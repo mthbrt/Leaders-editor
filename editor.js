@@ -244,6 +244,7 @@ function onWheel(e){
 function toggleC(id){S.tokens=S.tokens.map(t=>t.id===id?{...t,c:t.c==='w'?'b':'w'}:t);saveH();render();}
 function doReset(){
   S=mkState();
+  hist=[]; hidx=-1;
   Arrows.resetState(); saveH(); render();
 }
 function doLoad(){
@@ -421,6 +422,15 @@ function init(){
   });
 
   document.getElementById('input-state').addEventListener('keydown',e=>{if(e.key==='Enter')doLoad();});
+  document.getElementById('output-state').addEventListener('click',()=>{
+    navigator.clipboard.writeText(enc(S)).then(()=>{
+      const el=document.getElementById('output-state');
+      const prev=el.textContent;
+      el.textContent='Copied !';
+      el.classList.add('copied');
+      setTimeout(()=>{ el.textContent=prev; el.classList.remove('copied'); },1500);
+    });
+  });
   document.getElementById('btn-copy'  ).addEventListener('click',doCopy);
   document.getElementById('btn-undo'  ).addEventListener('click',undo);
   document.getElementById('btn-redo'  ).addEventListener('click',redo);

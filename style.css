@@ -127,9 +127,13 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: calc(100% - 200px);
-  pointer-events: none;
+  pointer-events: all;
   z-index: 10;
+  cursor: pointer;
+  transition: color 0.15s;
 }
+#output-state:hover { color: #c0c0ff; }
+#output-state.copied { color: #44ee88; }
 
 /* ── Main area ── */
 #main {
