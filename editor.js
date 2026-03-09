@@ -99,31 +99,45 @@ const undo  = () => hidx>0             && restH(hist[--hidx]);
 const redo  = () => hidx<hist.length-1 && restH(hist[++hidx]);
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
+const PAL_MARGIN  = 24;   // gap between canvas edge and floating palette
+const PAL_INNER   = 14;   // inner padding — same on all 4 sides of the token grid
+const PAL_RADIUS  = 16;   // border radius of the floating panel
+
 let LO = {};
 function relayout() {
   const cv=document.getElementById('board-canvas');
   const dpr=devicePixelRatio||1;
   const W=cv.parentElement.clientWidth||800, H=cv.parentElement.clientHeight||560;
   cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
-  // First pass: estimate r with a rough palette width to get cell size
-  const palEst = Math.max(PAL_W_MIN, 80);
-  const bWest  = W - palEst - 10;
-  const spEst  = Math.min(bWest/((2*R+1)*1.5+0.5), H/((2*R+1.5)*SQ3))*0.90;
-  const rEst   = spEst * CR;
-  // Palette: 2 columns of tokens + gaps + scrollbar zone on the left of right margin
+
+  // Estimate cell size using a rough palette width reservation for sizing tokens
   const pgap   = PAL_G;
   const scrollBarW = 6;
   const scrollMargin = 6;
-  const palW   = Math.max(PAL_W_MIN, rEst*2*2 + pgap*3 + scrollBarW + scrollMargin);
-  // Second pass: recompute layout with exact palette width
-  const bW=W-palW-10;
-  const sp=Math.min(bW/((2*R+1)*1.5+0.5), H/((2*R+1.5)*SQ3))*0.90;
-  const r=sp*CR, cx=bW/2, cy=H/2;
+  const palEst = Math.max(PAL_W_MIN, 80);
+  const spEst  = Math.min((W-palEst)/((2*R+1)*1.5+0.5), H/((2*R+1.5)*SQ3))*0.90;
+  const rEst   = spEst * CR;
+  // palW includes inner padding on both sides + 2 token columns + scrollbar
+  const palW   = Math.max(PAL_W_MIN, rEst*2*2 + PAL_INNER*2 + pgap + scrollBarW + scrollMargin);
+
+  // Board uses the FULL canvas width, centered
+  const sp=Math.min(W/((2*R+1)*1.5+0.5), H/((2*R+1.5)*SQ3))*0.90;
+  const r=sp*CR, cx=W/2, cy=H/2;
   const cells=CELLS.map(c=>({...c, x:cx+sp*1.5*c.q, y:cy+sp*(SQ3/2*c.q+SQ3*c.r)}));
   const byId=new Map(cells.map(c=>[c.id,c]));
   const hs=Math.max(...cells.map(c=>Math.hypot(c.x-cx,c.y-cy)))+r*1.6;
   const psz=r*2;  // token same size as board cell
-  LO={W,H,bW,dpr,r,cx,cy,cells,byId,hs,px0:bW+8,psz,pgap,palW,scrollBarW,scrollMargin};
+
+  // Floating palette: equal margin on top, bottom, right
+  const palH   = H - PAL_MARGIN * 2;
+  const palX   = W - palW - PAL_MARGIN;
+  const palY   = PAL_MARGIN;
+
+  // bW: boundary left of palette (for arrow/token hit-test exclusion)
+  const bW = palX - PAL_MARGIN/2;
+
+  LO={W,H,bW,dpr,r,cx,cy,cells,byId,hs,
+      psz,pgap,palW,palH,palX,palY,scrollBarW,scrollMargin};
 }
 
 // ── PALETTE SCROLL ────────────────────────────────────────────────────────────
@@ -151,23 +165,27 @@ function tokAt(x,y){
   return null;
 }
 function palAt(x,y){
-  const{px0,psz,pgap}=LO;
+  const{palX,palY,psz,pgap}=LO;
   const step=psz+pgap;
-  const col=Math.floor((x-px0-pgap)/step);
-  const ry=y-PAL_HEADER_H+palScrollY;
-  const row=Math.floor((ry-pgap)/step);
+  const col=Math.floor((x-palX-PAL_INNER)/step);
+  const ry=y-palY-PAL_HEADER_H+palScrollY;
+  const row=Math.floor((ry-PAL_INNER)/step);
   if(col<0||col>=PAL_C) return null;
   const i=row*PAL_C+col; if(i<0||i>=S.palette.length) return null;
-  const px=px0+pgap+col*step, py=PAL_HEADER_H+pgap+row*step-palScrollY;
+  const px=palX+PAL_INNER+col*step, py=palY+PAL_HEADER_H+PAL_INNER+row*step-palScrollY;
   return(x>=px&&x<=px+psz&&y>=py&&y<=py+psz)?S.palette[i]:null;
 }
 
+function inPalette(x,y){
+  const{palX,palY,palW,palH}=LO;
+  return x>=palX && x<=palX+palW && y>=palY && y<=palY+palH;
+}
 // ── EVENTS ────────────────────────────────────────────────────────────────────
 let drag=null, dpos=null, justDropped=false;
 let mousePos={x:0,y:0};
 
 function onDown(e){
-  const{x,y}=cvXY(e); const inP=x>LO.bW;
+  const{x,y}=cvXY(e); const inP=inPalette(x,y);
 
   // Right-click and arrow mid-drag → fully delegated to Arrows
   if(e.button===2){ e.preventDefault(); if(!inP) Arrows.onDown(e,x,y); return; }
@@ -208,7 +226,7 @@ function onUp(e){
   if(Arrows.onUp(e,ux,uy)) return;
   if(!drag||e.button!==0) return;
   const{x,y}=cvXY(e);
-  const cell=nearCell(x,y), inP=x>LO.bW;
+  const cell=nearCell(x,y), inP=inPalette(x,y);
   if(drag.type==='brd'){
     const tok=S.tokens.find(t=>t.id===drag.id);
     if(tok){
@@ -235,11 +253,12 @@ function onUp(e){
 }
 
 function onWheel(e){
-  const{x}=cvXY(e);
-  if(x>LO.bW){
+  const{x,y}=cvXY(e);
+  if(inPalette(x,y)){
     e.preventDefault();
-    const maxScroll=Math.max(0,palContentH-(LO.H-PAL_HEADER_H-10));
-    palScrollY=Math.max(0,Math.min(maxScroll,palScrollY+e.deltaY*0.6));
+    const clipH = LO.palH - PAL_HEADER_H - PAL_INNER * 2;
+    const maxScroll = Math.max(0, palContentH - clipH);
+    palScrollY = Math.max(0, Math.min(maxScroll, palScrollY + e.deltaY * 0.6));
     render();
   }
 }
@@ -331,51 +350,76 @@ function drawToken(ctx,x,y,r,name,c){
 }
 
 function drawPalette(ctx){
-  const{H,bW,px0,psz,pgap}=LO;
-  const pw=LO.palW+10, scrollAreaH=H-PAL_HEADER_H;
+  const{H,palX,palY,palW,palH,psz,pgap,scrollBarW}=LO;
+  const scrollAreaH=palH-PAL_HEADER_H;
 
-  ctx.fillStyle=C.palBg; ctx.fillRect(bW,0,pw,H);
-  ctx.strokeStyle=C.palDiv; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(bW,0); ctx.lineTo(bW,H); ctx.stroke();
+  // Drop shadow
+  ctx.save();
+  ctx.shadowColor='rgba(0,0,0,0.55)';
+  ctx.shadowBlur=22;
+  ctx.shadowOffsetX=0;
+  ctx.shadowOffsetY=4;
+  ctx.fillStyle=C.palBg;
+  ctx.beginPath();
+  ctx.roundRect(palX, palY, palW, palH, PAL_RADIUS);
+  ctx.fill();
+  ctx.restore();
 
+  // Panel fill (no shadow)
+  ctx.save();
+  ctx.fillStyle=C.palBg;
+  ctx.beginPath();
+  ctx.roundRect(palX, palY, palW, palH, PAL_RADIUS);
+  ctx.fill();
+  // Border
+  ctx.strokeStyle='rgba(70,70,160,0.55)';
+  ctx.lineWidth=1;
+  ctx.stroke();
+  ctx.restore();
+
+  // Header text
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillStyle=C.palHdr; ctx.font="bold 11px 'Segoe UI',sans-serif";
-  ctx.fillText('CHARACTERS', px0+LO.palW/2, 14);
+  ctx.fillText('CHARACTERS', palX+palW/2, palY+14);
   ctx.fillStyle='#30306a'; ctx.font="10px 'Segoe UI',sans-serif";
-  ctx.fillText(`${S.palette.length} available`, px0+LO.palW/2, 26);
+  ctx.fillText(`${S.palette.length} available`, palX+palW/2, palY+26);
 
+  // Clip scroll area — inset PAL_INNER top and bottom so tokens never touch the panel border
+  const clipY = palY + PAL_HEADER_H + PAL_INNER;
+  const clipH = scrollAreaH - PAL_INNER * 2;
   ctx.save();
-  ctx.beginPath(); ctx.rect(bW,PAL_HEADER_H,pw,scrollAreaH); ctx.clip();
+  ctx.beginPath();
+  ctx.rect(palX, clipY, palW, clipH);
+  ctx.clip();
+
   const step=psz+pgap;
-  palContentH=Math.ceil(S.palette.length/PAL_C)*step+pgap;
+  palContentH=Math.ceil(S.palette.length/PAL_C)*step - pgap; // no trailing gap
   for(let i=0;i<S.palette.length;i++){
     const col=i%PAL_C, row=Math.floor(i/PAL_C);
-    const px=px0+pgap+col*step;
-    const py=PAL_HEADER_H+pgap+row*step-palScrollY;
-    if(py+psz<PAL_HEADER_H-2||py>H+2) continue;
-    ctx.fillStyle=C.palCell; ctx.strokeStyle=C.palCellBd; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.roundRect(px,py,psz,psz,6); ctx.fill(); ctx.stroke();
+    const px=palX+PAL_INNER+col*step;
+    const py=clipY+row*step-palScrollY;
+    if(py+psz<clipY-2||py>clipY+clipH+2) continue;
     drawToken(ctx,px+psz/2,py+psz/2,psz/2*0.90,S.palette[i],'w');
   }
   ctx.restore();
 
-  if(palContentH>scrollAreaH){
-    const trackH=scrollAreaH-8;
-    const frac=Math.min(1,scrollAreaH/palContentH);
-    const barH=Math.max(24,trackH*frac);
-    const maxOff=palContentH-scrollAreaH;
-    const barY=PAL_HEADER_H+4+(palScrollY/maxOff)*(trackH-barH);
-    // scrollbar flush against right edge of palette
-    const sbX = bW + LO.palW - LO.scrollBarW;
+  // Scrollbar — track is exactly clipH, bar travels full track range
+  if(palContentH>clipH){
+    const maxScroll = palContentH - clipH;
+    const frac = clipH / palContentH;
+    const barH = Math.max(24, clipH * frac);
+    const travelH = clipH - barH;
+    const barY = clipY + (palScrollY / maxScroll) * travelH;
+    const sbX = palX + palW - scrollBarW - 3;
     ctx.fillStyle='rgba(80,80,170,0.55)';
-    ctx.beginPath(); ctx.roundRect(sbX, barY, LO.scrollBarW, barH, 3); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(sbX, barY, scrollBarW, barH, 3); ctx.fill();
   }
 }
 
 // ── CURSOR ────────────────────────────────────────────────────────────────────
 function updateCursor(){
   const cv=document.getElementById('board-canvas');
-  const{x,y}=mousePos; const inP=x>LO.bW;
+  const{x,y}=mousePos; const inP=inPalette(x,y);
   if(drag){ cv.style.cursor='grabbing'; return; }
   if(!inP){
     if(Arrows.updateCursor(cv,x,y)) return;
@@ -418,7 +462,7 @@ function render(){
   Arrows.draw(ctx);
   Arrows.drawPreview(ctx);
 
-  // Palette panel (clips any arrow that bleeds into it)
+  // Palette panel — floating, drawn on top
   drawPalette(ctx);
 
   // Dragged token ghost
