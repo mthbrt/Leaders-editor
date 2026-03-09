@@ -3,7 +3,7 @@ const R      = 3;
 const SQ3    = Math.sqrt(3);
 const PAL_W_MIN = 72;  // minimum palette width
 const PAL_G  = 8;
-const PAL_C  = 2;
+const PAL_C  = 3;
 const CR     = 0.79;
 const H_MAX  = 60;
 const T_RNG  = [3, 24];
@@ -99,53 +99,46 @@ const undo  = () => hidx>0             && restH(hist[--hidx]);
 const redo  = () => hidx<hist.length-1 && restH(hist[++hidx]);
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
-const PAL_MARGIN  = 24;   // gap between canvas edge and floating palette
-const PAL_INNER   = 14;   // inner padding — same on all 4 sides of the token grid
-const PAL_RADIUS  = 16;   // border radius of the floating panel
 
 let LO = {};
 function relayout() {
-  const cv=document.getElementById('board-canvas');
-  const dpr=devicePixelRatio||1;
-  const W=cv.parentElement.clientWidth||800, H=cv.parentElement.clientHeight||560;
-  cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+  const cv  = document.getElementById('board-canvas');
+  const dpr = devicePixelRatio || 1;
+  const W   = cv.parentElement.clientWidth  || 800;
+  const H   = cv.parentElement.clientHeight || 560;
+  cv.width  = W * dpr; cv.height  = H * dpr;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
 
-  // Estimate cell size using a rough palette width reservation for sizing tokens
-  const pgap   = PAL_G;
-  const scrollBarW = 6;
-  const scrollMargin = 6;
-  const palEst = Math.max(PAL_W_MIN, 80);
-  const spEst  = Math.min((W-palEst)/((2*R+1)*1.5+0.5), H/((2*R+1.5)*SQ3))*0.90;
-  const rEst   = spEst * CR;
-  // palW includes inner padding on both sides + 2 token columns + scrollbar
-  const palW   = Math.max(PAL_W_MIN, rEst*2*2 + PAL_INNER*2 + pgap + scrollBarW + scrollMargin);
+  // Estimate token radius for palette width calculation
+  const spEst = Math.min(W / ((2*R+1)*1.5+0.5), H / ((2*R+1.5)*SQ3)) * 0.90;
+  const rEst  = spEst * CR;
 
-  // Board uses the FULL canvas width, centered
-  const sp=Math.min(W/((2*R+1)*1.5+0.5), H/((2*R+1.5)*SQ3))*0.90;
-  const r=sp*CR, cx=W/2, cy=H/2;
-  const cells=CELLS.map(c=>({...c, x:cx+sp*1.5*c.q, y:cy+sp*(SQ3/2*c.q+SQ3*c.r)}));
-  const byId=new Map(cells.map(c=>[c.id,c]));
-  const hs=Math.max(...cells.map(c=>Math.hypot(c.x-cx,c.y-cy)))+r*1.6;
-  const psz=r*2;  // token same size as board cell
+  // Palette geometry (accounts for collapsed state)
+  const { palX, palY, palW, palH } = Palette.layout(W, H, rEst);
 
-  // Floating palette: equal margin on top, bottom, right
-  const palH   = H - PAL_MARGIN * 2;
-  const palX   = W - palW - PAL_MARGIN;
-  const palY   = PAL_MARGIN;
+  // Board — centered on the full canvas
+  const sp = Math.min(W / ((2*R+1)*1.5+0.5), H / ((2*R+1.5)*SQ3)) * 0.90;
+  const r  = sp * CR, cx = W / 2, cy = H / 2;
+  const cells = CELLS.map(c => ({
+    ...c,
+    x: cx + sp * 1.5 * c.q,
+    y: cy + sp * (SQ3/2 * c.q + SQ3 * c.r)
+  }));
+  const byId = new Map(cells.map(c => [c.id, c]));
+  const hs   = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
+  const psz  = r * 2;
 
-  // bW: boundary left of palette (for arrow/token hit-test exclusion)
-  const bW = palX - PAL_MARGIN/2;
+  // bW: left boundary of palette area (used for arrow / board hit exclusion)
+  const bW = palX - 8;
 
-  LO={W,H,bW,dpr,r,cx,cy,cells,byId,hs,
-      psz,pgap,palW,palH,palX,palY,scrollBarW,scrollMargin};
+  LO = { W, H, bW, dpr, r, cx, cy, cells, byId, hs,
+         psz, pgap: PAL_G, palW, palH, palX, palY,
+         scrollBarW: 6, scrollMargin: 6 };
 }
 
-// ── PALETTE SCROLL ────────────────────────────────────────────────────────────
-let palScrollY=0;
-let palContentH=0;
-
 // ── LABELS TOGGLE ─────────────────────────────────────────────────────────────
-let showLabels = true;
+let showLabels  = true;
+let showOutline = false;
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
 const cvXY = e => {
@@ -164,22 +157,9 @@ function tokAt(x,y){
   }
   return null;
 }
-function palAt(x,y){
-  const{palX,palY,psz,pgap}=LO;
-  const step=psz+pgap;
-  const col=Math.floor((x-palX-PAL_INNER)/step);
-  const ry=y-palY-PAL_HEADER_H+palScrollY;
-  const row=Math.floor((ry-PAL_INNER)/step);
-  if(col<0||col>=PAL_C) return null;
-  const i=row*PAL_C+col; if(i<0||i>=S.palette.length) return null;
-  const px=palX+PAL_INNER+col*step, py=palY+PAL_HEADER_H+PAL_INNER+row*step-palScrollY;
-  return(x>=px&&x<=px+psz&&y>=py&&y<=py+psz)?S.palette[i]:null;
-}
-
-function inPalette(x,y){
-  const{palX,palY,palW,palH}=LO;
-  return x>=palX && x<=palX+palW && y>=palY && y<=palY+palH;
-}
+// Delegated to Palette module
+const palAt      = (x, y) => Palette.palAt(x, y);
+const inPalette  = (x, y) => Palette.inPalette(x, y);
 // ── EVENTS ────────────────────────────────────────────────────────────────────
 let drag=null, dpos=null, justDropped=false;
 let mousePos={x:0,y:0};
@@ -187,7 +167,7 @@ let mousePos={x:0,y:0};
 function onDown(e){
   const{x,y}=cvXY(e); const inP=inPalette(x,y);
 
-  // Right-click and arrow mid-drag → fully delegated to Arrows
+  // Right-click → delegated to Arrows (never on palette)
   if(e.button===2){ e.preventDefault(); if(!inP) Arrows.onDown(e,x,y); return; }
 
   // Middle click → toggle token color
@@ -199,15 +179,18 @@ function onDown(e){
 
   if(e.button!==0) return;
 
-  // Left click: let Arrows handle first (handles, curve select, deselect)
-  if(!inP){
-    const consumed=Arrows.onDown(e,x,y);
-    if(consumed) return;
+  // Palette toggle / scroll-area click
+  if(inP){
+    if(Palette.onDown(x,y)) return;  // consumed by toggle button
+    const n=palAt(x,y);
+    if(n){drag={type:'pal',name:n,c:'w'};dpos={x,y};render();}
+    return;
   }
 
-  // Token / palette drag
-  if(inP){ const n=palAt(x,y); if(n){drag={type:'pal',name:n,c:'w'};dpos={x,y};render();} }
-  else   { const t=tokAt(x,y); if(t){drag={type:'brd',id:t.id};dpos={x,y};render();} }
+  // Board: arrows first, then token drag
+  const consumed=Arrows.onDown(e,x,y);
+  if(consumed) return;
+  const t=tokAt(x,y); if(t){drag={type:'brd',id:t.id};dpos={x,y};render();}
 }
 
 function onMove(e){
@@ -254,19 +237,13 @@ function onUp(e){
 
 function onWheel(e){
   const{x,y}=cvXY(e);
-  if(inPalette(x,y)){
-    e.preventDefault();
-    const clipH = LO.palH - PAL_HEADER_H - PAL_INNER * 2;
-    const maxScroll = Math.max(0, palContentH - clipH);
-    palScrollY = Math.max(0, Math.min(maxScroll, palScrollY + e.deltaY * 0.6));
-    render();
-  }
+  if(Palette.onWheel(x, y, e.deltaY)){ e.preventDefault(); }
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
 function toggleC(id){S.tokens=S.tokens.map(t=>t.id===id?{...t,c:t.c==='w'?'b':'w'}:t);saveH();render();}
 function doReset(){
-  S=mkState(); palScrollY=0;
+  S=mkState();
   Arrows.resetState(); saveH(); render();
 }
 function doLoad(){
@@ -338,81 +315,29 @@ function drawLabel(ctx,c,fs){
   ctx.restore();
 }
 
-function drawToken(ctx,x,y,r,name,c){
-  const im=getImg(name,c==='w'?'blanc':'noir');
-  if(imgOk(im)){ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,PI2);ctx.clip();ctx.drawImage(im,x-r,y-r,r*2,r*2);ctx.restore();}
-  else{
-    ctx.beginPath();ctx.arc(x,y,r,0,PI2);
-    ctx.fillStyle=c==='w'?'#d0d0e8':'#202038'; ctx.strokeStyle=c==='w'?'#7070b0':'#4848a0'; ctx.lineWidth=2; ctx.fill(); ctx.stroke();
-    ctx.fillStyle=c==='w'?'#1a1a44':'#aaaacc'; ctx.font=`bold ${Math.round(r*.8)}px 'Segoe UI',sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(name,x,y);
-  }
-}
-
-function drawPalette(ctx){
-  const{H,palX,palY,palW,palH,psz,pgap,scrollBarW}=LO;
-  const scrollAreaH=palH-PAL_HEADER_H;
-
-  // Drop shadow
-  ctx.save();
-  ctx.shadowColor='rgba(0,0,0,0.55)';
-  ctx.shadowBlur=22;
-  ctx.shadowOffsetX=0;
-  ctx.shadowOffsetY=4;
-  ctx.fillStyle=C.palBg;
-  ctx.beginPath();
-  ctx.roundRect(palX, palY, palW, palH, PAL_RADIUS);
-  ctx.fill();
-  ctx.restore();
-
-  // Panel fill (no shadow)
-  ctx.save();
-  ctx.fillStyle=C.palBg;
-  ctx.beginPath();
-  ctx.roundRect(palX, palY, palW, palH, PAL_RADIUS);
-  ctx.fill();
-  // Border
-  ctx.strokeStyle='rgba(70,70,160,0.55)';
-  ctx.lineWidth=1;
-  ctx.stroke();
-  ctx.restore();
-
-  // Header text
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillStyle=C.palHdr; ctx.font="bold 11px 'Segoe UI',sans-serif";
-  ctx.fillText('CHARACTERS', palX+palW/2, palY+14);
-  ctx.fillStyle='#30306a'; ctx.font="10px 'Segoe UI',sans-serif";
-  ctx.fillText(`${S.palette.length} available`, palX+palW/2, palY+26);
-
-  // Clip scroll area — inset PAL_INNER top and bottom so tokens never touch the panel border
-  const clipY = palY + PAL_HEADER_H + PAL_INNER;
-  const clipH = scrollAreaH - PAL_INNER * 2;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(palX, clipY, palW, clipH);
-  ctx.clip();
-
-  const step=psz+pgap;
-  palContentH=Math.ceil(S.palette.length/PAL_C)*step - pgap; // no trailing gap
-  for(let i=0;i<S.palette.length;i++){
-    const col=i%PAL_C, row=Math.floor(i/PAL_C);
-    const px=palX+PAL_INNER+col*step;
-    const py=clipY+row*step-palScrollY;
-    if(py+psz<clipY-2||py>clipY+clipH+2) continue;
-    drawToken(ctx,px+psz/2,py+psz/2,psz/2*0.90,S.palette[i],'w');
-  }
-  ctx.restore();
-
-  // Scrollbar — track is exactly clipH, bar travels full track range
-  if(palContentH>clipH){
-    const maxScroll = palContentH - clipH;
-    const frac = clipH / palContentH;
-    const barH = Math.max(24, clipH * frac);
-    const travelH = clipH - barH;
-    const barY = clipY + (palScrollY / maxScroll) * travelH;
-    const sbX = palX + palW - scrollBarW - 3;
-    ctx.fillStyle='rgba(80,80,170,0.55)';
-    ctx.beginPath(); ctx.roundRect(sbX, barY, scrollBarW, barH, 3); ctx.fill();
+function drawToken(ctx, x, y, r, name, c) {
+  const im = getImg(name, c === 'w' ? 'blanc' : 'noir');
+  if (imgOk(im)) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, PI2); ctx.clip();
+    ctx.drawImage(im, x - r, y - r, r * 2, r * 2);
+    // Outline drawn inside the clip so it never bleeds outside the token
+    if (showOutline) {
+      const lw = Math.max(0, r * 0.08);
+      ctx.beginPath(); ctx.arc(x, y, r - lw / 2, 0, PI2);
+      ctx.strokeStyle = c === 'w' ? '#ffffff' : '#000000';
+      ctx.lineWidth = lw;
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, PI2);
+    ctx.fillStyle = c === 'w' ? '#d0d0e8' : '#202038';
+    ctx.strokeStyle = c === 'w' ? '#7070b0' : '#4848a0';
+    ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+    ctx.fillStyle = c === 'w' ? '#1a1a44' : '#aaaacc';
+    ctx.font = `bold ${Math.round(r * .8)}px 'Segoe UI',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name, x, y);
   }
 }
 
@@ -463,7 +388,7 @@ function render(){
   Arrows.drawPreview(ctx);
 
   // Palette panel — floating, drawn on top
-  drawPalette(ctx);
+  Palette.draw(ctx);
 
   // Dragged token ghost
   if(drag&&dpos){
@@ -503,6 +428,11 @@ function init(){
   document.getElementById('btn-labels').addEventListener('click', () => {
     showLabels = !showLabels;
     document.getElementById('btn-labels').classList.toggle('active', showLabels);
+    render();
+  });
+  document.getElementById('btn-outline').addEventListener('click', () => {
+    showOutline = !showOutline;
+    document.getElementById('btn-outline').classList.toggle('active', showOutline);
     render();
   });
 
