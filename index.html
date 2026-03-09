@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="icon.ico" type="image/x-icon" />
+  <title>LEADERS Editor</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="arr_toolbar.css" />
+</head>
+<body>
+
+  <!-- ── Barre d'outils ── -->
+  <div id="toolbar">
+    <span class="logo">LEADERS - BOARD EDITOR</span>
+
+    <div class="center-group">
+      <input id="input-state" type="text" placeholder="Paste a configuration…"
+        autocomplete="off" spellcheck="false" />
+      <button id="btn-copy"   class="btn wide">Copy</button>
+      <button id="btn-labels" class="btn wide active">Coords</button>
+      <button id="btn-undo"   class="btn" title="Undo">↩</button>
+      <button id="btn-redo"   class="btn" title="Redo">↪</button>
+      <button id="btn-reset"  class="btn danger">Reset</button>
+    </div>
+  </div>
+
+  <!-- ── Plateau principal ── -->
+  <div id="main">
+    <canvas id="board-canvas"></canvas>
+    <!-- État du plateau en bas à gauche -->
+    <div id="output-state"></div>
+  </div>
+
+  <script src="arrows.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>
