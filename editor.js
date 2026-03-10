@@ -356,6 +356,7 @@ function updateCursor(){
 
 // ── MAIN RENDER ───────────────────────────────────────────────────────────────
 function render(){
+  history.replaceState(null, "", "#"+enc(S));
   const cv=document.getElementById('board-canvas'), ctx=cv.getContext('2d');
   const{W,H,bW,dpr,r,cells,byId,hs,cx,cy}=LO;
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -401,8 +402,26 @@ function render(){
   updateCursor();
 }
 
+// ── URL ──────────────────────────────────────────────────────────────────────
+function loadStateFromURL(){
+  const raw = window.location.hash.slice(1);
+  if(!raw) return;
+
+  const {tokens} = dec(raw);
+  const used = new Set(tokens.map(t=>t.name));
+
+  S={
+    tokens: tokens.map((t,i)=>({...t,id:i})),
+    palette: ALL_NAMES.filter(n=>!used.has(n)),
+    nid: tokens.length,
+    arrows: [],
+    arrowNid: 0
+  };
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function init(){
+  loadStateFromURL();
   const cv=document.getElementById('board-canvas');
   cv.addEventListener('mousedown',  onDown);
   cv.addEventListener('mousemove',  e=>{ mousePos=cvXY(e); onMove(e); });
