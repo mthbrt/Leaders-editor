@@ -275,7 +275,7 @@ const Arrows = (() => {
       // ── shadow pass: shaft + head together so shadow is unified ──
       ctx.save();
       ctx.shadowColor   = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur    = 6;
+      ctx.shadowBlur    = 4;
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
       ctx.strokeStyle = a.color;

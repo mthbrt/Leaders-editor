@@ -138,6 +138,7 @@ function relayout() {
 // ── LABELS TOGGLE ─────────────────────────────────────────────────────────────
 let showLabels  = true;
 let showOutline = false;
+let showShadow  = true;
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
 const cvXY = e => {
@@ -317,11 +318,25 @@ function drawToken(ctx, x, y, r, name, c) {
   const im = getImg(name, c === 'w' ? 'blanc' : 'noir');
   if (imgOk(im)) {
     ctx.save();
+    // Drop shadow: draw a filled circle with shadow BEFORE clipping,
+    // then immediately cover it with the image inside a clip.
+    if (showShadow) {
+      ctx.shadowColor   = 'rgba(0,0,0,0.55)';
+      ctx.shadowBlur    = r * 0.1;
+      ctx.shadowOffsetX = r * 0.05;
+      ctx.shadowOffsetY = r * 0.05;
+    }
+    ctx.fillStyle     = '#000';          // colour doesn't matter — hidden by image
+    ctx.beginPath(); ctx.arc(x, y, r, 0, PI2); ctx.fill();
+    // Reset shadow before clipping+drawing the image
+    ctx.shadowColor   = 'rgba(0,0,0,0)';
+    ctx.shadowBlur    = 0;
+    ctx.shadowOffsetY = 0;
     ctx.beginPath(); ctx.arc(x, y, r, 0, PI2); ctx.clip();
     ctx.drawImage(im, x - r, y - r, r * 2, r * 2);
     // Outline drawn inside the clip so it never bleeds outside the token
     if (showOutline) {
-      const lw = Math.max(0, r * 0.08);
+      const lw = Math.max(0, r * 0.09);
       ctx.beginPath(); ctx.arc(x, y, r - lw / 2, 0, PI2);
       ctx.strokeStyle = c === 'w' ? '#ffffff' : '#000000';
       ctx.lineWidth = lw;
@@ -440,6 +455,11 @@ function init(){
   document.getElementById('btn-outline').addEventListener('click', () => {
     showOutline = !showOutline;
     document.getElementById('btn-outline').classList.toggle('active', showOutline);
+    render();
+  });
+  document.getElementById('btn-shadow').addEventListener('click', () => {
+    showShadow = !showShadow;
+    document.getElementById('btn-shadow').classList.toggle('active', showShadow);
     render();
   });
 
