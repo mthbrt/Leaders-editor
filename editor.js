@@ -12,15 +12,8 @@ const HL = new Set([0,3,4,8,9,14,15,21,22,27,28,32,33,36]);
 const SP = new Set([15,21]);
 
 const C = {
-  bg:        '#0f0f20',
-  board:     '#181830',
-  cellEdge:  'rgba(80,80,200,0.35)',
-  palBg:     '#1a1a30',
-  palDiv:    '#2a2a50',
-  palCell:   '#1a1a3a',
-  palCellBd: '#2e2e68',
+  palBg:     '#1a1a2e',
   palHdr:    '#7070c0',
-  lLtr:      'rgba(60,60,120,0.85)',
 };
 
 const PAL_HEADER_H = 36;
@@ -109,16 +102,22 @@ function relayout() {
   cv.width  = W * dpr; cv.height  = H * dpr;
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
 
-  // Estimate token radius for palette width calculation
-  const spEst = Math.min(W / ((2*R+1)*1.5+0.5), H / ((2*R+1.5)*SQ3)) * 0.90;
-  const rEst  = spEst * CR;
+  const BOARD_COLS = (2*R+1)*1.5+0.5;
+  const BOARD_ROWS = (2*R+1.5)*SQ3;
+  const GAP = 24; // same as palette MARGIN — space between board right edge and palette left edge
 
-  // Palette geometry (accounts for collapsed state)
-  const { palX, palY, palW, palH } = Palette.layout(W, H, rEst);
+  // sp always computed on full canvas (board never shrinks)
+  const sp = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90;
+  const r  = sp * CR;
 
-  // Board — centered on the full canvas
-  const sp = Math.min(W / ((2*R+1)*1.5+0.5), H / ((2*R+1.5)*SQ3)) * 0.90;
-  const r  = sp * CR, cx = W / 2, cy = H / 2;
+  // Palette width computed with the real r (not an estimate)
+  const { palX, palY, palW, palH, palCols } = Palette.layout(W, H, r);
+
+  // Board: ideal centre = W/2; pushed left so right edge stays GAP away from palette
+  const boardHalfW = BOARD_COLS / 2 * sp;
+  const maxCx = palX - GAP - boardHalfW;
+  const cx = Math.max(boardHalfW + GAP, Math.min(W / 2, maxCx));
+  const cy = H / 2;
   const cells = CELLS.map(c => ({
     ...c,
     x: cx + sp * 1.5 * c.q,
@@ -132,7 +131,7 @@ function relayout() {
   const bW = palX - 8;
 
   LO = { W, H, bW, dpr, r, cx, cy, cells, byId, hs,
-         psz, pgap: PAL_G, palW, palH, palX, palY,
+         psz, pgap: PAL_G, palW, palH, palX, palY, palCols,
          scrollBarW: 6, scrollMargin: 6 };
 }
 
@@ -289,8 +288,6 @@ function drawBoard(ctx,cx,cy,hs){
     const iw = hs * Math.sqrt(3);
     const ih = hs * 2;
     ctx.drawImage(BOARD_IMG, cx - iw/2, cy - ih/2, iw, ih);
-  } else {
-    ctx.fillStyle=C.board; ctx.fill();
   }
   ctx.restore();
 }
@@ -331,14 +328,6 @@ function drawToken(ctx, x, y, r, name, c) {
       ctx.stroke();
     }
     ctx.restore();
-  } else {
-    ctx.beginPath(); ctx.arc(x, y, r, 0, PI2);
-    ctx.fillStyle = c === 'w' ? '#d0d0e8' : '#202038';
-    ctx.strokeStyle = c === 'w' ? '#7070b0' : '#4848a0';
-    ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
-    ctx.fillStyle = c === 'w' ? '#1a1a44' : '#aaaacc';
-    ctx.font = `bold ${Math.round(r * .8)}px 'Segoe UI',sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(name, x, y);
   }
 }
 
@@ -363,7 +352,6 @@ function render(){
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
   ctx.clearRect(0,0,W,H);
 
-  ctx.fillStyle=C.bg; ctx.fillRect(0,0,W,H);
   drawBoard(ctx,cx,cy,hs);
 
   const dtgt=drag&&dpos?nearCell(dpos.x,dpos.y):null;
@@ -398,7 +386,6 @@ function render(){
     if(t){ctx.globalAlpha=0.75;drawToken(ctx,dpos.x,dpos.y,drag.type==='brd'?r:LO.psz/2*0.90,t.name,t.c);ctx.globalAlpha=1;}
   }
 
-  document.getElementById('output-state').textContent=enc(S);
   updateCursor();
 }
 
@@ -441,15 +428,6 @@ function init(){
   });
 
   document.getElementById('input-state').addEventListener('keydown',e=>{if(e.key==='Enter')doLoad();});
-  document.getElementById('output-state').addEventListener('click',()=>{
-    navigator.clipboard.writeText(enc(S)).then(()=>{
-      const el=document.getElementById('output-state');
-      const prev=el.textContent;
-      el.textContent='Copied !';
-      el.classList.add('copied');
-      setTimeout(()=>{ el.textContent=prev; el.classList.remove('copied'); },1500);
-    });
-  });
   document.getElementById('btn-copy'  ).addEventListener('click',doCopy);
   document.getElementById('btn-undo'  ).addEventListener('click',undo);
   document.getElementById('btn-redo'  ).addEventListener('click',redo);

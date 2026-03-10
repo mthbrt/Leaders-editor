@@ -5,8 +5,8 @@
 }
 
 :root {
-  --bg:        #1a1a2e;
-  --bg-dark:   #1a1a2e;
+  --bg:        #141424;
+  --bg-bar:    #1a1a2e;
   --border:    #2a2a50;
   --border-hl: #3a3a70;
   --accent:    #5050c0;
@@ -39,7 +39,7 @@ body {
   align-items: center;
   padding: 0 14px;
   height: 60px;
-  background: var(--bg-dark);
+  background: var(--bg-bar);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -115,25 +115,6 @@ body {
   color: var(--btn-red-c);
 }
 .btn.danger:hover { background: var(--btn-red-h); }
-
-/* ── Output state — bottom left overlay ── */
-#output-state {
-  position: absolute;
-  bottom: 8px;
-  left: 10px;
-  font-size: 11px;
-  color: #9090e0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: calc(100% - 200px);
-  pointer-events: all;
-  z-index: 10;
-  cursor: pointer;
-  transition: color 0.15s;
-}
-#output-state:hover { color: #c0c0ff; }
-#output-state.copied { color: #44ee88; }
 
 /* ── Main area ── */
 #main {

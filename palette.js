@@ -20,16 +20,25 @@ const Palette = (() => {
   let contentH   = 0;   // computed each draw, used by scroll & scrollbar
   let collapsed  = false;
 
+  // ── Dynamic column count based on aspect ratio ────────────────────────────
+  function _colCount(W, H) {
+    const ratio = W / H;
+    if (ratio >= 1.5) return 3;
+    if (ratio >= 0.8) return 2;
+    return 1;
+  }
+
   // ── Layout computation ────────────────────────────────────────────────────
-  // Returns { palX, palY, palW, palH } for the current canvas size.
+  // Returns { palX, palY, palW, palH, palCols } for the current canvas size.
   // Called by editor's relayout() to feed LO.
   function layout(W, H, rEst) {
     const pgap = PAL_G;
-    const palW = Math.max(72, rEst * 2 * PAL_C + INNER * 2 + pgap * (PAL_C - 1));
+    const cols = _colCount(W, H);
+    const palW = Math.max(72, rEst * 2 * cols + INNER * 2 + pgap * (cols - 1));
     const palH = collapsed ? HEADER_H : H - MARGIN * 2;
     const palX = W - palW - MARGIN;
     const palY = MARGIN;
-    return { palX, palY, palW, palH };
+    return { palX, palY, palW, palH, palCols: cols };
   }
 
   // ── Hit testing ───────────────────────────────────────────────────────────
@@ -41,13 +50,14 @@ const Palette = (() => {
   // Returns the token name under (x,y), or null.
   function palAt(x, y) {
     if (collapsed) return null;
-    const { palX, palY, psz, pgap } = LO;
+    const { palX, palY, psz, pgap, palCols } = LO;
+    const cols = palCols || 3;
     const step = psz + pgap;
     const col  = Math.floor((x - palX - INNER) / step);
     const clipY = palY + HEADER_H + HEADER_GAP;
     const row  = Math.floor((y - clipY + scrollY) / step);
-    if (col < 0 || col >= PAL_C) return null;
-    const i = row * PAL_C + col;
+    if (col < 0 || col >= cols) return null;
+    const i = row * cols + col;
     if (i < 0 || i >= S.palette.length) return null;
     const px = palX + INNER + col * step;
     const py = clipY + row * step - scrollY;
@@ -124,7 +134,8 @@ const Palette = (() => {
     const clipY = palY + HEADER_H + HEADER_GAP;
     const clipH = palH - HEADER_H - HEADER_GAP - INNER;
     const step  = psz + pgap;
-    contentH    = Math.ceil(S.palette.length / PAL_C) * step - pgap;
+    const cols  = LO.palCols || 3;
+    contentH    = Math.ceil(S.palette.length / cols) * step - pgap;
 
     ctx.save();
     ctx.beginPath();
@@ -132,8 +143,8 @@ const Palette = (() => {
     ctx.clip();
 
     for (let i = 0; i < S.palette.length; i++) {
-      const col = i % PAL_C;
-      const row = Math.floor(i / PAL_C);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
       const px  = palX + INNER + col * step;
       const py  = clipY + row * step - scrollY;
       if (py + psz < clipY - 2 || py > clipY + clipH + 2) continue;
