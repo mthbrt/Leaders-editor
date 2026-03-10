@@ -83,11 +83,18 @@ let S = mkState();
 
 // ── HISTORIQUE ────────────────────────────────────────────────────────────────
 let hist=[], hidx=-1;
+const _snapS = () => { const {arrows,arrowNid,...rest}=S; return JSON.stringify(rest); };
 const saveH = () => {
-  hist=hist.slice(0,hidx+1); hist.push(JSON.stringify(S));
+  const snap = _snapS();
+  if (hidx >= 0 && hist[hidx] === snap) return;   // rien de changé → on n'empile pas
+  hist=hist.slice(0,hidx+1); hist.push(snap);
   if(++hidx, hist.length>H_MAX){hist.shift();hidx--;}
 };
-const restH = e => { S=JSON.parse(e); Arrows.clearSelected(); render(); };
+const restH = e => {
+  const {arrows,arrowNid}=S;
+  S={...JSON.parse(e),arrows,arrowNid};
+  Arrows.clearSelected(); render();
+};
 const undo  = () => hidx>0             && restH(hist[--hidx]);
 const redo  = () => hidx<hist.length-1 && restH(hist[++hidx]);
 
@@ -242,6 +249,10 @@ function onWheel(e){
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
 function toggleC(id){S.tokens=S.tokens.map(t=>t.id===id?{...t,c:t.c==='w'?'b':'w'}:t);saveH();render();}
+function doClearArrows(){
+  S.arrows = []; S.arrowNid = 0;
+  Arrows.resetState(); saveH(); render();
+}
 function doReset(){
   S=mkState();
   hist=[]; hidx=-1;
@@ -446,6 +457,7 @@ function init(){
   document.getElementById('btn-copy'  ).addEventListener('click',doCopy);
   document.getElementById('btn-undo'  ).addEventListener('click',undo);
   document.getElementById('btn-redo'  ).addEventListener('click',redo);
+  document.getElementById('btn-clear-arrows').addEventListener('click', doClearArrows);
   document.getElementById('btn-reset' ).addEventListener('click',doReset);
   document.getElementById('btn-labels').addEventListener('click', () => {
     showLabels = !showLabels;
