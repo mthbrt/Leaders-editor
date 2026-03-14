@@ -45,6 +45,7 @@ body {
 }
 
 #toolbar .logo {
+  width: fit-content;
   color: #9090e0;
   font-weight: 700;
   font-size: 17px;
