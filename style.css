@@ -122,12 +122,12 @@ body {
   .toolbar-sep { margin: 0; }
   #input-state { padding: 0 8px; font-size: 12px; }
   #btn-clear-arrows { display: none; }
-
 }
 
 /* Cache aussi clear-arrows */
 @media (max-width: 400px) {
-  #btn-undo, #btn-redo { display: none; }
+  #btn-help { display: none; }
+  #toolbar { grid-template-columns: 1fr auto auto; gap: 8px }
   #toolbar .center-group > .toolbar-sep { display: none; }
   #toolbar { padding: 0 8px; }
 }
