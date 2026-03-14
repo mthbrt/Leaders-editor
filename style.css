@@ -138,6 +138,7 @@ body {
   overflow: hidden;
   position: relative;
   background: var(--bg);
+  touch-action: none;
 }
 
 /* ── Board layer ── */
