@@ -38,6 +38,7 @@ body {
   background: var(--bg-bar);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  min-width: 0;
 }
 
 #toolbar .logo {
@@ -57,6 +58,7 @@ body {
   align-items: center;
   gap: 8px;
   justify-content: center;
+  min-width: 0;
 }
 
 #toolbar .right-group {
@@ -83,9 +85,10 @@ body {
   color: var(--text);
   font-size: 13px;
   outline: none;
-  width: 220px;
+  width: clamp(80px, calc(100vw - 580px), 220px);
   height: 32px;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  min-width: 80px;
 }
 #input-state:focus { border-color: var(--accent); }
 #input-state::placeholder { color: #404070; }
@@ -109,6 +112,26 @@ body {
   flex-shrink: 0;
 }
 .btn:hover { background: var(--btn-bg-h); }
+
+/* ── Responsive toolbar ── */
+
+/* Cache undo / redo + réduit padding */
+@media (max-width: 520px) {
+  #toolbar { padding: 0 14px; }
+  #toolbar .center-group { gap: 5px; }
+  .toolbar-sep { margin: 0; }
+  #input-state { padding: 0 8px; font-size: 12px; }
+  #btn-undo,
+  #btn-redo { display: none; }
+  #toolbar .center-group > .toolbar-sep:first-of-type { display: none; }
+}
+
+/* Cache aussi clear-arrows */
+@media (max-width: 400px) {
+  #btn-clear-arrows { display: none; }
+  #toolbar .center-group > .toolbar-sep { display: none; }
+  #toolbar { padding: 0 8px; }
+}
 
 /* ── Main area ── */
 #main {
