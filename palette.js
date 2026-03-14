@@ -124,7 +124,6 @@ const Palette = (() => {
   function _buildSections() {
     const container = panel.querySelector('#pal-sections');
     container.innerHTML = '';
-    const { psz } = LO.psz ? LO : { psz: 0 };
 
     for (let gi = 0; gi < GROUPS.length; gi++) {
       const g = GROUPS[gi];
@@ -133,16 +132,10 @@ const Palette = (() => {
 
       const hdr = document.createElement('div');
       hdr.className = 'pal-sec-hdr';
-      hdr.dataset.gi = gi;
-      hdr.innerHTML = `<span class="pal-sec-label">${typeof t === 'function' ? t(g.labelKey) : g.labelKey}</span><span class="pal-sec-chevron">${gi === openSec ? '∧' : '∨'}</span>`;
-      hdr.addEventListener('click', () => {
-        openSec = (openSec === gi) ? -1 : gi;
-        _buildSections();
-        _applyItemSizes();
-      });
+      hdr.innerHTML = `<span class="pal-sec-label">${typeof t === 'function' ? t(g.labelKey) : g.labelKey}</span>`;
 
       const grid = document.createElement('div');
-      grid.className = 'pal-grid' + (gi === openSec ? ' open' : '');
+      grid.className = 'pal-grid open';
 
       for (const name of g.names) {
         const item = document.createElement('div');

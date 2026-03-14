@@ -23,6 +23,26 @@ const LANGS = {
     palReset:       'Réinitialiser',
     secLancement:   'Lancement',
     secVermillon:   'Extension Vermillon',
+    // Help
+    btnHelp:          'Aide',
+    helpTitle:        'Commandes',
+    helpSecTokens:    'Jetons',
+    helpDragBoard:    'Clic gauche',
+    helpDragBoardDesc:'Déplacer le jeton par glisser-déposer',
+    helpMiddleTok:    'Clic molette',
+    helpMiddleTokDesc:'Plateau : changer équipe<br>Liste des personnages : bannir / débannir',
+    helpRightTok:     'Clic droit',
+    helpRightTokDesc: 'Plateau : menu (équipe / supprimer)<br>Liste des personnages : placer sur le plateau',
+    helpSecArrows:    'Flèches',
+    helpClickArrow:   'Clic gauche',
+    helpClickArrowDesc:'Sélectionner la flèche (couleur / supprimer)',
+    helpRightDrag:    'Clic droit',
+    helpRightDragDesc:'Maintenir appuyé et glisser vers une autre case pour tracer une flèche',
+    helpDelArrow:     'Suppr / Backspace',
+    helpDelArrowDesc: 'Supprimer la flèche sélectionnée',
+    helpSecGeneral:   'Général',
+    helpArrowKeys:    'Annuler / Rétablir',
+    helpEsc:          'Annuler action en cours',
   },
   en: {
     // Toolbar
@@ -47,6 +67,26 @@ const LANGS = {
     palReset:       'Reset',
     secLancement:   'Launch',
     secVermillon:   'Vermillon Expansion',
+    // Help
+    btnHelp:          'Help',
+    helpTitle:        'Controls',
+    helpSecTokens:    'Tokens',
+    helpDragBoard:    'Left-click',
+    helpDragBoardDesc:'Move the token by drag and drop',
+    helpMiddleTok:    'Middle-click',
+    helpMiddleTokDesc:'Board: toggle team<br>Character list: ban / unban',
+    helpRightTok:     'Right-click',
+    helpRightTokDesc: 'Board: menu (team / delete)<br>Character list: place on board',
+    helpSecArrows:    'Arrows',
+    helpClickArrow:   'Left-click',
+    helpClickArrowDesc:'Select the arrow (color / delete)',
+    helpRightDrag:    'Right-click',
+    helpRightDragDesc:'Hold and drag to another cell to draw an arrow',
+    helpDelArrow:     'Del / Backspace',
+    helpDelArrowDesc: 'Delete selected arrow',
+    helpSecGeneral:   'General',
+    helpArrowKeys:    'Undo / Redo',
+    helpEsc:          'Cancel current action',
   }
 };
 
@@ -91,6 +131,14 @@ function _applyLang() {
   });
   // Palette
   if (typeof Palette !== 'undefined' && Palette.applyLang) Palette.applyLang();
+  // Help
+  const btnHelp = document.getElementById('btn-help');
+  if (btnHelp) btnHelp.title = t('btnHelp');
+  const htitle = document.getElementById('help-title');
+  if (htitle) htitle.textContent = t('helpTitle');
+  document.querySelectorAll('#help-popup [data-i18n]').forEach(el => {
+    el.innerHTML = t(el.dataset.i18n);
+  });
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -580,8 +628,16 @@ function doLoad() {
 }
 function doCopy() {
   navigator.clipboard.writeText(enc(S)).then(()=>{
-    const b=document.getElementById('btn-copy'),o=b.textContent;
-    b.textContent=t('copied'); setTimeout(()=>b.textContent=o,1500);
+    const b = document.getElementById('btn-copy');
+    if (b._copyTimer) clearTimeout(b._copyTimer);
+    const originalHTML = b.innerHTML;
+    b.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    b._copyTimer = setTimeout(() => {
+      b.innerHTML = originalHTML;
+      b.style.color = '';
+      b.style.borderColor = '';
+      b._copyTimer = null;
+    }, 1000);
   });
 }
 
@@ -803,6 +859,15 @@ function init() {
   });
   document.getElementById('row-shadow').addEventListener('click', ()=>{
     showShadow=!showShadow; localStorage.setItem('leaders-shadow', showShadow); _syncToggle('tog-shadow',showShadow); render();
+  });
+
+  //Help
+  function _openHelp() { document.getElementById('help-overlay').classList.remove('hidden'); }
+  function _closeHelp() { document.getElementById('help-overlay').classList.add('hidden'); }
+  document.getElementById('btn-help').addEventListener('click', _openHelp);
+  document.getElementById('help-close').addEventListener('click', _closeHelp);
+  document.getElementById('help-overlay').addEventListener('mousedown', e => {
+    if (e.target === document.getElementById('help-overlay')) _closeHelp();
   });
 
   // Language switcher
