@@ -88,7 +88,7 @@ body {
   width: clamp(80px, calc(100vw - 580px), 220px);
   height: 32px;
   flex-shrink: 1;
-  min-width: 80px;
+  min-width: 100px;
 }
 #input-state:focus { border-color: var(--accent); }
 #input-state::placeholder { color: #404070; }
@@ -116,19 +116,18 @@ body {
 /* ── Responsive toolbar ── */
 
 /* Cache undo / redo + réduit padding */
-@media (max-width: 520px) {
+@media (max-width: 500px) {
   #toolbar { padding: 0 14px; }
   #toolbar .center-group { gap: 5px; }
   .toolbar-sep { margin: 0; }
   #input-state { padding: 0 8px; font-size: 12px; }
-  #btn-undo,
-  #btn-redo { display: none; }
-  #toolbar .center-group > .toolbar-sep:first-of-type { display: none; }
+  #btn-clear-arrows { display: none; }
+
 }
 
 /* Cache aussi clear-arrows */
 @media (max-width: 400px) {
-  #btn-clear-arrows { display: none; }
+  #btn-undo, #btn-redo { display: none; }
   #toolbar .center-group > .toolbar-sep { display: none; }
   #toolbar { padding: 0 8px; }
 }
