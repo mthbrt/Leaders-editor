@@ -1,180 +1,293 @@
-// ── PALETTE ───────────────────────────────────────────────────────────────────
-// API: Palette.{ layout, draw, onDown, onWheel, inPalette, palAt, isDragging,
-//               getCollapsedWidth, init }
-//
-// Depends on globals: S, LO, C, PAL_C, PAL_G, render, drawToken, saveH
-
+// ── PALETTE (HTML/CSS pure — zéro canvas) ─────────────────────────────────────
 const Palette = (() => {
 
-  // ── Constants ────────────────────────────────────────────────────────────────
-  const MARGIN   = 24;   // gap between canvas edge and panel
-  const INNER    = 14;   // padding inside panel on all 4 sides
-  const RADIUS   = 16;   // panel border radius
-  const HEADER_H = 36;   // height of the title/count header
-  const HEADER_GAP = 6;  // small gap between header and first token row
-  const SCROLL_W = 6;    // scrollbar width
-  const COL_W    = 28;   // collapsed panel width (just the toggle button)
+  const MARGIN  = 30;
+  const INNER   = 20;
+  const RADIUS  = 20;
+  const PAL_G   = 8;
+  const RUB_W   = 60;
+  const RUB_H   = 40;
+  const CIRC_R  = 24;
 
-  // ── State ─────────────────────────────────────────────────────────────────
-  let scrollY    = 0;
-  let contentH   = 0;   // computed each draw, used by scroll & scrollbar
+  const GROUPS = [
+    { key: 'lancement', labelKey: 'secLancement', names: Array.from({length:19}, (_,i) => String(i+1))  },
+    { key: 'vermillon', labelKey: 'secVermillon', names: Array.from({length:5},  (_,i) => String(i+20)) },
+  ];
+
   let collapsed  = false;
+  let openSec    = 0;
+  let panel      = null;
+  let ruban      = null;
+  let bubble     = null;
+  let lastPsz    = 0;   // pour ne recalculer la taille des items qu'en cas de changement
 
-  // ── Dynamic column count based on aspect ratio ────────────────────────────
-  function _colCount(W, H) {
-    const ratio = W / H;
-    if (ratio >= 1.5) return 3;
-    if (ratio >= 0.8) return 2;
-    return 1;
-  }
-
-  // ── Layout computation ────────────────────────────────────────────────────
-  // Returns { palX, palY, palW, palH, palCols } for the current canvas size.
-  // Called by editor's relayout() to feed LO.
+  // ── Layout ─────────────────────────────────────────────────────────────────
   function layout(W, H, rEst) {
-    const pgap = PAL_G;
-    const cols = _colCount(W, H);
-    const palW = Math.max(72, rEst * 2 * cols + INNER * 2 + pgap * (cols - 1));
-    const palH = collapsed ? HEADER_H : H - MARGIN * 2;
+    const cols = 3;
+    const psz  = rEst * 2;
+    const itemSz = Math.round(psz * 0.90);
+    const palW = INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 2; // +2 for 1px border each side
+    const palH = H - MARGIN * 2;
     const palX = W - palW - MARGIN;
     const palY = MARGIN;
     return { palX, palY, palW, palH, palCols: cols };
   }
 
-  // ── Hit testing ───────────────────────────────────────────────────────────
+  // ── Hit testing ────────────────────────────────────────────────────────────
+  function _mainRect() {
+    return document.getElementById('main').getBoundingClientRect();
+  }
+
   function inPalette(x, y) {
-    const { palX, palY, palW, palH } = LO;
-    return x >= palX && x <= palX + palW && y >= palY && y <= palY + palH;
+    const r = _mainRect();
+    const el = document.elementFromPoint(x + r.left, y + r.top);
+    if (!el) return false;
+    return !!(el.closest('#pal-panel') || el.closest('#pal-ruban') || el.closest('#pal-bubble'));
   }
 
-  // Returns the token name under (x,y), or null.
   function palAt(x, y) {
-    if (collapsed) return null;
-    const { palX, palY, psz, pgap, palCols } = LO;
-    const cols = palCols || 3;
-    const step = psz + pgap;
-    const col  = Math.floor((x - palX - INNER) / step);
-    const clipY = palY + HEADER_H + HEADER_GAP;
-    const row  = Math.floor((y - clipY + scrollY) / step);
-    if (col < 0 || col >= cols) return null;
-    const i = row * cols + col;
-    if (i < 0 || i >= S.palette.length) return null;
-    const px = palX + INNER + col * step;
-    const py = clipY + row * step - scrollY;
-    return (x >= px && x <= px + psz && y >= py && y <= py + psz) ? S.palette[i] : null;
+    const r = _mainRect();
+    const el = document.elementFromPoint(x + r.left, y + r.top);
+    if (!el) return null;
+    const item = el.closest('.pal-item');
+    return item ? item.dataset.name : null;
   }
 
-  // ── Toggle button hit ─────────────────────────────────────────────────────
-  function _inToggle(x, y) {
-    const { palX, palY, palW } = LO;
-    return x >= palX && x <= palX + palW && y >= palY && y <= palY + HEADER_H;
+  // ── No-ops pour compatibilité avec editor.js ───────────────────────────────
+  function onDown(x, y)        { return false; }
+  function onMove(x, y)        {}
+  function onWheel(x, y, dy)   { return false; }
+  function draw(ctx)           {}
+
+  // ── Construction du DOM ───────────────────────────────────────────────────
+  function _build() {
+    const main = document.getElementById('main');
+
+    // Panel — structure : header fixe / body scrollable / footer FIXE (hors body)
+    panel = document.createElement('div');
+    panel.id = 'pal-panel';
+    panel.innerHTML = `
+      <div id="pal-header"><span id="pal-title">PERSONNAGES</span></div>
+      <div id="pal-body"><div id="pal-sections"></div></div>
+      <div id="pal-footer"><button id="pal-reset">Réinitialiser</button></div>`;
+    main.appendChild(panel);
+
+    // Ruban (toggle collapse), positionné en absolu dans #main
+    ruban = document.createElement('div');
+    ruban.id = 'pal-ruban';
+    ruban.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="84" height="40" viewBox="0 0 84 40">
+      <polygon points="84,0 84,40 0,40 14,20 0,0" fill="#1a1a2e" stroke="rgba(70,70,160,0.5)" stroke-width="1.5" stroke-linejoin="round"/>
+      <polyline id="ruban-chevron" points="26,14 34,20 26,26" fill="none" stroke="rgba(140,140,220,0.8)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    main.appendChild(ruban);
+
+    // Bubble (état collapsed)
+    bubble = document.createElement('div');
+    bubble.id = 'pal-bubble';
+    bubble.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+      <!-- Jeton / personnage : silhouette tête + corps -->
+      <circle cx="18" cy="12" r="6" fill="rgba(140,140,220,0.85)"/>
+      <path d="M6 32 C6 22 30 22 30 32" fill="rgba(140,140,220,0.85)"/>
+      <!-- Petit + en bas à droite -->
+      <circle cx="27" cy="27" r="7" fill="#1a1a2e" stroke="rgba(70,70,160,0.8)" stroke-width="1.2"/>
+      <line x1="27" y1="23" x2="27" y2="31" stroke="rgba(140,140,220,0.9)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="23" y1="27" x2="31" y2="27" stroke="rgba(140,140,220,0.9)" stroke-width="2" stroke-linecap="round"/>
+    </svg>`;
+    main.appendChild(bubble);
+
+    _buildSections();
+
+    // Events collapse
+    ruban.addEventListener('click', _toggleCollapse);
+    bubble.addEventListener('click', _toggleCollapse);
+
+    panel.querySelector('#pal-reset').addEventListener('click', e => {
+      e.stopPropagation(); doReset();
+    });
+
+    // IMPORTANT : on laisse mousedown remonter vers #main pour le drag&drop,
+    // SAUF pour les éléments de contrôle (reset, headers de section, ruban).
+    // On bloque seulement sur ces éléments précis.
+    panel.querySelector('#pal-reset').addEventListener('mousedown', e => e.stopPropagation());
+    panel.querySelector('#pal-header').addEventListener('mousedown', e => e.stopPropagation());
+    ruban.addEventListener('mousedown', e => e.stopPropagation());
+    bubble.addEventListener('mousedown', e => e.stopPropagation());
+    // Les headers de section sont reconstruits, on délègue via le panel
+    panel.addEventListener('mousedown', e => {
+      const hdr = e.target.closest('.pal-sec-hdr');
+      if (hdr) e.stopPropagation(); // ne pas déclencher de drag sur les headers
+    });
+
+    _syncCollapsed();
   }
 
-  // ── Events ────────────────────────────────────────────────────────────────
-  function onDown(x, y) {
-    if (!inPalette(x, y)) return false;
-    if (_inToggle(x, y)) {
-      collapsed = !collapsed;
-      scrollY = 0;
-      relayout();
-      render();
-      return true;
+  function _buildSections() {
+    const container = panel.querySelector('#pal-sections');
+    container.innerHTML = '';
+    const { psz } = LO.psz ? LO : { psz: 0 };
+
+    for (let gi = 0; gi < GROUPS.length; gi++) {
+      const g = GROUPS[gi];
+      const sec = document.createElement('div');
+      sec.className = 'pal-section';
+
+      const hdr = document.createElement('div');
+      hdr.className = 'pal-sec-hdr';
+      hdr.dataset.gi = gi;
+      hdr.innerHTML = `<span class="pal-sec-label">${typeof t === 'function' ? t(g.labelKey) : g.labelKey}</span><span class="pal-sec-chevron">${gi === openSec ? '∧' : '∨'}</span>`;
+      hdr.addEventListener('click', () => {
+        openSec = (openSec === gi) ? -1 : gi;
+        _buildSections();
+        _applyItemSizes();
+      });
+
+      const grid = document.createElement('div');
+      grid.className = 'pal-grid' + (gi === openSec ? ' open' : '');
+
+      for (const name of g.names) {
+        const item = document.createElement('div');
+        const banned = (S.banned || []).includes(name);
+        item.className = 'pal-item' + (banned ? ' pal-item-banned' : '');
+        item.dataset.name = name;
+        const count = S.tokens.filter(t => t.name === name).length;
+        const img = document.createElement('img');
+        img.src = `jetons_noir/${name}.png`;
+        img.alt = name;
+        img.draggable = false;
+        item.appendChild(img);
+        if (count > 0) {
+          const badge = document.createElement('span');
+          badge.className = 'pal-badge';
+          badge.textContent = count;
+          item.appendChild(badge);
+        }
+        if (banned) {
+          const banOverlay = document.createElement('div');
+          banOverlay.className = 'pal-item-ban-overlay';
+          const banImg = document.createElement('img');
+          banImg.src = 'ui/ban.png';
+          banImg.draggable = false;
+          banOverlay.appendChild(banImg);
+          item.appendChild(banOverlay);
+        }
+        grid.appendChild(item);
+      }
+
+      sec.appendChild(hdr);
+      sec.appendChild(grid);
+      container.appendChild(sec);
     }
-    return false;
   }
 
-  function onWheel(x, y, deltaY) {
-    if (!inPalette(x, y) || collapsed) return false;
-    const { palH } = LO;
-    const clipH    = palH - HEADER_H - HEADER_GAP - INNER;
-    const maxScroll = Math.max(0, contentH - clipH);
-    scrollY = Math.max(0, Math.min(maxScroll, scrollY + deltaY * 0.6));
-    render();
-    return true;
-  }
-
-  // ── Drawing ───────────────────────────────────────────────────────────────
-  function draw(ctx) {
-    const { palX, palY, palW, palH, psz, pgap, scrollBarW } = LO;
-
-    // ── Shadow ──
-    ctx.save();
-    ctx.shadowColor   = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur    = 22;
-    ctx.shadowOffsetY = 4;
-    ctx.fillStyle = C.palBg;
-    ctx.beginPath(); ctx.roundRect(palX, palY, palW, palH, RADIUS); ctx.fill();
-    ctx.restore();
-
-    // ── Panel background + border ──
-    ctx.save();
-    ctx.fillStyle = C.palBg;
-    ctx.beginPath(); ctx.roundRect(palX, palY, palW, palH, RADIUS); ctx.fill();
-    ctx.strokeStyle = 'rgba(70,70,160,0.55)';
-    ctx.lineWidth   = 1;
-    ctx.stroke();
-    ctx.restore();
-
-    // ── Toggle button (always visible) ──
-    _drawToggle(ctx, palX, palY, palW);
-
-    // ── Header text (always visible) ──
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle    = C.palHdr;
-    ctx.font         = "bold 11px 'Segoe UI',sans-serif";
-    ctx.fillText('CHARACTERS', palX + palW / 2, palY + 14);
-    ctx.fillStyle = '#30306a';
-    ctx.font      = "10px 'Segoe UI',sans-serif";
-    ctx.fillText(`${S.palette.length} available`, palX + palW / 2, palY + 26);
-
-    if (collapsed) return;
-
-    // ── Token grid (clipped) ──
-    const clipY = palY + HEADER_H + HEADER_GAP;
-    const clipH = palH - HEADER_H - HEADER_GAP - INNER;
-    const step  = psz + pgap;
-    const cols  = LO.palCols || 3;
-    contentH    = Math.ceil(S.palette.length / cols) * step - pgap;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(palX, clipY, palW, clipH);
-    ctx.clip();
-
-    for (let i = 0; i < S.palette.length; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const px  = palX + INNER + col * step;
-      const py  = clipY + row * step - scrollY;
-      if (py + psz < clipY - 2 || py > clipY + clipH + 2) continue;
-      drawToken(ctx, px + psz / 2, py + psz / 2, psz / 2 * 0.90, S.palette[i], 'w');
+  function _applyItemSizes() {
+    const { psz } = LO;
+    if (!psz || !panel) return;
+    const sz = Math.round(psz * 0.90) + 'px';
+    for (const item of panel.querySelectorAll('.pal-item')) {
+      item.style.width  = sz;
+      item.style.height = sz;
     }
-    ctx.restore();
-
-  
   }
 
-  function _drawToggle(ctx, palX, palY, palW) {
-    // ∨ = expanded (click to collapse upward)
-    // ∧ = collapsed (click to expand downward)
-    const cx  = palX + palW - 14;
-    const cy  = palY + HEADER_H / 2;
-    const arr = collapsed ? '∨' : '∧';
-    ctx.save();
-    ctx.fillStyle    = 'rgba(130,130,210,0.85)';
-    ctx.font         = "bold 13px 'Segoe UI',sans-serif";
-    ctx.textAlign    = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(arr, cx, cy);
-    ctx.restore();
+  function _toggleCollapse() {
+    collapsed = !collapsed;
+    _syncCollapsed();
   }
 
-  // ── Exposed helpers ───────────────────────────────────────────────────────
-  function getScrollY()        { return scrollY; }
-  function isCollapsed()       { return collapsed; }
+  function _syncCollapsed() {
+    panel.classList.toggle('collapsed', collapsed);
+    ruban.classList.toggle('collapsed', collapsed);
+    bubble.classList.toggle('visible', collapsed);
+    const chevron = ruban.querySelector('#ruban-chevron');
+    if (chevron) chevron.setAttribute('points', collapsed ? '34,14 26,20 34,26' : '26,14 34,20 26,26');
+    // Déplacer le ruban directement ici, sans attendre syncDOM
+    if (LO && LO.palX !== undefined) {
+      const { palX, palW, palH } = LO;
+      const bubbleCX = palX + palW - CIRC_R;
+      ruban.style.left = (collapsed ? bubbleCX - CIRC_R - RUB_W : palX - RUB_W) + 'px';
+    }
+    syncDOM();
+  }
 
-  return { layout, draw, onDown, onWheel, inPalette, palAt,
-           getScrollY, isCollapsed };
+  // ── Mise à jour du DOM après chaque render() ──────────────────────────────
+  function syncDOM() {
+    if (!panel) return;
+    const { palX, palY, palW, palH, psz } = LO;
 
+    // Position + taille du panel
+    panel.style.left   = palX + 'px';
+    panel.style.top    = palY + 'px';
+    panel.style.width  = palW + 'px';
+    panel.style.height = palH + 'px';
+
+    // Bubble : bord droit aligné bord droit palette, Y aligné sur le ruban
+    bubble.style.left = (palX + palW - CIRC_R * 2) + 'px';
+    bubble.style.top  = (palY + RADIUS + RUB_H / 2 - CIRC_R) + 'px';
+
+    // Ruban : bord droit au centre du rond (replié) ou bord gauche palette (déplié)
+    const bubbleCX = palX + palW - CIRC_R;
+    ruban.style.left = (collapsed ? bubbleCX - CIRC_R - RUB_W : palX - RUB_W) + 'px';
+    ruban.style.top  = (palY + RADIUS) + 'px';
+
+    // Taille des items : recalculer seulement si psz a changé (resize fenêtre)
+    if (psz && Math.abs(psz - lastPsz) > 0.5) {
+      lastPsz = psz;
+      _applyItemSizes();
+    }
+
+    _syncItems();
+  }
+
+  function _syncItems() {
+    for (const item of panel.querySelectorAll('.pal-item')) {
+      const name  = item.dataset.name;
+      const banned = (S.banned || []).includes(name);
+      item.classList.toggle('pal-item-banned', banned);
+      const count = S.tokens.filter(t => t.name === name).length;
+      const img   = item.querySelector('img');
+      const expectedSrc = `jetons_noir/${name}.png`;
+      if (!img.src.endsWith(expectedSrc)) img.src = expectedSrc;
+      let badge = item.querySelector('.pal-badge');
+      if (count > 0) {
+        if (!badge) { badge = document.createElement('span'); badge.className = 'pal-badge'; item.appendChild(badge); }
+        badge.textContent = count;
+      } else {
+        if (badge) badge.remove();
+      }
+      // Sync ban overlay
+      let banOverlay = item.querySelector('.pal-item-ban-overlay');
+      if (banned) {
+        if (!banOverlay) {
+          banOverlay = document.createElement('div');
+          banOverlay.className = 'pal-item-ban-overlay';
+          const banImg = document.createElement('img');
+          banImg.src = 'ui/ban.png';
+          banImg.draggable = false;
+          banOverlay.appendChild(banImg);
+          item.appendChild(banOverlay);
+        }
+      } else {
+        if (banOverlay) banOverlay.remove();
+      }
+    }
+  }
+
+  function applyLang() {
+    const title = panel && panel.querySelector('#pal-title');
+    if (title && typeof t === 'function') title.textContent = t('palTitle');
+    const reset = panel && panel.querySelector('#pal-reset');
+    if (reset && typeof t === 'function') reset.textContent = t('palReset');
+    // Update section headers
+    panel && panel.querySelectorAll('.pal-sec-hdr').forEach((hdr, gi) => {
+      const label = hdr.querySelector('.pal-sec-label');
+      if (label && GROUPS[gi] && typeof t === 'function') label.textContent = t(GROUPS[gi].labelKey);
+    });
+  }
+
+  function getScrollY()  { return 0; }
+  function isCollapsed() { return collapsed; }
+  function init()        { _build(); }
+
+  return { layout, draw, onDown, onMove, onWheel, inPalette, palAt,
+           syncDOM, getScrollY, isCollapsed, applyLang, init };
 })();

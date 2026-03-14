@@ -1,6 +1,7 @@
 // ── ARROWS ────────────────────────────────────────────────────────────────────
+// SVG-based arrows — zéro canvas. API identique à l'ancienne version.
 // API: Arrows.{ onDown, onMove, onUp, onKey, resetState, clearSelected,
-//               draw, drawPreview, updateCursor, getArrowSrc, isDragging, init }
+//               render, updateCursor, getArrowSrc, isDragging, init }
 
 const Arrows = (() => {
 
@@ -8,23 +9,23 @@ const Arrows = (() => {
   const nextColor = c => COLORS[(COLORS.indexOf(c) + 1) % COLORS.length];
 
   let sel      = null;
-  let drawFrom = null;   // cell id while right-dragging
-  let bendDrag = null;   // { id, ox, oy }
+  let drawFrom = null;
+  let bendDrag = null;
   let mouse    = { x: 0, y: 0 };
   let toolbar  = null;
+  let svg      = null;  // l'élément <svg> dans #main (flèches)
 
-  // ── Shared geometry — single source of truth ──────────────────────────────
-  // Returns the exact points used both for drawing AND for hit-testing.
+  // ── Géométrie partagée ────────────────────────────────────────────────────
   function _geom(a) {
     const s = LO.byId.get(a.from_cell), d = LO.byId.get(a.to_cell);
     if (!s || !d) return null;
-    const cp = {                          // quadratic control point
+    const cp = {
       x: (s.x + d.x) / 2 + (a.mx || 0),
       y: (s.y + d.y) / 2 + (a.my || 0)
     };
-    const shrinkSrc = LO.r * 1.0;    // shaft starts at cell edge
-    const shrinkDst = LO.r * 0.30;   // arrowhead tip goes well into destination cell
-    const headLen = Math.max(13, LO.r * 0.56);
+    const shrinkSrc = LO.r * 1.0;
+    const shrinkDst = LO.r * 0.30;
+    const headLen   = Math.max(13, LO.r * 0.56);
 
     const spt = (ax, ay, bx, by, dist) => {
       const l = Math.hypot(bx - ax, by - ay);
@@ -32,26 +33,27 @@ const Arrows = (() => {
       return { x: ax + (bx - ax) / l * dist, y: ay + (by - ay) / l * dist };
     };
 
-    const p1 = spt(s.x, s.y, cp.x, cp.y, shrinkSrc);   // shaft start
-    const p2 = spt(d.x, d.y, cp.x, cp.y, shrinkDst);   // arrowhead tip
+    const p1  = spt(s.x, s.y, cp.x, cp.y, shrinkSrc);
+    const p2  = spt(d.x, d.y, cp.x, cp.y, shrinkDst);
 
-    // direction at tip: tangent of the quadratic at t=1 = 2*(p2-cp)
-    const ang = Math.atan2(p2.y - cp.y, p2.x - cp.x);
-    const pe  = {                                      // shaft end (before head)
+    // Tangente en bout de Bézier (t=1) : 2*(p2 - cp)
+    // Si cp est dégénéré (trop proche de p2), on replie sur la direction src→dst
+    let dx = p2.x - cp.x, dy = p2.y - cp.y;
+    if (Math.hypot(dx, dy) < 0.5) { dx = d.x - s.x; dy = d.y - s.y; }
+    const ang = Math.atan2(dy, dx);
+
+    const pe  = {
       x: p2.x - headLen * 0.72 * Math.cos(ang),
       y: p2.y - headLen * 0.72 * Math.sin(ang)
     };
-
-    // on-curve midpoint at t=0.5 (exact Bézier, using shaft endpoints + cp)
     const mid = {
       x: 0.25 * p1.x + 0.5 * cp.x + 0.25 * pe.x,
       y: 0.25 * p1.y + 0.5 * cp.y + 0.25 * pe.y
     };
-
     return { cp, p1, p2, pe, ang, headLen, mid };
   }
 
-  // ── Hit-testing (uses _geom — always matches drawn curve) ─────────────────
+  // ── Hit-testing ───────────────────────────────────────────────────────────
   function _hitArrow(x, y) {
     const thr = Math.max(7, LO.r * 0.22);
     for (let i = S.arrows.length - 1; i >= 0; i--) {
@@ -86,7 +88,7 @@ const Arrows = (() => {
     return best;
   }
 
-  // ── Toolbar ───────────────────────────────────────────────────────────────
+  // ── Toolbar (inchangé — déjà en HTML) ─────────────────────────────────────
   function _mkToolbar() {
     if (toolbar) return toolbar;
     const el = document.createElement('div');
@@ -118,7 +120,6 @@ const Arrows = (() => {
       e.stopPropagation();
       const a = S.arrows.find(a => a.id === sel); if (!a) return;
       const presets = [[0,0],[-40,0]];
-      // toggle: straight ↔ slight curve
       const cur = presets.findIndex(([mx,my]) => Math.abs(a.mx-mx)<5 && Math.abs(a.my-my)<5);
       [a.mx, a.my] = presets[(cur + 1) % presets.length];
       saveH(); render(); _placeToolbar();
@@ -145,7 +146,6 @@ const Arrows = (() => {
 
     requestAnimationFrame(() => {
       const pw = el.offsetWidth, ph = el.offsetHeight;
-      // perpendicular to the src→dst direction, offset from the on-curve midpoint
       const s = LO.byId.get(a.from_cell), d = LO.byId.get(a.to_cell);
       if (!s || !d) { _hideToolbar(); return; }
       const dx = d.x - s.x, dy = d.y - s.y, len = Math.hypot(dx, dy) || 1;
@@ -165,23 +165,31 @@ const Arrows = (() => {
   // ── Events ─────────────────────────────────────────────────────────────────
   function onDown(e, x, y) {
     if (e.button === 2) {
+      const hit = _hitArrow(x, y);
+      if (hit) {
+        sel = hit.id;
+        if (typeof tokTbId !== 'undefined') { tokTbId = null; if (typeof _hideTokToolbar === 'function') _hideTokToolbar(); }
+        _placeToolbar(); render(); return true;
+      }
       const cell = _nearCell(x, y);
-      if (cell) { drawFrom = cell.id; render(); return true; }
+      if (cell) { sel = null; _hideToolbar(); drawFrom = cell.id; render(); return true; }
       return false;
     }
     if (e.button !== 0) return false;
 
     if (_hitBend(x, y)) {
       const a = S.arrows.find(a => a.id === sel);
-      const g = _geom(a);
-      // drag offset relative to the control point (not the on-curve mid)
       bendDrag = { id: a.id };
       if (toolbar) toolbar.style.pointerEvents = 'none';
       return true;
     }
 
     const hit = _hitArrow(x, y);
-    if (hit) { sel = hit.id; _placeToolbar(); render(); return true; }
+    if (hit) {
+      sel = hit.id;
+      if (typeof tokTbId !== 'undefined') { tokTbId = null; if (typeof _hideTokToolbar === 'function') _hideTokToolbar(); }
+      _placeToolbar(); render(); return true;
+    }
 
     sel = null; _hideToolbar(); render(); return false;
   }
@@ -193,11 +201,6 @@ const Arrows = (() => {
       if (a) {
         const s = LO.byId.get(a.from_cell), d = LO.byId.get(a.to_cell);
         if (s && d) {
-          // mouse is on the curve at t=0.5 (mid).
-          // mid = 0.25*p1 + 0.5*cp + 0.25*pe  =>  cp = 2*mid - 0.5*(p1+pe)
-          // p1 and pe depend on cp, but their shrink direction (toward cp) is
-          // stable enough for one linearised step. We compute p1/pe from the
-          // CURRENT cp, then solve for the new cp that places mid under mouse.
           const _g = _geom(a);
           if (_g) {
             const newCpx = 2 * x - 0.5 * (_g.p1.x + _g.pe.x);
@@ -227,7 +230,9 @@ const Arrows = (() => {
       drawFrom = null; render(); return true;
     }
     if (bendDrag && e.button === 0) {
-      bendDrag = null; if (toolbar) toolbar.style.pointerEvents = 'all'; saveH(); _placeToolbar(); render(); return true;
+      bendDrag = null;
+      if (toolbar) toolbar.style.pointerEvents = 'all';
+      saveH(); _placeToolbar(); render(); return true;
     }
     return false;
   }
@@ -244,165 +249,155 @@ const Arrows = (() => {
   function resetState()    { sel = null; drawFrom = null; bendDrag = null; if (toolbar) toolbar.style.pointerEvents = 'all'; _hideToolbar(); }
   function clearSelected() { sel = null; _hideToolbar(); }
 
-  // ── Drawing ────────────────────────────────────────────────────────────────
-  function draw(ctx) {
+  // ── SVG helpers ───────────────────────────────────────────────────────────
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function _el(tag, attrs) {
+    const e = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    return e;
+  }
+
+  // Construit le d= d'une flèche (tige quadratique + tête)
+  function _arrowPath(g) {
+    const { p1, cp, pe, p2, ang, headLen } = g;
+    const ha = 0.40;
+    const shaft = `M${p1.x},${p1.y} Q${cp.x},${cp.y} ${pe.x},${pe.y}`;
+    const hx1 = p2.x - headLen * Math.cos(ang - ha);
+    const hy1 = p2.y - headLen * Math.sin(ang - ha);
+    const hx2 = p2.x - headLen * Math.cos(ang + ha);
+    const hy2 = p2.y - headLen * Math.sin(ang + ha);
+    const head = `M${p2.x},${p2.y} L${hx1},${hy1} L${hx2},${hy2} Z`;
+    return { shaft, head };
+  }
+
+  // ── Rendu SVG ─────────────────────────────────────────────────────────────
+  function render() {
+    if (!svg) return;
     const lw = Math.max(2.8, LO.r * 0.15);
-    ctx.save();
+
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Filtre ombre unifié — appliqué sur un <g> qui contient tige + tête
+    // => l'ombre est calculée sur la forme complète, pas élément par élément
+    const defs = _el('defs', {});
+    const filt = _el('filter', { id: 'arr-shadow', x: '-30%', y: '-30%', width: '160%', height: '160%', 'color-interpolation-filters': 'sRGB' });
+    const fe   = _el('feDropShadow', { dx: '0', dy: '0', stdDeviation: '2.5', 'flood-color': '#000', 'flood-opacity': '0.55' });
+    filt.appendChild(fe); defs.appendChild(filt); svg.appendChild(defs);
+
+    // Toutes les flèches persistantes
     for (const a of S.arrows) {
       const g = _geom(a); if (!g) continue;
       const isSel = sel === a.id;
+      const { shaft, head } = _arrowPath(g);
 
-      ctx.strokeStyle = a.color;
-      ctx.fillStyle   = a.color;
-      ctx.lineCap     = 'round';
-      ctx.lineJoin    = 'round';
-
-      const ha = 0.40;
-
-      // selection glow
+      // Glow de sélection (sans ombre)
       if (isSel) {
-        ctx.save();
-        ctx.strokeStyle = a.color;
-        ctx.lineWidth   = lw + 8;
-        ctx.globalAlpha = 0.15;
-        ctx.beginPath();
-        ctx.moveTo(g.p1.x, g.p1.y);
-        ctx.quadraticCurveTo(g.cp.x, g.cp.y, g.pe.x, g.pe.y);
-        ctx.stroke();
-        ctx.restore();
+        svg.appendChild(_el('path', {
+          d: shaft,
+          stroke: a.color,
+          'stroke-width': lw + 8,
+          fill: 'none',
+          'stroke-linecap': 'round',
+          opacity: '0.15'
+        }));
       }
 
-      // ── shadow pass: shaft + head together so shadow is unified ──
-      ctx.save();
-      ctx.shadowColor   = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur    = 4;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 0;
-      ctx.strokeStyle = a.color;
-      ctx.fillStyle   = a.color;
-      ctx.lineWidth   = lw;
-      ctx.beginPath();
-      ctx.moveTo(g.p1.x, g.p1.y);
-      ctx.quadraticCurveTo(g.cp.x, g.cp.y, g.pe.x, g.pe.y);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(g.p2.x, g.p2.y);
-      ctx.lineTo(g.p2.x - g.headLen * Math.cos(g.ang - ha), g.p2.y - g.headLen * Math.sin(g.ang - ha));
-      ctx.lineTo(g.p2.x - g.headLen * Math.cos(g.ang + ha), g.p2.y - g.headLen * Math.sin(g.ang + ha));
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      // Groupe tige + tête avec UNE SEULE ombre sur l'ensemble
+      const shadow = _el('g', { filter: 'url(#arr-shadow)' });
+      shadow.appendChild(_el('path', {
+        d: shaft,
+        stroke: a.color,
+        'stroke-width': lw,
+        fill: 'none',
+        'stroke-linecap': 'round',
+        'stroke-linejoin': 'round'
+      }));
+      shadow.appendChild(_el('path', {
+        d: head,
+        fill: a.color,
+        stroke: a.color,
+        'stroke-width': '0.5',
+        'stroke-linejoin': 'round'
+      }));
+      svg.appendChild(shadow);
 
-      // ── colour pass: redraw on top without shadow so head doesn't cast shadow on shaft ──
-      ctx.save();
-      ctx.strokeStyle = a.color;
-      ctx.fillStyle   = a.color;
-      ctx.lineWidth   = lw;
-      ctx.beginPath();
-      ctx.moveTo(g.p1.x, g.p1.y);
-      ctx.quadraticCurveTo(g.cp.x, g.cp.y, g.pe.x, g.pe.y);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(g.p2.x, g.p2.y);
-      ctx.lineTo(g.p2.x - g.headLen * Math.cos(g.ang - ha), g.p2.y - g.headLen * Math.sin(g.ang - ha));
-      ctx.lineTo(g.p2.x - g.headLen * Math.cos(g.ang + ha), g.p2.y - g.headLen * Math.sin(g.ang + ha));
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      // diamond handle — on the visible curve (mid at t=0.5)
+      // Diamant de courbure (handle) si sélectionné — pas d'ombre
       if (isSel) {
         const hs = Math.max(6, LO.r * 0.18);
         const { x: hx, y: hy } = g.mid;
-        ctx.save();
-        ctx.fillStyle   = '#ffffff';
-        ctx.strokeStyle = a.color;
-        ctx.lineWidth   = 2;
-        ctx.beginPath();
-        ctx.moveTo(hx,      hy - hs);
-        ctx.lineTo(hx + hs, hy);
-        ctx.lineTo(hx,      hy + hs);
-        ctx.lineTo(hx - hs, hy);
-        ctx.closePath();
-        ctx.fill(); ctx.stroke();
-        ctx.restore();
+        svg.appendChild(_el('polygon', {
+          points: `${hx},${hy - hs} ${hx + hs},${hy} ${hx},${hy + hs} ${hx - hs},${hy}`,
+          fill: '#ffffff',
+          stroke: a.color,
+          'stroke-width': '2'
+        }));
       }
     }
-    ctx.restore();
-  }
 
-  function drawPreview(ctx) {
-    if (drawFrom === null) return;
-    const src = LO.byId.get(drawFrom); if (!src) return;
-    const snap = _nearCell(mouse.x, mouse.y);
-    const tx = snap && snap.id !== drawFrom ? snap.x : mouse.x;
-    const ty = snap && snap.id !== drawFrom ? snap.y : mouse.y;
+    // Preview flèche en cours de tracé
+    if (drawFrom !== null) {
+      const src = LO.byId.get(drawFrom); if (!src) return;
+      const snap = _nearCell(mouse.x, mouse.y);
+      if (!snap || snap.id === drawFrom) return;
 
-    // Build a temporary arrow and draw it semi-transparent
-    const fake = { id: -1, from_cell: drawFrom, to_cell: -1, mx: 0, my: 0, color: COLORS[0] };
-    // Override _geom for preview by computing geometry inline
-    const lw      = Math.max(2.8, LO.r * 0.15);
-    const shrinkSrc = LO.r * 1.0;
-    const shrinkDst = LO.r * 0.40;
-    const headLen = Math.max(13, LO.r * 0.56);
-    const ha      = 0.40;
+      const shrinkSrc = LO.r * 1.0;
+      const shrinkDst = LO.r * 0.40;
+      const headLen   = Math.max(13, LO.r * 0.56);
+      const ha        = 0.40;
+      const cpx = (src.x + snap.x) / 2;
+      const cpy = (src.y + snap.y) / 2;
 
-    const spt = (ax, ay, bx, by, dist) => {
-      const l = Math.hypot(bx - ax, by - ay); if (l < 1) return [ax, ay];
-      return [ax + (bx - ax) / l * dist, ay + (by - ay) / l * dist];
-    };
-
-    // Don't draw anything if hovering the source cell or out of range
-    if (!snap || snap.id === drawFrom) return;
-
-    const cpx = (src.x + tx) / 2;
-    const cpy = (src.y + ty) / 2;
-
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle   = COLORS[0];
-    ctx.strokeStyle = COLORS[0];
-    ctx.lineWidth   = lw;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
-
-    {
+      const spt = (ax, ay, bx, by, dist) => {
+        const l = Math.hypot(bx - ax, by - ay); if (l < 1) return [ax, ay];
+        return [ax + (bx - ax) / l * dist, ay + (by - ay) / l * dist];
+      };
       const [x1, y1] = spt(src.x, src.y, cpx, cpy, shrinkSrc);
-      const [x2, y2] = spt(tx, ty, cpx, cpy, shrinkDst);
+      const [x2, y2] = spt(snap.x, snap.y, cpx, cpy, shrinkDst);
       const ang = Math.atan2(y2 - cpy, x2 - cpx);
       const lx2 = x2 - headLen * 0.72 * Math.cos(ang);
       const ly2 = y2 - headLen * 0.72 * Math.sin(ang);
+      const hx1 = x2 - headLen * Math.cos(ang - ha);
+      const hy1 = y2 - headLen * Math.sin(ang - ha);
+      const hx2b = x2 - headLen * Math.cos(ang + ha);
+      const hy2b = y2 - headLen * Math.sin(ang + ha);
 
-      // shaft
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo(cpx, cpy, lx2, ly2);
-      ctx.stroke();
-
-      // head
-      ctx.beginPath();
-      ctx.moveTo(x2, y2);
-      ctx.lineTo(x2 - headLen * Math.cos(ang - ha), y2 - headLen * Math.sin(ang - ha));
-      ctx.lineTo(x2 - headLen * Math.cos(ang + ha), y2 - headLen * Math.sin(ang + ha));
-      ctx.closePath();
-      ctx.fill();
+      const grp = _el('g', { opacity: '0.45' });
+      grp.appendChild(_el('path', {
+        d: `M${x1},${y1} Q${cpx},${cpy} ${lx2},${ly2}`,
+        stroke: COLORS[0], 'stroke-width': lw,
+        fill: 'none', 'stroke-linecap': 'round'
+      }));
+      grp.appendChild(_el('path', {
+        d: `M${x2},${y2} L${hx1},${hy1} L${hx2b},${hy2b} Z`,
+        fill: COLORS[0], stroke: 'none'
+      }));
+      svg.appendChild(grp);
     }
-
-    ctx.restore();
   }
 
-  function updateCursor(cv, x, y) {
-    if (bendDrag)          { cv.style.cursor = 'grabbing';  return true; }
-    if (drawFrom !== null) { cv.style.cursor = 'crosshair'; return true; }
-    if (_hitBend(x, y))    { cv.style.cursor = 'grab';      return true; }
-    if (_hitArrow(x, y))   { cv.style.cursor = 'pointer';   return true; }
+  // ── Curseur ───────────────────────────────────────────────────────────────
+  function updateCursor(el, x, y) {
+    if (bendDrag)          { el.style.cursor = 'grabbing';  return true; }
+    if (drawFrom !== null) { el.style.cursor = 'crosshair'; return true; }
+    if (_hitBend(x, y))    { el.style.cursor = 'grab';      return true; }
+    if (_hitArrow(x, y))   { el.style.cursor = 'pointer';   return true; }
     return false;
   }
 
-  function getArrowSrc() { return null; } // no source highlight wanted
+  function getArrowSrc() { return null; }
   function isDragging()  { return bendDrag !== null || drawFrom !== null; }
-  function init()        { _mkToolbar(); }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  function init() {
+    svg = document.getElementById('arrows-svg');
+    _mkToolbar();
+  }
+
+  // Rendre draw() et drawPreview() no-ops (remplacés par render())
+  function draw() {}
+  function drawPreview() {}
 
   return { onDown, onMove, onUp, onKey, resetState, clearSelected,
-           draw, drawPreview, updateCursor, getArrowSrc, isDragging, init };
+           draw, drawPreview, render, updateCursor, getArrowSrc, isDragging, init };
 })();

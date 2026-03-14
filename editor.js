@@ -1,22 +1,108 @@
+// ── I18N ──────────────────────────────────────────────────────────────────────
+const LANGS = {
+  fr: {
+    // Toolbar
+    placeholder:    'Coller une configuration…',
+    btnCopy:        'Copier la configuration',
+    btnUndo:        'Annuler',
+    btnRedo:        'Rétablir',
+    btnClearArrows: 'Effacer toutes les flèches',
+    btnSettings:    'Paramètres',
+    copied:         'Copié !',
+    // Settings
+    settingsTitle:  'Paramètres',
+    rowLabels:      'Indices plateau',
+    descLabels:     'Marque les coordonnées sur chaque case du plateau',
+    rowOutline:     'Bordures',
+    descOutline:    'Ajoute une bordure blanche ou noire sur chaque personnage',
+    rowShadow:      'Ombres',
+    descShadow:     'Ajoute une ombre sous chaque personnage',
+    rowLang:        'Langue',
+    // Palette
+    palTitle:       'PERSONNAGES',
+    palReset:       'Réinitialiser',
+    secLancement:   'Lancement',
+    secVermillon:   'Extension Vermillon',
+  },
+  en: {
+    // Toolbar
+    placeholder:    'Paste a configuration…',
+    btnCopy:        'Copy configuration',
+    btnUndo:        'Undo',
+    btnRedo:        'Redo',
+    btnClearArrows: 'Clear all arrows',
+    btnSettings:    'Settings',
+    copied:         'Copied!',
+    // Settings
+    settingsTitle:  'Settings',
+    rowLabels:      'Board labels',
+    descLabels:     'Shows coordinates on each board cell',
+    rowOutline:     'Outlines',
+    descOutline:    'Adds a white or black outline on each character',
+    rowShadow:      'Shadows',
+    descShadow:     'Adds a shadow under each character',
+    rowLang:        'Language',
+    // Palette
+    palTitle:       'CHARACTERS',
+    palReset:       'Reset',
+    secLancement:   'Launch',
+    secVermillon:   'Vermillon Expansion',
+  }
+};
+
+const _browserLang = navigator.language?.slice(0, 2).toLowerCase() === 'fr' ? 'fr' : 'en';
+let currentLang = localStorage.getItem('leaders-lang') || _browserLang;
+const t = key => (LANGS[currentLang] || LANGS.fr)[key] || key;
+
+function _applyLang() {
+  // Toolbar
+  const inp = document.getElementById('input-state');
+  if (inp) inp.placeholder = t('placeholder');
+  const btnCopy = document.getElementById('btn-copy');
+  if (btnCopy) btnCopy.title = t('btnCopy');
+  const btnUndo = document.getElementById('btn-undo');
+  if (btnUndo) btnUndo.title = t('btnUndo');
+  const btnRedo = document.getElementById('btn-redo');
+  if (btnRedo) btnRedo.title = t('btnRedo');
+  const btnCA = document.getElementById('btn-clear-arrows');
+  if (btnCA) btnCA.title = t('btnClearArrows');
+  const btnSet = document.getElementById('btn-settings');
+  if (btnSet) btnSet.title = t('btnSettings');
+  // Settings popup
+  const stitle = document.getElementById('settings-title');
+  if (stitle) stitle.textContent = t('settingsTitle');
+  const rn = document.querySelector('#row-labels .setting-name');
+  if (rn) rn.textContent = t('rowLabels');
+  const rd = document.querySelector('#row-labels .setting-desc');
+  if (rd) rd.textContent = t('descLabels');
+  const rn2 = document.querySelector('#row-outline .setting-name');
+  if (rn2) rn2.textContent = t('rowOutline');
+  const rd2 = document.querySelector('#row-outline .setting-desc');
+  if (rd2) rd2.textContent = t('descOutline');
+  const rn3 = document.querySelector('#row-shadow .setting-name');
+  if (rn3) rn3.textContent = t('rowShadow');
+  const rd3 = document.querySelector('#row-shadow .setting-desc');
+  if (rd3) rd3.textContent = t('descShadow');
+  const rl = document.querySelector('#row-lang .setting-name');
+  if (rl) rl.textContent = t('rowLang');
+  // Lang buttons
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active-lang', btn.dataset.lang === currentLang);
+  });
+  // Palette
+  if (typeof Palette !== 'undefined' && Palette.applyLang) Palette.applyLang();
+}
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const R      = 3;
 const SQ3    = Math.sqrt(3);
-const PAL_W_MIN = 72;  // minimum palette width
 const PAL_G  = 8;
-const PAL_C  = 3;
 const CR     = 0.79;
 const H_MAX  = 60;
-const T_RNG  = [3, 24];
+const T_RNG  = [1, 24];
 
 const HL = new Set([0,3,4,8,9,14,15,21,22,27,28,32,33,36]);
 const SP = new Set([15,21]);
-
-const C = {
-  palBg:     '#1a1a2e',
-  palHdr:    '#7070c0',
-};
-
-const PAL_HEADER_H = 36;
 
 // ── PLATEAU ───────────────────────────────────────────────────────────────────
 const CELLS = (() => {
@@ -53,78 +139,92 @@ function dec(raw) {
   return {tokens};
 }
 
-// ── BOARD IMAGE ───────────────────────────────────────────────────────────────
-const BOARD_IMG = new Image();
-BOARD_IMG.src = 'board.png';
-BOARD_IMG.onload = render;
-
-// ── IMAGES ────────────────────────────────────────────────────────────────────
-const IMGS = new Map();
-const ALL_NAMES = Array.from({length:T_RNG[1]-T_RNG[0]+1},(_,i)=>String(i+T_RNG[0]));
-
-function getImg(name,c) {
-  const k=c+'/'+name;
-  if (!IMGS.has(k)) { const i=new Image(); i.src=`jetons_${c}/${name}.png`; i.onload=render; IMGS.set(k,i); }
-  return IMGS.get(k);
-}
-function preload() {
-  for (const n of [...ALL_NAMES,'1','2']) for (const c of ['blanc','noir']) getImg(n,c);
-}
-
 // ── ÉTAT ──────────────────────────────────────────────────────────────────────
 const mkState = () => ({
-  tokens: [{id:0,cell:21,name:'1',c:'w'},{id:1,cell:15,name:'2',c:'b'}],
-  palette: ALL_NAMES.slice(),
+  tokens: [{id:0,cell:21,name:'1',c:'b'},{id:1,cell:15,name:'2',c:'w'}],
+  palette: {
+    lancement: Array.from({length:19}, (_,i) => String(i+1)),
+    vermillon: Array.from({length:5},  (_,i) => String(i+20)),
+    other:     [],
+  },
   nid: 2,
-  arrows: [],   // [{id, from_cell, to_cell, mx, my, color}]
+  arrows: [],
   arrowNid: 0,
+  banned: [],
 });
 let S = mkState();
 
-// ── HISTORIQUE ────────────────────────────────────────────────────────────────
+// ── PALETTE HELPERS ───────────────────────────────────────────────────────────
+const ALL_NAMES = Array.from({length:T_RNG[1]-T_RNG[0]+1},(_,i)=>String(i+T_RNG[0]));
+
+function _palGroupOf(name) {
+  const n = +name;
+  if (n >= 1  && n <= 19) return 'lancement';
+  if (n >= 20 && n <= 24) return 'vermillon';
+  return 'other';
+}
+function _palAdd(name) {
+  const key = _palGroupOf(name);
+  const arr = [...(S.palette[key] || []), name];
+  arr.sort((a, b) => +a - +b);
+  S.palette = { ...S.palette, [key]: arr };
+}
+function _palRemove(name) {
+  const key = _palGroupOf(name);
+  S.palette = { ...S.palette, [key]: (S.palette[key] || []).filter(n => n !== name) };
+}
+
+// ── BAN HELPERS ───────────────────────────────────────────────────────────────
+function isBanned(name) { return (S.banned || []).includes(name); }
+function doBan(name) {
+  if (isBanned(name)) return;
+  S.banned = [...(S.banned || []), name];
+  saveH(); render();
+}
+function doUnban(name) {
+  S.banned = (S.banned || []).filter(n => n !== name);
+  saveH(); render();
+}
+
+
 let hist=[], hidx=-1;
 const _snapS = () => { const {arrows,arrowNid,...rest}=S; return JSON.stringify(rest); };
 const saveH = () => {
   const snap = _snapS();
-  if (hidx >= 0 && hist[hidx] === snap) return;   // rien de changé → on n'empile pas
+  if (hidx >= 0 && hist[hidx] === snap) return;
   hist=hist.slice(0,hidx+1); hist.push(snap);
   if(++hidx, hist.length>H_MAX){hist.shift();hidx--;}
 };
 const restH = e => {
   const {arrows,arrowNid}=S;
-  S={...JSON.parse(e),arrows,arrowNid};
+  const restored = JSON.parse(e);
+  if (!restored.banned) restored.banned = [];
+  S={...restored,arrows,arrowNid};
   Arrows.clearSelected(); render();
 };
 const undo  = () => hidx>0             && restH(hist[--hidx]);
 const redo  = () => hidx<hist.length-1 && restH(hist[++hidx]);
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
-
 let LO = {};
+
 function relayout() {
-  const cv  = document.getElementById('board-canvas');
-  const dpr = devicePixelRatio || 1;
-  const W   = cv.parentElement.clientWidth  || 800;
-  const H   = cv.parentElement.clientHeight || 560;
-  cv.width  = W * dpr; cv.height  = H * dpr;
-  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const main = document.getElementById('main');
+  const W = main.clientWidth  || 800;
+  const H = main.clientHeight || 560;
 
   const BOARD_COLS = (2*R+1)*1.5+0.5;
   const BOARD_ROWS = (2*R+1.5)*SQ3;
-  const GAP = 24; // same as palette MARGIN — space between board right edge and palette left edge
 
-  // sp always computed on full canvas (board never shrinks)
   const sp = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90;
   const r  = sp * CR;
 
-  // Palette width computed with the real r (not an estimate)
   const { palX, palY, palW, palH, palCols } = Palette.layout(W, H, r);
 
-  // Board: ideal centre = W/2; pushed left so right edge stays GAP away from palette
-  const boardHalfW = BOARD_COLS / 2 * sp;
-  const maxCx = palX - GAP - boardHalfW;
-  const cx = Math.max(boardHalfW + GAP, Math.min(W / 2, maxCx));
+  // Board is always centered on the full screen width
+  const cx = W / 2;
   const cy = H / 2;
+
   const cells = CELLS.map(c => ({
     ...c,
     x: cx + sp * 1.5 * c.q,
@@ -133,98 +233,315 @@ function relayout() {
   const byId = new Map(cells.map(c => [c.id, c]));
   const hs   = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
   const psz  = r * 2;
+  const bW   = W;
 
-  // bW: left boundary of palette area (used for arrow / board hit exclusion)
-  const bW = palX - 8;
+  LO = { W, H, bW, r, cx, cy, cells, byId, hs,
+         psz, pgap: PAL_G, palW, palH, palX, palY, palCols };
 
-  LO = { W, H, bW, dpr, r, cx, cy, cells, byId, hs,
-         psz, pgap: PAL_G, palW, palH, palX, palY, palCols,
-         scrollBarW: 6, scrollMargin: 6 };
+  // Board layer
+  const boardLayer = document.getElementById('board-layer');
+  if (boardLayer) {
+    const bw = hs * Math.sqrt(3);
+    const bh = hs * 2;
+    boardLayer.style.left   = (cx - bw/2) + 'px';
+    boardLayer.style.top    = (cy - bh/2) + 'px';
+    boardLayer.style.width  = bw + 'px';
+    boardLayer.style.height = bh + 'px';
+    _updateBoardClip(boardLayer, bw, bh, hs);
+  }
+
+  // SVG flèches
+  const arrowsSvg = document.getElementById('arrows-svg');
+  if (arrowsSvg) {
+    arrowsSvg.setAttribute('width',  W);
+    arrowsSvg.setAttribute('height', H);
+    arrowsSvg.style.width  = W + 'px';
+    arrowsSvg.style.height = H + 'px';
+  }
+  // SVG outlines
+  const outlinesSvg = document.getElementById('outlines-svg');
+  if (outlinesSvg) {
+    outlinesSvg.setAttribute('width',  W);
+    outlinesSvg.setAttribute('height', H);
+    outlinesSvg.style.width  = W + 'px';
+    outlinesSvg.style.height = H + 'px';
+  }
+  if (typeof Outlines !== 'undefined') Outlines.syncSize(W, H);
 }
 
-// ── LABELS TOGGLE ─────────────────────────────────────────────────────────────
-let showLabels  = true;
-let showOutline = false;
-let showShadow  = true;
+function _updateBoardClip(el, bw, bh, hs) {
+  const pts = Array.from({length:6}, (_,i) => {
+    const a = Math.PI/3*i + Math.PI/6;
+    const px = 50 + (hs * Math.cos(a)) / bw * 100;
+    const py = 50 + (hs * Math.sin(a)) / bh * 100;
+    return `${px.toFixed(3)}% ${py.toFixed(3)}%`;
+  });
+  el.style.clipPath = `polygon(${pts.join(', ')})`;
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
+let showLabels  = _loadSetting('leaders-labels',  true);
+let showOutline = _loadSetting('leaders-outline', false);
+let showShadow  = _loadSetting('leaders-shadow',  true);
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
-const cvXY = e => {
-  const b=document.getElementById('board-canvas').getBoundingClientRect();
-  return {x:e.clientX-b.left, y:e.clientY-b.top};
-};
-function nearCell(x,y){
-  let best=null,bd=Infinity;
-  for(const c of LO.cells){const d=Math.hypot(c.x-x,c.y-y);if(d<LO.r*1.3&&d<bd){bd=d;best=c;}}
+function _mainXY(e) {
+  const b = document.getElementById('main').getBoundingClientRect();
+  return { x: e.clientX - b.left, y: e.clientY - b.top };
+}
+
+function nearCell(x,y) {
+  let best=null, bd=Infinity;
+  for (const c of LO.cells) {
+    const d=Math.hypot(c.x-x,c.y-y);
+    if (d<LO.r*1.3 && d<bd) { bd=d; best=c; }
+  }
   return best;
 }
-function tokAt(x,y){
-  for(let i=S.tokens.length-1;i>=0;i--){
-    const t=S.tokens[i],c=LO.byId.get(t.cell);
-    if(c&&Math.hypot(x-c.x,y-c.y)<LO.r*0.9) return t;
+
+function tokAt(x,y) {
+  for (let i=S.tokens.length-1; i>=0; i--) {
+    const t=S.tokens[i], c=LO.byId.get(t.cell);
+    if (c && Math.hypot(x-c.x,y-c.y)<LO.r*0.9) return t;
   }
   return null;
 }
-// Delegated to Palette module
-const palAt      = (x, y) => Palette.palAt(x, y);
-const inPalette  = (x, y) => Palette.inPalette(x, y);
-// ── EVENTS ────────────────────────────────────────────────────────────────────
+
+const inPalette = (x, y) => Palette.inPalette(x, y);
+const palAt     = (x, y) => Palette.palAt(x, y);
+
+// ── PALETTE CLICK HELPERS ─────────────────────────────────────────────────────
+function _nearestFreeCell() {
+  // Find free cell closest to board center
+  const occupied = new Set(S.tokens.map(t => t.cell));
+  let best = null, bd = Infinity;
+  for (const c of LO.cells) {
+    if (occupied.has(c.id)) continue;
+    const d = Math.hypot(c.x - LO.cx, c.y - LO.cy);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+
+function _palRecruitOne(name) {
+  // Place token on nearest free cell, default black
+  const cell = _nearestFreeCell();
+  if (!cell) return;
+  S.tokens = [...S.tokens, {id: S.nid++, cell: cell.id, name, c: 'b'}];
+  _palRemove(name);
+  saveH(); render();
+}
+
+function _palRemoveOne(name) {
+  // Remove the last token of this name placed on board
+  const tokens = S.tokens.filter(t => t.name === name);
+  if (tokens.length === 0) return;
+  const last = tokens[tokens.length - 1];
+  S.tokens = S.tokens.filter(t => t.id !== last.id);
+  _palAdd(name);
+  saveH(); render();
+}
+
+
 let drag=null, dpos=null, justDropped=false;
+let palClickName=null; // tracks palette item for left-click recruit
 let mousePos={x:0,y:0};
 
-function onDown(e){
-  const{x,y}=cvXY(e); const inP=inPalette(x,y);
+// ── Token toolbar ─────────────────────────────────────────────────────────────
+let tokTb = null;
+let tokTbId = null; // token id currently shown
 
-  // Right-click → delegated to Arrows (never on palette)
-  if(e.button===2){ e.preventDefault(); if(!inP) Arrows.onDown(e,x,y); return; }
+function _mkTokToolbar() {
+  if (tokTb) return tokTb;
+  const el = document.createElement('div');
+  el.id = 'tok-tb';
+  el.innerHTML = `
+    <button id="tok-color" title="Changer d'équipe"><span id="tok-dot"></span></button>
+    <div class="arr-sep"></div>
+    <button id="tok-del" class="arr-del" title="Supprimer">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
+      </svg>
+    </button>`;
+  document.getElementById('main').appendChild(el);
+  el.addEventListener('mousedown', e => e.stopPropagation());
 
-  // Middle click → toggle token color
-  if(e.button===1){
-    e.preventDefault();
-    if(!inP){const t=tokAt(x,y);if(t)toggleC(t.id);}
-    return;
-  }
+  el.querySelector('#tok-color').addEventListener('click', e => {
+    e.stopPropagation();
+    if (tokTbId === null) return;
+    S.tokens = S.tokens.map(t => t.id === tokTbId ? {...t, c: t.c === 'w' ? 'b' : 'w'} : t);
+    saveH(); render();
+  });
+  el.querySelector('#tok-del').addEventListener('click', e => {
+    e.stopPropagation();
+    if (tokTbId === null) return;
+    const tok = S.tokens.find(t => t.id === tokTbId);
+    if (tok) _palAdd(tok.name);
+    S.tokens = S.tokens.filter(t => t.id !== tokTbId);
+    tokTbId = null; _hideTokToolbar(); saveH(); render();
+  });
 
-  if(e.button!==0) return;
-
-  // Palette toggle / scroll-area click
-  if(inP){
-    if(Palette.onDown(x,y)) return;  // consumed by toggle button
-    const n=palAt(x,y);
-    if(n){drag={type:'pal',name:n,c:'w'};dpos={x,y};render();}
-    return;
-  }
-
-  // Board: arrows first, then token drag
-  const consumed=Arrows.onDown(e,x,y);
-  if(consumed) return;
-  const t=tokAt(x,y); if(t){drag={type:'brd',id:t.id};dpos={x,y};render();}
+  tokTb = el;
+  return el;
 }
 
-function onMove(e){
-  const{x,y}=cvXY(e);
+function _placeTokToolbar() {
+  if (tokTbId === null) { _hideTokToolbar(); return; }
+  const tok = S.tokens.find(t => t.id === tokTbId);
+  if (!tok) { _hideTokToolbar(); return; }
+  const cell = LO.byId.get(tok.cell);
+  if (!cell) { _hideTokToolbar(); return; }
+
+  const el = _mkTokToolbar();
+  // Update dot color to show current team
+  const dot = el.querySelector('#tok-dot');
+  if (tok.c === 'w') {
+    dot.style.background = '#ffffff';
+    dot.style.borderColor = 'rgba(255,255,255,0.4)';
+  } else {
+    dot.style.background = '#111111';
+    dot.style.borderColor = 'rgba(255,255,255,0.15)';
+  }
+  el.style.display = 'flex';
+
+  requestAnimationFrame(() => {
+    const pw = el.offsetWidth, ph = el.offsetHeight;
+    let px = cell.x + LO.r + 10;
+    let py = cell.y - ph / 2;
+    px = Math.max(4, Math.min(LO.bW - pw - 4, px));
+    py = Math.max(4, Math.min(LO.H  - ph - 4, py));
+    el.style.left = px + 'px';
+    el.style.top  = py + 'px';
+  });
+}
+
+function _hideTokToolbar() { if (tokTb) tokTb.style.display = 'none'; }
+
+// ── Right-click intent detection ──────────────────────────────────────────────
+let _rcPending = null; // { x, y, tok } — right-click down on a token, waiting to decide
+
+function _rcCancel() { _rcPending = null; }
+
+function _rcCommitArrow(x, y) {
+  if (!_rcPending) return;
+  tokTbId = null; _hideTokToolbar();
+  const fakeE = { button: 2, preventDefault: () => {} };
+  Arrows.onDown(fakeE, _rcPending.x, _rcPending.y);
+  _rcPending = null;
+}
+
+function onDown(e) {
+  const {x,y} = _mainXY(e);
+  const inP = inPalette(x,y);
+
+  if (e.button===2) {
+    e.preventDefault();
+    if (inP) {
+      const n = palAt(x, y);
+      if (n) _palRecruitOne(n);
+      return;
+    }
+    // On a token? → defer decision until mouseup or move
+    const tok = tokAt(x, y);
+    if (tok) {
+      Arrows.clearSelected();
+      _rcPending = { x, y, tokId: tok.id };
+      return;
+    }
+    // On empty board → close token toolbar + immediate arrow
+    tokTbId = null; _hideTokToolbar();
+    Arrows.onDown(e, x, y);
+    return;
+  }
+
+  if (e.button===1) {
+    e.preventDefault();
+    if (!inP) {
+      const t=tokAt(x,y);
+      if (t) toggleC(t.id);
+    } else {
+      const n=palAt(x,y);
+      if (n) {
+        if (isBanned(n)) doUnban(n);
+        else doBan(n);
+      }
+    }
+    return;
+  }
+
+  if (e.button!==0) return;
+
+  // Left click: hide token toolbar if clicking elsewhere
+  if (!inP) {
+    const tok = tokAt(x, y);
+    if (!tok || tok.id !== tokTbId) { tokTbId = null; _hideTokToolbar(); }
+  }
+
+  if (inP) {
+    const n=palAt(x,y);
+    if (n) { palClickName=n; drag={type:'pal',name:n,c:'b',_startX:x,_startY:y}; dpos={x,y}; render(); }
+    return;
+  }
+
+  const consumed=Arrows.onDown(e,x,y);
+  if (consumed) return;
+  const t=tokAt(x,y);
+  if (t) {
+    tokTbId = null; _hideTokToolbar();
+    drag={type:'brd',id:t.id,_startX:x,_startY:y}; dpos={x,y}; render();
+  }
+}
+
+function onMove(e) {
+  const {x,y}=_mainXY(e);
   mousePos={x,y};
 
-  // Let Arrows handle mid-drag first
-  const arrowConsumed=Arrows.onMove(x,y);
-  if(arrowConsumed) return;
+  // If right-click pending on a token and mouse moved enough → start arrow
+  if (_rcPending) {
+    const moved = Math.hypot(x - _rcPending.x, y - _rcPending.y);
+    if (moved > 6) {
+      _rcCommitArrow(x, y);
+    }
+  }
 
-  if(drag){ dpos={x,y}; render(); }
+  const arrowConsumed=Arrows.onMove(x,y);
+  if (arrowConsumed) return;
+
+  if (drag) { dpos={x,y}; render(); }
+  _updateCursor(x,y);
 }
 
-function onUp(e){
-  const{x:ux,y:uy}=cvXY(e);
-  if(Arrows.onUp(e,ux,uy)) return;
-  if(!drag||e.button!==0) return;
-  const{x,y}=cvXY(e);
+function onUp(e) {
+  const {x,y}=_mainXY(e);
+
+  // Right-click up: if pending (no significant move) → show token toolbar
+  if (e.button === 2 && _rcPending) {
+    const moved = Math.hypot(x - _rcPending.x, y - _rcPending.y);
+    if (moved <= 6) {
+      tokTbId = _rcPending.tokId;
+      _rcPending = null;
+      _placeTokToolbar();
+      render();
+      return;
+    }
+    _rcPending = null;
+  }
+
+  if (Arrows.onUp(e,x,y)) return;
+  if (!drag || e.button!==0) return;
+
   const cell=nearCell(x,y), inP=inPalette(x,y);
-  if(drag.type==='brd'){
+
+  if (drag.type==='brd') {
     const tok=S.tokens.find(t=>t.id===drag.id);
-    if(tok){
-      if(inP){S.tokens=S.tokens.filter(t=>t.id!==drag.id);S.palette=[...S.palette,tok.name].sort((a,b)=>+a-+b);saveH();}
-      else if(cell){
+    if (tok) {
+      if (inP) {
+        S.tokens=S.tokens.filter(t=>t.id!==drag.id);
+        _palAdd(tok.name); saveH();
+      } else if (cell) {
         const other=S.tokens.find(t=>t.cell===cell.id&&t.id!==drag.id);
-        if(other){
-          // swap: dragged token goes to target cell, other goes to dragged token's original cell
+        if (other) {
           const fromCell=tok.cell;
           S.tokens=S.tokens.map(t=>t.id===drag.id?{...t,cell:cell.id}:t.id===other.id?{...t,cell:fromCell}:t);
         } else {
@@ -233,252 +550,278 @@ function onUp(e){
         saveH();
       }
     }
-  } else if(drag.type==='pal'){
-    if(!inP&&cell&&!S.tokens.find(t=>t.cell===cell.id)){
+  } else if (drag.type==='pal') {
+    const startX = drag._startX ?? x, startY = drag._startY ?? y;
+    const moved = Math.hypot(x - startX, y - startY);
+    if (moved >= 6 && !inP && cell && !S.tokens.find(t=>t.cell===cell.id)) {
       S.tokens=[...S.tokens,{id:S.nid++,cell:cell.id,name:drag.name,c:drag.c}];
-      S.palette=S.palette.filter(n=>n!==drag.name); saveH();
+      _palRemove(drag.name); saveH();
     }
+    // Simple click (no significant move) → do nothing
   }
-  drag=null; dpos=null; justDropped=true; render();
-}
 
-function onWheel(e){
-  const{x,y}=cvXY(e);
-  if(Palette.onWheel(x, y, e.deltaY)){ e.preventDefault(); }
+  palClickName=null; drag=null; dpos=null; justDropped=true; render();
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
-function toggleC(id){S.tokens=S.tokens.map(t=>t.id===id?{...t,c:t.c==='w'?'b':'w'}:t);saveH();render();}
-function doClearArrows(){
-  S.arrows = []; S.arrowNid = 0;
+function toggleC(id) { S.tokens=S.tokens.map(t=>t.id===id?{...t,c:t.c==='w'?'b':'w'}:t); saveH(); render(); }
+function doClearArrows() { S.arrows=[]; S.arrowNid=0; Arrows.resetState(); saveH(); render(); }
+function doReset() {
+  S=mkState(); hist=[]; hidx=-1;
   Arrows.resetState(); saveH(); render();
 }
-function doReset(){
-  S=mkState();
-  hist=[]; hidx=-1;
-  Arrows.resetState(); saveH(); render();
-}
-function doLoad(){
-  const raw=document.getElementById('input-state').value.trim(); if(!raw)return;
+function doLoad() {
+  const raw=document.getElementById('input-state').value.trim(); if(!raw) return;
   const{tokens}=dec(raw); const used=new Set(tokens.map(t=>t.name));
-  S={tokens:tokens.map((t,i)=>({...t,id:i})),palette:ALL_NAMES.filter(n=>!used.has(n)),nid:tokens.length,arrows:[],arrowNid:0};
-  palScrollY=0; Arrows.clearSelected();
-  saveH(); render();
+  const palette={lancement:[],vermillon:[],other:[]};
+  for (const n of ALL_NAMES) { if(!used.has(n)) palette[_palGroupOf(n)].push(n); }
+  S={tokens:tokens.map((t,i)=>({...t,id:i})),palette,nid:tokens.length,arrows:[],arrowNid:0};
+  Arrows.clearSelected(); saveH(); render();
 }
-function doCopy(){
+function doCopy() {
   navigator.clipboard.writeText(enc(S)).then(()=>{
     const b=document.getElementById('btn-copy'),o=b.textContent;
-    b.textContent='Copied !'; setTimeout(()=>b.textContent=o,1500);
+    b.textContent=t('copied'); setTimeout(()=>b.textContent=o,1500);
   });
 }
 
-// ── RENDER HELPERS ────────────────────────────────────────────────────────────
-const PI2=Math.PI*2;
-const imgOk=i=>i.complete&&i.naturalWidth>0;
+// ── HTML LAYERS ───────────────────────────────────────────────────────────────
 
-function hexPath(ctx,cx,cy,sz,cr){
-  const pts=Array.from({length:6},(_,i)=>{const a=Math.PI/3*i+Math.PI/6;return[cx+sz*Math.cos(a),cy+sz*Math.sin(a)];});
-  ctx.beginPath();
-  for(let i=0;i<6;i++){
-    const p=pts[(i+5)%6],cv2=pts[i],n=pts[(i+1)%6];
-    const li=Math.hypot(cv2[0]-p[0],cv2[1]-p[1]),lo=Math.hypot(n[0]-cv2[0],n[1]-cv2[1]);
-    const rv=Math.min(cr,li/2,lo/2);
-    const ix=cv2[0]-(cv2[0]-p[0])/li*rv, iy=cv2[1]-(cv2[1]-p[1])/li*rv;
-    const ox=cv2[0]+(n[0]-cv2[0])/lo*rv, oy=cv2[1]+(n[1]-cv2[1])/lo*rv;
-    i===0?ctx.moveTo(ix,iy):ctx.lineTo(ix,iy);
-    ctx.quadraticCurveTo(cv2[0],cv2[1],ox,oy);
-  }
-  ctx.closePath();
-}
+function _syncTokenLayer() {
+  const layer=document.getElementById('tokens-layer');
+  if (!layer) return;
+  const {r,byId}=LO;
+  const d=r*2;
 
-function drawBoard(ctx,cx,cy,hs){
-  // Draw board image clipped to hex shape
-  hexPath(ctx,cx,cy,hs,hs*0.02);
-  ctx.save();
-  ctx.clip();
-  if(BOARD_IMG.complete && BOARD_IMG.naturalWidth > 0){
-    const iw = hs * Math.sqrt(3);
-    const ih = hs * 2;
-    ctx.drawImage(BOARD_IMG, cx - iw/2, cy - ih/2, iw, ih);
-  }
-  ctx.restore();
-}
+  const existing=new Map();
+  for (const el of layer.children) existing.set(+el.dataset.tid, el);
 
-function drawCell(ctx,x,y,r,hl,sp,tgt){
-  // Drop-target highlight: semi-transparent fill
-  if(tgt){
-    ctx.beginPath(); ctx.arc(x,y,r,0,PI2);
-    ctx.fillStyle='rgba(100,100,100,0.25)'; ctx.fill();
-  }
-}
+  const seen=new Set();
+  for (const t of S.tokens) {
+    if (drag?.type==='brd' && drag.id===t.id && _dragMoved()) continue;
+    const cell=byId.get(t.cell); if (!cell) continue;
+    seen.add(t.id);
 
-function drawLabel(ctx,c,fs){
-  const lbl=LABELS[c.id]??'', letter=lbl[0]??'', num=lbl.slice(1);
-  ctx.save(); ctx.font=`bold ${fs}px 'Segoe UI',sans-serif`;
-  ctx.textAlign='left'; ctx.textBaseline='middle';
-  const lw=ctx.measureText(letter).width, nw=ctx.measureText(num).width;
-  const sx=c.x-(lw+nw)/2;
-  // Dark colors for readability on light board image
-  ctx.fillStyle='rgb(168, 164, 148)'; ctx.fillText(letter,sx,c.y);
-  const numColors=['#ff3f3f','#31be60','#4c99ff','#ff73c2','rgb(215, 160, 65)','#12aaaa','#a938ff'];
-  ctx.fillStyle=numColors[(+num-1)%numColors.length]??'rgba(60,60,120,0.85)'; ctx.fillText(num,sx+lw,c.y);
-  ctx.restore();
-}
-
-function drawToken(ctx, x, y, r, name, c) {
-  const im = getImg(name, c === 'w' ? 'blanc' : 'noir');
-  if (imgOk(im)) {
-    ctx.save();
-    // Drop shadow: draw a filled circle with shadow BEFORE clipping,
-    // then immediately cover it with the image inside a clip.
-    if (showShadow) {
-      ctx.shadowColor   = 'rgba(0,0,0,0.55)';
-      ctx.shadowBlur    = r * 0.1;
-      ctx.shadowOffsetX = r * 0.05;
-      ctx.shadowOffsetY = r * 0.05;
+    let el=existing.get(t.id);
+    if (!el) {
+      el=document.createElement('div');
+      el.className='html-token';
+      el.dataset.tid=t.id;
+      const img=document.createElement('img');
+      img.draggable=false;
+      el.appendChild(img);
+      layer.appendChild(el);
     }
-    ctx.fillStyle     = '#000';          // colour doesn't matter — hidden by image
-    ctx.beginPath(); ctx.arc(x, y, r, 0, PI2); ctx.fill();
-    // Reset shadow before clipping+drawing the image
-    ctx.shadowColor   = 'rgba(0,0,0,0)';
-    ctx.shadowBlur    = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.beginPath(); ctx.arc(x, y, r, 0, PI2); ctx.clip();
-    ctx.drawImage(im, x - r, y - r, r * 2, r * 2);
-    // Outline drawn inside the clip so it never bleeds outside the token
-    if (showOutline) {
-      const lw = Math.max(0, r * 0.09);
-      ctx.beginPath(); ctx.arc(x, y, r - lw / 2, 0, PI2);
-      ctx.strokeStyle = c === 'w' ? '#ffffff' : '#000000';
-      ctx.lineWidth = lw;
-      ctx.stroke();
-    }
-    ctx.restore();
+
+    const color=t.c==='w'?'blanc':'noir';
+    const img=el.querySelector('img');
+    const expectedSrc=`jetons_${color}/${t.name}.png`;
+    if (!img.src.endsWith(expectedSrc)) img.src=expectedSrc;
+
+    el.style.left  =(cell.x-d/2)+'px';
+    el.style.top   =(cell.y-d/2)+'px';
+    el.style.width =d+'px';
+    el.style.height=d+'px';
+    el.style.overflow = 'visible';
+    el.style.boxShadow = showShadow
+      ? `${r*0.05}px ${r*0.07}px ${r*0.15}px rgba(0,0,0,0.6)` : 'none';
+    el.style.outline = 'none';
+    el.querySelector('img').style.boxShadow = 'none';
+
+    // Remove any stale ban overlay (ban is palette-only now)
+    const banOverlay = el.querySelector('.html-token-ban');
+    if (banOverlay) banOverlay.remove();
   }
+  for (const [tid,el] of existing) { if (!seen.has(tid)) el.remove(); }
 }
 
-// ── CURSOR ────────────────────────────────────────────────────────────────────
-function updateCursor(){
-  const cv=document.getElementById('board-canvas');
-  const{x,y}=mousePos; const inP=inPalette(x,y);
-  if(drag){ cv.style.cursor='grabbing'; return; }
-  if(!inP){
-    if(Arrows.updateCursor(cv,x,y)) return;
-    if(tokAt(x,y)){ cv.style.cursor='grab'; return; }
-  }
-  cv.style.cursor='default';
-}
-
-// ── MAIN RENDER ───────────────────────────────────────────────────────────────
-function render(){
-  history.replaceState(null, "", "#"+enc(S));
-  const cv=document.getElementById('board-canvas'), ctx=cv.getContext('2d');
-  const{W,H,bW,dpr,r,cells,byId,hs,cx,cy}=LO;
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-  ctx.clearRect(0,0,W,H);
-
-  drawBoard(ctx,cx,cy,hs);
-
-  const dtgt=drag&&dpos?nearCell(dpos.x,dpos.y):null;
-  const dcell=drag?.type==='brd'?S.tokens.find(t=>t.id===drag.id)?.cell:-1;
+function _syncLabelLayer() {
+  const layer=document.getElementById('labels-layer');
+  if (!layer) return;
+  const {r,cells}=LO;
   const occ=new Set(S.tokens.map(t=>t.cell));
+  const dcell=drag?.type==='brd'?S.tokens.find(t=>t.id===drag.id)?.cell:-1;
   const fs=Math.max(7,Math.round(r*0.36));
-  const arrowSrcCell=Arrows.getArrowSrc();
 
-  // Cells
-  for(const c of cells){
-    drawCell(ctx,c.x,c.y,r,HL.has(c.id),SP.has(c.id),dtgt?.id===c.id,arrowSrcCell===c.id);
-    if(showLabels && (!occ.has(c.id)||c.id===dcell)) drawLabel(ctx,c,fs);
+  layer.innerHTML='';
+  if (!showLabels) return;
+
+  const numColors=['#ff3f3f','#31be60','#4c99ff','#ff73c2','rgb(215,160,65)','#12aaaa','#a938ff'];
+  for (const c of cells) {
+    if (occ.has(c.id) && c.id!==dcell) continue;
+    const lbl=LABELS[c.id]??''; if (!lbl) continue;
+    const letter=lbl[0]??'', num=lbl.slice(1);
+    const numCol=numColors[(+num-1)%numColors.length]??'rgba(60,60,120,0.85)';
+    const div=document.createElement('div');
+    div.className='html-label';
+    div.style.cssText=`left:${c.x}px;top:${c.y}px;font-size:${fs}px;`;
+    div.innerHTML=`<span style="color:rgb(168,164,148)">${letter}</span><span style="color:${numCol}">${num}</span>`;
+    layer.appendChild(div);
   }
-
-  // Tokens
-  for(const t of S.tokens){
-    if(drag?.type==='brd'&&drag.id===t.id) continue;
-    const c=byId.get(t.cell); if(!c) continue;
-    drawToken(ctx,c.x,c.y,r,t.name,t.c);
-  }
-
-  // Arrows — always on top of tokens
-  Arrows.draw(ctx);
-  Arrows.drawPreview(ctx);
-
-  // Palette panel — floating, drawn on top
-  Palette.draw(ctx);
-
-  // Dragged token ghost
-  if(drag&&dpos){
-    const t=drag.type==='brd'?S.tokens.find(t=>t.id===drag.id):{name:drag.name,c:drag.c};
-    if(t){ctx.globalAlpha=0.75;drawToken(ctx,dpos.x,dpos.y,drag.type==='brd'?r:LO.psz/2*0.90,t.name,t.c);ctx.globalAlpha=1;}
-  }
-
-  updateCursor();
 }
 
-// ── URL ──────────────────────────────────────────────────────────────────────
-function loadStateFromURL(){
-  const raw = window.location.hash.slice(1);
-  if(!raw) return;
+function _dragMoved() {
+  if (!drag || !dpos) return false;
+  const startX = drag._startX ?? dpos.x;
+  const startY = drag._startY ?? dpos.y;
+  return Math.hypot(dpos.x - startX, dpos.y - startY) >= 6;
+}
 
-  const {tokens} = dec(raw);
-  const used = new Set(tokens.map(t=>t.name));
+function _syncDropTarget() {
+  const layer=document.getElementById('droptarget-layer');
+  if (!layer) return;
+  layer.innerHTML='';
+  if (!drag||!dpos||!_dragMoved()) return;
+  const dtgt=nearCell(dpos.x,dpos.y); if (!dtgt) return;
+  const {r}=LO;
+  const div=document.createElement('div');
+  div.className='html-droptarget';
+  div.style.cssText=`left:${dtgt.x-r}px;top:${dtgt.y-r}px;width:${r*2}px;height:${r*2}px;`;
+  layer.appendChild(div);
+}
 
-  S={
-    tokens: tokens.map((t,i)=>({...t,id:i})),
-    palette: ALL_NAMES.filter(n=>!used.has(n)),
-    nid: tokens.length,
-    arrows: [],
-    arrowNid: 0
-  };
+function _syncGhost() {
+  let ghost=document.getElementById('drag-ghost');
+  if (!drag||!dpos||!_dragMoved()) {
+    if (ghost) ghost.style.display='none';
+    return;
+  }
+  const t=drag.type==='brd'?S.tokens.find(t=>t.id===drag.id):{name:drag.name,c:drag.c};
+  if (!t) { if(ghost) ghost.style.display='none'; return; }
+
+  if (!ghost) {
+    ghost=document.createElement('div');
+    ghost.id='drag-ghost';
+    ghost.className='html-token';
+    const img=document.createElement('img'); img.draggable=false;
+    ghost.appendChild(img);
+    document.getElementById('main').appendChild(ghost);
+  }
+
+  const r=drag.type==='brd'?LO.r:LO.psz/2*0.90;
+  const d=r*2;
+  const color=t.c==='w'?'blanc':'noir';
+  const img=ghost.querySelector('img');
+  const expectedSrc=`jetons_${color}/${t.name}.png`;
+  if (!img.src.endsWith(expectedSrc)) img.src=expectedSrc;
+
+  ghost.style.display ='block';
+  ghost.style.left    =(dpos.x-r)+'px';
+  ghost.style.top     =(dpos.y-r)+'px';
+  ghost.style.width   =d+'px';
+  ghost.style.height  =d+'px';
+  ghost.style.opacity ='1';
+  ghost.style.boxShadow=showShadow?`2px 3px 8px rgba(0,0,0,0.5)`:'none';
+}
+
+// ── CURSEUR ───────────────────────────────────────────────────────────────────
+function _updateCursor(x, y) {
+  const main=document.getElementById('main');
+  if (drag) { main.style.cursor='default'; return; }
+  if (inPalette(x,y)) { main.style.cursor='default'; return; }
+  if (Arrows.updateCursor(main, x, y)) return;
+  if (tokAt(x,y)) { main.style.cursor='default'; return; }
+  main.style.cursor='default';
+}
+
+// ── RENDU PRINCIPAL ───────────────────────────────────────────────────────────
+function render() {
+  history.replaceState(null, '', '#'+enc(S));
+  _syncTokenLayer();
+  _syncLabelLayer();
+  _syncDropTarget();
+  _syncGhost();
+  Outlines.render();
+  Arrows.render();
+  Palette.syncDOM();
+  if (tokTbId !== null) _placeTokToolbar();
+}
+
+// ── URL ───────────────────────────────────────────────────────────────────────
+function loadStateFromURL() {
+  const raw=window.location.hash.slice(1); if (!raw) return;
+  const {tokens}=dec(raw);
+  const used=new Set(tokens.map(t=>t.name));
+  const palette={lancement:[],vermillon:[],other:[]};
+  for (const n of ALL_NAMES) { if(!used.has(n)) palette[_palGroupOf(n)].push(n); }
+  S={tokens:tokens.map((t,i)=>({...t,id:i})),palette,nid:tokens.length,arrows:[],arrowNid:0};
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-function init(){
+function init() {
   loadStateFromURL();
-  const cv=document.getElementById('board-canvas');
-  cv.addEventListener('mousedown',  onDown);
-  cv.addEventListener('mousemove',  e=>{ mousePos=cvXY(e); onMove(e); });
-  cv.addEventListener('mouseup',    onUp);
-  cv.addEventListener('click',      e=>{if(justDropped){justDropped=false;}});
-  cv.addEventListener('contextmenu',e=>e.preventDefault());
-  cv.addEventListener('mouseleave', ()=>{ drag=null; dpos=null; render(); });
-  cv.addEventListener('wheel',      onWheel,{passive:false});
 
-  window.addEventListener('keydown',e=>{
-    if(['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
-    if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undo();}
-    if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();redo();}
-    if(e.key==='ArrowLeft')  undo();
-    if(e.key==='ArrowRight') redo();
+  const main=document.getElementById('main');
+
+  main.addEventListener('mousedown',  onDown);
+  main.addEventListener('mousemove',  e=>{ mousePos=_mainXY(e); onMove(e); });
+  main.addEventListener('mouseup',    onUp);
+  main.addEventListener('click',      ()=>{ if(justDropped) justDropped=false; });
+  main.addEventListener('contextmenu',e=>e.preventDefault());
+  main.addEventListener('mouseleave', ()=>{ drag=null; dpos=null; render(); });
+
+  window.addEventListener('keydown', e=>{
+    if (['INPUT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
+    if ((e.ctrlKey||e.metaKey)&&e.key==='z') { e.preventDefault(); undo(); }
+    if ((e.ctrlKey||e.metaKey)&&e.key==='y') { e.preventDefault(); redo(); }
+    if (e.key==='ArrowLeft')  undo();
+    if (e.key==='ArrowRight') redo();
+    if (e.key==='Escape') { tokTbId=null; _hideTokToolbar(); }
     Arrows.onKey(e);
   });
 
-  document.getElementById('input-state').addEventListener('keydown',e=>{if(e.key==='Enter')doLoad();});
-  document.getElementById('btn-copy'  ).addEventListener('click',doCopy);
-  document.getElementById('btn-undo'  ).addEventListener('click',undo);
-  document.getElementById('btn-redo'  ).addEventListener('click',redo);
+  document.getElementById('input-state').addEventListener('keydown', e=>{ if(e.key==='Enter') doLoad(); });
+  document.getElementById('btn-copy'        ).addEventListener('click', doCopy);
+  document.getElementById('btn-undo'        ).addEventListener('click', undo);
+  document.getElementById('btn-redo'        ).addEventListener('click', redo);
   document.getElementById('btn-clear-arrows').addEventListener('click', doClearArrows);
-  document.getElementById('btn-reset' ).addEventListener('click',doReset);
-  document.getElementById('btn-labels').addEventListener('click', () => {
-    showLabels = !showLabels;
-    document.getElementById('btn-labels').classList.toggle('active', showLabels);
-    render();
+
+  function _syncToggle(id, val) {
+    const el=document.getElementById(id);
+    el.classList.toggle('active',val);
+    el.setAttribute('aria-checked',val);
+  }
+  function _openSettings() {
+    _syncToggle('tog-labels',  showLabels);
+    _syncToggle('tog-outline', showOutline);
+    _syncToggle('tog-shadow',  showShadow);
+    document.getElementById('settings-overlay').classList.remove('hidden');
+  }
+  function _closeSettings() {
+    document.getElementById('settings-overlay').classList.add('hidden');
+  }
+  document.getElementById('btn-settings').addEventListener('click', _openSettings);
+  document.getElementById('settings-close').addEventListener('click', _closeSettings);
+  document.getElementById('settings-overlay').addEventListener('mousedown', e=>{
+    if (e.target===document.getElementById('settings-overlay')) _closeSettings();
   });
-  document.getElementById('btn-outline').addEventListener('click', () => {
-    showOutline = !showOutline;
-    document.getElementById('btn-outline').classList.toggle('active', showOutline);
-    render();
+  document.getElementById('row-labels').addEventListener('click', ()=>{
+    showLabels=!showLabels; localStorage.setItem('leaders-labels', showLabels); _syncToggle('tog-labels',showLabels); render();
   });
-  document.getElementById('btn-shadow').addEventListener('click', () => {
-    showShadow = !showShadow;
-    document.getElementById('btn-shadow').classList.toggle('active', showShadow);
-    render();
+  document.getElementById('row-outline').addEventListener('click', ()=>{
+    showOutline=!showOutline; localStorage.setItem('leaders-outline', showOutline); _syncToggle('tog-outline',showOutline); render();
+  });
+  document.getElementById('row-shadow').addEventListener('click', ()=>{
+    showShadow=!showShadow; localStorage.setItem('leaders-shadow', showShadow); _syncToggle('tog-shadow',showShadow); render();
+  });
+
+  // Language switcher
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentLang = btn.dataset.lang;
+      localStorage.setItem('leaders-lang', currentLang);
+      _applyLang();
+      if (typeof Palette !== 'undefined' && Palette.applyLang) Palette.applyLang();
+    });
   });
 
   Arrows.init();
+  Outlines.init();
+  Palette.init();
+  _mkTokToolbar();
 
-  new ResizeObserver(()=>{relayout();render();}).observe(document.getElementById('main'));
-  preload(); relayout(); saveH(); render();
+  new ResizeObserver(()=>{ relayout(); render(); }).observe(main);
+  relayout(); saveH(); render(); _applyLang();
 }
 
-document.addEventListener('DOMContentLoaded',init);
+document.addEventListener('DOMContentLoaded', init);

@@ -6,35 +6,126 @@
   <link rel="icon" href="icon.ico" type="image/x-icon" />
   <title>LEADERS Editor</title>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="arr_toolbar.css" />
+  <link rel="stylesheet" href="loader.css" />
 </head>
 <body>
 
+  <!-- ── Loader ── -->
+  <div id="loader">
+    <div id="loader-inner">
+      <div id="loader-title">LEADERS</div>
+      <div id="loader-bar-track">
+        <div id="loader-bar-fill">
+          <div id="loader-bar-shimmer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Barre d'outils ── -->
   <div id="toolbar">
-    <span class="logo">LEADERS - BOARD EDITOR</span>
+    <a href="https://www.leadersthegame.com/" target="_blank" rel="noopener" class="logo">LEADERS</a>
 
     <div class="center-group">
+      <button id="btn-undo" class="btn" title="Undo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5.5 9H14C16.485 9 18.5 11.015 18.5 13.5C18.5 15.985 16.485 18 14 18H10.5"/>
+          <polyline points="8.5 6 5.5 9 8.5 12"/>
+        </svg>
+      </button>
+      <button id="btn-redo" class="btn" title="Redo">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.5 9H10C7.515 9 5.5 11.015 5.5 13.5C5.5 15.985 7.515 18 10 18H13.5"/>
+          <polyline points="15.5 6 18.5 9 15.5 12"/>
+        </svg>
+      </button>
+      <button id="btn-clear-arrows" class="btn" title="Clear all arrows">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/>
+          <line x1="3" y1="3" x2="21" y2="21" stroke-width="2" opacity="0.6"/>
+        </svg>
+      </button>
+      <div class="toolbar-sep"></div>
       <input id="input-state" type="text" placeholder="Paste a configuration…"
         autocomplete="off" spellcheck="false" />
-      <button id="btn-copy"   class="btn wide">Copy</button>
-      <button id="btn-labels" class="btn wide active">Coords</button>
-      <button id="btn-outline" class="btn wide" title="Token outline">Outline</button>
-      <button id="btn-shadow" class="btn wide active" title="Token shadow">Shadow</button>
-      <button id="btn-clear-arrows" class="btn wide" title="Clear all arrows">Clear arrows</button>
-      <button id="btn-undo"   class="btn" title="Undo">↩</button>
-      <button id="btn-redo"   class="btn" title="Redo">↪</button>
-      <button id="btn-reset"  class="btn danger">Reset</button>
+      <button id="btn-copy" class="btn" title="Copy configuration">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="right-group">
+      <button id="btn-settings" class="btn" title="Paramètres">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
     </div>
   </div>
 
   <!-- ── Plateau principal ── -->
   <div id="main">
-    <canvas id="board-canvas"></canvas>
+    <div id="board-layer"></div>
+    <div id="droptarget-layer"></div>
+    <div id="labels-layer"></div>
+    <div id="tokens-layer"></div>
+    <svg id="outlines-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <svg id="arrows-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <svg id="outlines-drag-svg" xmlns="http://www.w3.org/2000/svg"></svg>
   </div>
 
+  <!-- ── Settings popup ── -->
+  <div id="settings-overlay" class="hidden">
+    <div id="settings-popup">
+      <div id="settings-header">
+        <span id="settings-title">Paramètres</span>
+        <button id="settings-close">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
+          </svg>
+        </button>
+      </div>
+      <div id="settings-body">
+        <div class="setting-row" id="row-labels">
+          <div class="setting-info">
+            <div class="setting-name">Indices plateau</div>
+            <div class="setting-desc">Marque les coordonnées sur chaque case du plateau</div>
+          </div>
+          <button class="toggle active" id="tog-labels" role="switch" aria-checked="true"></button>
+        </div>
+        <div class="setting-row" id="row-outline">
+          <div class="setting-info">
+            <div class="setting-name">Bordures</div>
+            <div class="setting-desc">Ajoute une bordure blanche ou noire sur chaque personnage</div>
+          </div>
+          <button class="toggle" id="tog-outline" role="switch" aria-checked="false"></button>
+        </div>
+        <div class="setting-row" id="row-shadow">
+          <div class="setting-info">
+            <div class="setting-name">Ombres</div>
+            <div class="setting-desc">Ajoute une ombre sous chaque personnage</div>
+          </div>
+          <button class="toggle active" id="tog-shadow" role="switch" aria-checked="true"></button>
+        </div>
+        <div class="setting-row setting-row-lang" id="row-lang">
+          <div class="setting-name">Langue</div>
+          <div class="lang-switcher">
+            <button class="lang-btn" data-lang="fr">FR</button>
+            <button class="lang-btn" data-lang="en">EN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="outline.js"></script>
   <script src="arrows.js"></script>
   <script src="palette.js"></script>
   <script src="editor.js"></script>
+  <script src="loader.js"></script>
+
 </body>
 </html>
