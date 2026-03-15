@@ -20,10 +20,11 @@ const Palette = (() => {
   let ruban      = null;
   let bubble     = null;
   let lastPsz    = 0;   // pour ne recalculer la taille des items qu'en cas de changement
+  let lastCols   = 3;   // pour détecter un changement de nb colonnes
 
   // ── Layout ─────────────────────────────────────────────────────────────────
   function layout(W, H, rEst) {
-    const cols = 3;
+    const cols = W <= H ? 2 : 3;   // 2 colonnes si fenêtre carrée ou portrait
     const psz  = rEst * 2;
     const itemSz = Math.round(psz * 0.90);
     const palW = INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 2; // +2 for 1px border each side
@@ -226,6 +227,15 @@ const Palette = (() => {
     if (psz && Math.abs(psz - lastPsz) > 0.5) {
       lastPsz = psz;
       _applyItemSizes();
+    }
+
+    // Nb de colonnes : recalculer la grille CSS si changé
+    const cols = LO.palCols || 3;
+    if (cols !== lastCols) {
+      lastCols = cols;
+      for (const grid of panel.querySelectorAll('.pal-grid')) {
+        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      }
     }
 
     _syncItems();

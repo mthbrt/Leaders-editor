@@ -26,9 +26,9 @@ const LANGS = {
     // Help
     btnHelp:          'Aide',
     helpTitle:        'Commandes',
-    helpSecTokens:    'Jetons',
+    helpSecTokens:    'Personnages',
     helpDragBoard:    'Clic gauche',
-    helpDragBoardDesc:'Déplacer le jeton par glisser-déposer',
+    helpDragBoardDesc:'Déplacer les personnages par glisser-déposer',
     helpMiddleTok:    'Clic molette',
     helpMiddleTokDesc:'Plateau : changer équipe<br>Liste des personnages : bannir / débannir',
     helpRightTok:     'Clic droit',
@@ -70,9 +70,9 @@ const LANGS = {
     // Help
     btnHelp:          'Help',
     helpTitle:        'Controls',
-    helpSecTokens:    'Tokens',
+    helpSecTokens:    'Characters',
     helpDragBoard:    'Left-click',
-    helpDragBoardDesc:'Move the token by drag and drop',
+    helpDragBoardDesc:'Move the characters by drag and drop',
     helpMiddleTok:    'Middle-click',
     helpMiddleTokDesc:'Board: toggle team<br>Character list: ban / unban',
     helpRightTok:     'Right-click',
@@ -269,8 +269,20 @@ function relayout() {
 
   const { palX, palY, palW, palH, palCols } = Palette.layout(W, H, r);
 
-  // Board is always centered on the full screen width
-  const cx = W / 2;
+  // Board centered on full width, but nudged left if palette gets too close.
+  // PAL_MARGIN is the gap between palette and right edge; we keep the same
+  // gap on the board's right side before the palette (min 30 px clearance).
+  const PAL_MARGIN   = 30;   // px — same as MARGIN in palette.js
+  const MIN_CLEARANCE = 30;  // px — minimum gap between board right edge and palette left edge
+
+  const boardHalfW = (Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90) * (BOARD_COLS / 2);
+  const naiveCx    = W / 2;
+  const boardRight = naiveCx + boardHalfW;
+  const needed     = palX - MIN_CLEARANCE;
+  const overflow   = boardRight - needed;
+  const shiftedCx  = overflow > 0 ? naiveCx - overflow : naiveCx;
+  // Clamp so the board never overflows the left edge
+  const cx = Math.max(boardHalfW + MIN_CLEARANCE, shiftedCx);
   const cy = H / 2;
 
   const cells = CELLS.map(c => ({
@@ -414,21 +426,26 @@ function _mkTokToolbar() {
     </button>`;
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
+  el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
 
-  el.querySelector('#tok-color').addEventListener('click', e => {
+  const _tokColorAction = e => {
     e.stopPropagation();
     if (tokTbId === null) return;
     S.tokens = S.tokens.map(t => t.id === tokTbId ? {...t, c: t.c === 'w' ? 'b' : 'w'} : t);
-    saveH(); render();
-  });
-  el.querySelector('#tok-del').addEventListener('click', e => {
+    tokTbId = null; _hideTokToolbar(); saveH(); render();
+  };
+  const _tokDelAction = e => {
     e.stopPropagation();
     if (tokTbId === null) return;
     const tok = S.tokens.find(t => t.id === tokTbId);
     if (tok) _palAdd(tok.name);
     S.tokens = S.tokens.filter(t => t.id !== tokTbId);
     tokTbId = null; _hideTokToolbar(); saveH(); render();
-  });
+  };
+  el.querySelector('#tok-color').addEventListener('click',      _tokColorAction);
+  el.querySelector('#tok-color').addEventListener('touchstart', _tokColorAction, { passive: false });
+  el.querySelector('#tok-del'  ).addEventListener('click',      _tokDelAction);
+  el.querySelector('#tok-del'  ).addEventListener('touchstart', _tokDelAction,   { passive: false });
 
   tokTb = el;
   return el;
@@ -702,7 +719,7 @@ function _syncLabelLayer() {
   layer.innerHTML='';
   if (!showLabels) return;
 
-  const numColors=['#ff3f3f','#31be60','#4c99ff','#ff73c2','rgb(215,160,65)','#12aaaa','#a938ff'];
+  const numColors=['#ff4c4c','#31cf65','#50aff8','#ff83bd','rgb(215,160,65)','#27b4b4','#ff4c4c'];
   for (const c of cells) {
     if (occ.has(c.id) && c.id!==dcell) continue;
     const lbl=LABELS[c.id]??''; if (!lbl) continue;
