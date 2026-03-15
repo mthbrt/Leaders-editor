@@ -15,23 +15,33 @@ const Palette = (() => {
   ];
 
   let collapsed  = false;
-  let openSec    = 0;
   let panel      = null;
   let ruban      = null;
   let bubble     = null;
   let lastPsz    = 0;   // pour ne recalculer la taille des items qu'en cas de changement
-  let lastCols   = 3;   // pour détecter un changement de nb colonnes
+  let isBottomSheet = false; // true on narrow screens
 
   // ── Layout ─────────────────────────────────────────────────────────────────
+  // Portrait mode = bottom sheet; landscape = right side panel
+  function isPortrait(W, H) { return H > W; }
+
   function layout(W, H, rEst) {
-    const cols = W <= H ? 2 : 3;   // 2 colonnes si fenêtre carrée ou portrait
-    const psz  = rEst * 2;
+    if (isPortrait(W, H)) {
+      // Bottom sheet: full width, max height = H/2
+      const palH = Math.round(H / 2);
+      return { palX: 0, palY: H - palH, palW: W, palH, palCols: 6, _bottomSheet: true };
+    }
+
+    // Landscape: right-side panel
+    const margin = Math.max(10, Math.min(MARGIN, W * 0.04));
+    const cols   = 3;
+    const psz    = rEst * 2;
     const itemSz = Math.round(psz * 0.90);
-    const palW = INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 2; // +2 for 1px border each side
-    const palH = H - MARGIN * 2;
-    const palX = W - palW - MARGIN;
-    const palY = MARGIN;
-    return { palX, palY, palW, palH, palCols: cols };
+    const palW   = INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 2;
+    const palH   = H - margin * 2;
+    const palX   = W - palW - margin;
+    const palY   = margin;
+    return { palX, palY, palW, palH, palCols: cols, _bottomSheet: false };
   }
 
   // ── Hit testing ────────────────────────────────────────────────────────────
@@ -101,6 +111,10 @@ const Palette = (() => {
     // Events collapse
     ruban.addEventListener('click', _toggleCollapse);
     bubble.addEventListener('click', _toggleCollapse);
+    // In bottom-sheet mode, the header itself acts as the toggle
+    panel.querySelector('#pal-header').addEventListener('click', e => {
+      if (isBottomSheet) { e.stopPropagation(); _toggleCollapse(); }
+    });
 
     panel.querySelector('#pal-reset').addEventListener('click', e => {
       e.stopPropagation(); doReset();
@@ -174,8 +188,17 @@ const Palette = (() => {
   }
 
   function _applyItemSizes() {
+    if (!panel) return;
+    if (isBottomSheet) {
+      const sz = Math.round(LO.r * 2) + 'px';
+      for (const item of panel.querySelectorAll('.pal-item')) {
+        item.style.width  = sz;
+        item.style.height = sz;
+      }
+      return;
+    }
     const { psz } = LO;
-    if (!psz || !panel) return;
+    if (!psz) return;
     const sz = Math.round(psz * 0.90) + 'px';
     for (const item of panel.querySelectorAll('.pal-item')) {
       item.style.width  = sz;
@@ -190,52 +213,75 @@ const Palette = (() => {
 
   function _syncCollapsed() {
     panel.classList.toggle('collapsed', collapsed);
+    if (isBottomSheet) {
+      if (ruban)  ruban.style.display = 'none';
+      if (bubble) bubble.style.display = 'none';
+      // Notify editor to recenter board
+      if (typeof onCollapseChange === 'function') onCollapseChange();
+      return;
+    }
+    if (ruban) ruban.style.display = '';
     ruban.classList.toggle('collapsed', collapsed);
     bubble.classList.toggle('visible', collapsed);
     const chevron = ruban.querySelector('#ruban-chevron');
     if (chevron) chevron.setAttribute('points', collapsed ? '34,14 26,20 34,26' : '26,14 34,20 26,26');
-    // Déplacer le ruban directement ici, sans attendre syncDOM
-    if (LO && LO.palX !== undefined) {
-      const { palX, palW, palH } = LO;
-      const bubbleCX = palX + palW - CIRC_R;
-      ruban.style.left = (collapsed ? bubbleCX - CIRC_R - RUB_W : palX - RUB_W) + 'px';
-    }
-    syncDOM();
+    // Notify editor to recalculate board position
+    if (typeof onCollapseChange === 'function') onCollapseChange();
+    else syncDOM();
   }
 
   // ── Mise à jour du DOM après chaque render() ──────────────────────────────
   function syncDOM() {
     if (!panel) return;
     const { palX, palY, palW, palH, psz } = LO;
+    const _bottomSheet = LO._palBottomSheet || LO._bottomSheet || false;
 
-    // Position + taille du panel
+    // Detect mode switch and update class + state
+    const newBottomSheet = !!_bottomSheet;
+    if (newBottomSheet !== isBottomSheet) {
+      isBottomSheet = newBottomSheet;
+      panel.classList.toggle('bottom-sheet', isBottomSheet);
+      if (isBottomSheet) {
+        // Start collapsed (just the handle tab shows) when entering portrait mode
+        collapsed = true;
+        panel.classList.add('collapsed');
+      } else {
+        // Entering landscape: always start expanded
+        collapsed = false;
+        panel.classList.remove('collapsed');
+      }
+      lastPsz = 0; // force item resize
+    }
+    // Keep collapsed class in sync
+    panel.classList.toggle('collapsed', collapsed);
+
+    // Position + size of panel
     panel.style.left   = palX + 'px';
     panel.style.top    = palY + 'px';
     panel.style.width  = palW + 'px';
     panel.style.height = palH + 'px';
 
-    // Bubble : bord droit aligné bord droit palette, Y aligné sur le ruban
-    bubble.style.left = (palX + palW - CIRC_R * 2) + 'px';
-    bubble.style.top  = (palY + RADIUS + RUB_H / 2 - CIRC_R) + 'px';
-
-    // Ruban : bord droit au centre du rond (replié) ou bord gauche palette (déplié)
-    const bubbleCX = palX + palW - CIRC_R;
-    ruban.style.left = (collapsed ? bubbleCX - CIRC_R - RUB_W : palX - RUB_W) + 'px';
-    ruban.style.top  = (palY + RADIUS) + 'px';
-
-    // Taille des items : recalculer seulement si psz a changé (resize fenêtre)
-    if (psz && Math.abs(psz - lastPsz) > 0.5) {
-      lastPsz = psz;
-      _applyItemSizes();
+    if (isBottomSheet) {
+      // Hide sidebar controls
+      if (ruban)  ruban.style.display  = 'none';
+      if (bubble) bubble.style.display = 'none';
+    } else {
+      if (ruban)  ruban.style.display  = '';
+      if (bubble) bubble.style.display = '';
+      // Bubble position
+      bubble.style.left = (palX + palW - CIRC_R * 2) + 'px';
+      bubble.style.top  = (palY + RADIUS + RUB_H / 2 - CIRC_R) + 'px';
+      // Ruban position
+      const bubbleCX = palX + palW - CIRC_R;
+      ruban.style.left = (collapsed ? bubbleCX - CIRC_R - RUB_W : palX - RUB_W) + 'px';
+      ruban.style.top  = (palY + RADIUS) + 'px';
     }
 
-    // Nb de colonnes : recalculer la grille CSS si changé
-    const cols = LO.palCols || 3;
-    if (cols !== lastCols) {
-      lastCols = cols;
-      for (const grid of panel.querySelectorAll('.pal-grid')) {
-        grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-      }
+    // Recalculate item sizes when psz or mode changes
+    const effectivePsz = isBottomSheet ? (LO.r || 0) : (psz || 0);
+    if (Math.abs(effectivePsz - lastPsz) > 0.5) {
+      lastPsz = effectivePsz;
+      _applyItemSizes();
     }
 
     _syncItems();
@@ -291,6 +337,10 @@ const Palette = (() => {
   function isCollapsed() { return collapsed; }
   function init()        { _build(); }
 
+  // Callback set by editor so palette toggle triggers a full relayout
+  let onCollapseChange = null;
+  function setOnCollapseChange(fn) { onCollapseChange = fn; }
+
   return { layout, draw, onDown, onMove, onWheel, inPalette, palAt,
-           syncDOM, getScrollY, isCollapsed, applyLang, init };
+           syncDOM, getScrollY, isCollapsed, applyLang, init, setOnCollapseChange };
 })();
