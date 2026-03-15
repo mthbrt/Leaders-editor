@@ -3,7 +3,6 @@ const Palette = (() => {
 
   const MARGIN  = 30;
   const INNER   = 20;
-  const RADIUS  = 20;
   const PAL_G   = 8;
   const RUB_W   = 60;
   const RUB_H   = 40;
@@ -145,12 +144,17 @@ const Palette = (() => {
       const sec = document.createElement('div');
       sec.className = 'pal-section';
 
-      const hdr = document.createElement('div');
-      hdr.className = 'pal-sec-hdr';
-      hdr.innerHTML = `<span class="pal-sec-label">${typeof t === 'function' ? t(g.labelKey) : g.labelKey}</span>`;
-
       const grid = document.createElement('div');
       grid.className = 'pal-grid open';
+
+      if (gi === 0) {
+        grid.style.paddingTop = INNER + 'px';
+      } else {
+        const hdr = document.createElement('div');
+        hdr.className = 'pal-sec-hdr';
+        hdr.innerHTML = `<span class="pal-sec-label">${typeof t === 'function' ? t(g.labelKey) : g.labelKey}</span>`;
+        sec.appendChild(hdr);
+      }
 
       for (const name of g.names) {
         const item = document.createElement('div');
@@ -181,7 +185,6 @@ const Palette = (() => {
         grid.appendChild(item);
       }
 
-      sec.appendChild(hdr);
       sec.appendChild(grid);
       container.appendChild(sec);
     }
@@ -270,11 +273,11 @@ const Palette = (() => {
       if (bubble) bubble.style.display = '';
       // Bubble position
       bubble.style.left = (palX + palW - CIRC_R * 2) + 'px';
-      bubble.style.top  = (palY + RADIUS + RUB_H / 2 - CIRC_R) + 'px';
+      bubble.style.top  = (palY + INNER + RUB_H / 2 - CIRC_R) + 'px';
       // Ruban position
       const bubbleCX = palX + palW - CIRC_R;
       ruban.style.left = (collapsed ? bubbleCX - CIRC_R - RUB_W : palX - RUB_W) + 'px';
-      ruban.style.top  = (palY + RADIUS) + 'px';
+      ruban.style.top  = (palY + INNER) + 'px';
     }
 
     // Recalculate item sizes when psz or mode changes
@@ -326,10 +329,10 @@ const Palette = (() => {
     if (title && typeof t === 'function') title.textContent = t('palTitle');
     const reset = panel && panel.querySelector('#pal-reset');
     if (reset && typeof t === 'function') reset.textContent = t('palReset');
-    // Update section headers
+    // Update section headers (first section has no header, so headers map to GROUPS[gi+1])
     panel && panel.querySelectorAll('.pal-sec-hdr').forEach((hdr, gi) => {
       const label = hdr.querySelector('.pal-sec-label');
-      if (label && GROUPS[gi] && typeof t === 'function') label.textContent = t(GROUPS[gi].labelKey);
+      if (label && GROUPS[gi + 1] && typeof t === 'function') label.textContent = t(GROUPS[gi + 1].labelKey);
     });
   }
 

@@ -33,7 +33,7 @@ body {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 clamp(12px, 2.778vw, 30px);
   height: 50px;
   background: var(--bg-bar);
   border-bottom: 1px solid var(--border);
@@ -389,7 +389,7 @@ body {
   border-bottom: 1px solid rgba(70,70,160,0.2);
 }
 #pal-panel.bottom-sheet #pal-footer {
-  padding: 8px 12px;
+  padding: 10px;
 }
 
 .pal-item {
@@ -449,7 +449,7 @@ body {
 }
 
 #pal-footer {
-  padding: 16px;
+  padding: 10px;
   border-top: 1px solid rgba(70,70,160,0.2);
   flex-shrink: 0;
   display: flex;
@@ -467,6 +467,7 @@ body {
   cursor: pointer;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
   width: 50%;
+  max-width: 160px;
 }
 #pal-reset:hover {
   background: #2a2a50;
