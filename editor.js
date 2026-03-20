@@ -138,18 +138,61 @@ const LABELS = (() => {
 const L2ID = Object.fromEntries(Object.entries(LABELS).map(([id, l]) => [l, +id]));
 
 // ── ENCODE / DECODE ───────────────────────────────────────────────────────────
-const enc = ({ tokens }) =>
-  tokens.map(t => `${LABELS[t.cell] ?? t.cell}:${t.name}:${t.c}`).join(',');
+// Format : tokens|arrows|banned
+//   tokens  : "A1:1:b,B2:2:w,…"
+//   arrows  : "fromId>toId:mx,my:color;…"   (omis si vide)
+//   banned  : "3,7,12,…"                    (omis si vide)
+// Rétrocompatible : si aucun '|' → ancien format, on ne lit que les tokens.
+
+const enc = ({ tokens, arrows = [], banned = [] }) => {
+  const tPart = tokens.map(t => `${LABELS[t.cell] ?? t.cell}:${t.name}:${t.c}`).join(',');
+  const aPart = (arrows || [])
+    .map(a => {
+      const fl = LABELS[a.from_cell] ?? a.from_cell;
+      const tl = LABELS[a.to_cell]   ?? a.to_cell;
+      const mx = Math.round((a.mx || 0) * 10) / 10;
+      const my = Math.round((a.my || 0) * 10) / 10;
+      return `${fl}>${tl}:${mx},${my}:${a.color || '#ff4444'}`;
+    })
+    .join(';');
+  const bPart = (banned || []).join(',');
+  // N'ajoute les sections trailing que si elles ont du contenu
+  if (!aPart && !bPart) return tPart;
+  if (!bPart)           return `${tPart}|${aPart}`;
+  return `${tPart}|${aPart}|${bPart}`;
+};
 
 function dec(raw) {
   if (raw.startsWith('état|')) raw = raw.slice(5);
-  const [ts] = raw.split('|');
+  const parts  = raw.split('|');
+  const ts     = parts[0] || '';
+  const as     = parts[1] || '';
+  const bs     = parts[2] || '';
+
   const tokens = (ts ? ts.split(',') : []).flatMap(p => {
     const [ref, name, c] = p.split(':');
     const cell = L2ID[ref] ?? +ref;
     return (!ref || !name || !c || isNaN(cell)) ? [] : [{ cell, name, c }];
   });
-  return { tokens };
+
+  let arrowNid = 0;
+  const arrows = (as ? as.split(';') : []).flatMap(p => {
+    if (!p) return [];
+    const [cells, offsets, color] = p.split(':');
+    if (!cells || !offsets) return [];
+    const [fromRef, toRef] = cells.split('>');
+    const [mxs, mys]       = offsets.split(',');
+    const from_cell = L2ID[fromRef] ?? +fromRef;
+    const to_cell   = L2ID[toRef]   ?? +toRef;
+    if (isNaN(from_cell) || isNaN(to_cell)) return [];
+    return [{ id: arrowNid++, from_cell, to_cell,
+              mx: parseFloat(mxs) || 0, my: parseFloat(mys) || 0,
+              color: color || '#ff4444' }];
+  });
+
+  const banned = (bs ? bs.split(',').filter(Boolean) : []);
+
+  return { tokens, arrows, arrowNid, banned };
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -201,19 +244,19 @@ function doUnban(name) {
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 let hist = [], hidx = -1;
-const _snapS = () => { const { arrows, arrowNid, ...rest } = S; return JSON.stringify(rest); };
+const _snapS = () => JSON.stringify(S);
 const saveH = () => {
   const snap = _snapS();
   if (hidx >= 0 && hist[hidx] === snap) return;
   hist = hist.slice(0, hidx + 1);
   hist.push(snap);
   if (++hidx, hist.length > H_MAX) { hist.shift(); hidx--; }
+
+  updateURL();
 };
 const restH = entry => {
-  const { arrows, arrowNid } = S;
-  const restored = JSON.parse(entry);
-  if (!restored.banned) restored.banned = [];
-  S = { ...restored, arrows, arrowNid };
+  S = JSON.parse(entry);
+  if (!S.banned) S.banned = [];
   Arrows.clearSelected(); render();
 };
 const undo = () => hidx > 0             && restH(hist[--hidx]);
@@ -571,11 +614,18 @@ function doReset() { S = mkState(); hist = []; hidx = -1; Arrows.resetState(); s
 function doLoad() {
   const raw = document.getElementById('input-state').value.trim();
   if (!raw) return;
-  const { tokens } = dec(raw);
+  const { tokens, arrows, arrowNid, banned } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
   const palette = { lancement: [], vermillon: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0 };
+  S = {
+    tokens:   tokens.map((t, i) => ({ ...t, id: i })),
+    palette,
+    nid:      tokens.length,
+    arrows:   arrows || [],
+    arrowNid: arrowNid || 0,
+    banned:   banned  || [],
+  };
   Arrows.clearSelected(); saveH(); render();
 }
 function doCopy() {
@@ -737,7 +787,6 @@ function _updateCursor(x, y) {
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function render() {
-  history.replaceState(null, '', '?' + enc(S));
   _syncTokenLayer();
   _syncLabelLayer();
   _syncDropTarget();
@@ -749,14 +798,29 @@ function render() {
 }
 
 // ── URL STATE ─────────────────────────────────────────────────────────────────
+function updateURL() {
+  const encoded = enc(S);
+  const newHash = encoded ? '#' + encoded : '';
+  if (window.location.hash !== newHash) {
+    location.replace(window.location.pathname + newHash);
+  }
+}
+ 
 function loadStateFromURL() {
-  const raw = window.location.search.slice(1);
+  const raw = window.location.hash.slice(1) || window.location.search.slice(1);
   if (!raw) return;
-  const { tokens } = dec(raw);
+  const { tokens, arrows, arrowNid, banned } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
   const palette = { lancement: [], vermillon: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0 };
+  S = {
+    tokens:   tokens.map((t, i) => ({ ...t, id: i })),
+    palette,
+    nid:      tokens.length,
+    arrows:   arrows || [],
+    arrowNid: arrowNid || 0,
+    banned:   banned  || [],
+  };
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
