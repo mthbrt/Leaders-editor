@@ -206,7 +206,7 @@ body {
   inset: 0;
   overflow: visible;
   pointer-events: none;
-  z-index: 60;
+  z-index: 30;
   cursor: default;
 }
 
