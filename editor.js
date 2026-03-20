@@ -737,7 +737,7 @@ function _updateCursor(x, y) {
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function render() {
-  history.replaceState(null, '', '#' + enc(S));
+  history.replaceState(null, '', '?' + enc(S));
   _syncTokenLayer();
   _syncLabelLayer();
   _syncDropTarget();
@@ -750,7 +750,7 @@ function render() {
 
 // ── URL STATE ─────────────────────────────────────────────────────────────────
 function loadStateFromURL() {
-  const raw = window.location.hash.slice(1);
+  const raw = window.location.search.slice(1);
   if (!raw) return;
   const { tokens } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
