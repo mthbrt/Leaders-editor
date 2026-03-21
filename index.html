@@ -24,7 +24,7 @@
 
   <!-- ── Barre d'outils ── -->
   <div id="toolbar">
-    <a href="https://mthbrt.github.io/Leaders-editor/" class="logo">LEADERS</a>
+    <a href="/" class="logo">LEADERS</a>
 
     <div class="center-group">
       <button id="btn-undo" class="btn" title="Undo">
@@ -79,6 +79,7 @@
     <div id="droptarget-layer"></div>
     <div id="labels-layer"></div>
     <div id="tokens-layer"></div>
+    <div id="markers-layer"></div>
     <svg id="outlines-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="arrows-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="outlines-drag-svg" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -152,11 +153,19 @@
           <button class="toggle active" id="tog-shadow" role="switch" aria-checked="true"></button>
         </div>
         <div class="setting-row setting-row-lang" id="row-lang">
-          <div class="setting-name">Langue</div>
-          <div class="lang-switcher">
-            <button class="lang-btn" data-lang="fr">FR</button>
-            <button class="lang-btn" data-lang="en">EN</button>
+          <div class="setting-name" data-i18n="rowLang">Langue</div>
+          <div id="lang-trigger">
+            <span id="lang-current-label">English</span>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="5 2 10 7 5 12"/>
+            </svg>
           </div>
+        </div>
+
+        <!-- Language submenu popup -->
+        <div id="lang-submenu">
+          <div class="lang-option" data-lang="fr">Français</div>
+          <div class="lang-option" data-lang="en">English</div>
         </div>
       </div>
     </div>

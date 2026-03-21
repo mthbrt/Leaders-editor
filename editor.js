@@ -19,6 +19,7 @@ const LANGS = {
     palTitle:       'PERSONNAGES',
     palReset:       'Réinitialiser',
     secVermillon:   'Extension Vermillon',
+    secArchetypes:  'Archétypes',
     btnHelp:          'Aide',
     helpTitle:        'Commandes',
     helpSecTokens:    'Personnages',
@@ -58,6 +59,7 @@ const LANGS = {
     palTitle:       'CHARACTERS',
     palReset:       'Reset',
     secVermillon:   'Vermillon Expansion',
+    secArchetypes:  'Archetypes',
     btnHelp:          'Help',
     helpTitle:        'Controls',
     helpSecTokens:    'Characters',
@@ -101,9 +103,6 @@ function _applyLang() {
   document.querySelector('#row-shadow  .setting-name').textContent = t('rowShadow');
   document.querySelector('#row-shadow  .setting-desc').textContent = t('descShadow');
   document.querySelector('#row-lang    .setting-name').textContent = t('rowLang');
-  document.querySelectorAll('.lang-btn').forEach(btn =>
-    btn.classList.toggle('active-lang', btn.dataset.lang === currentLang)
-  );
   document.querySelectorAll('#help-popup [data-i18n]').forEach(el =>
     el.innerHTML = t(el.dataset.i18n)
   );
@@ -115,7 +114,7 @@ const R     = 3;
 const SQ3   = Math.sqrt(3);
 const CR    = 0.79;
 const H_MAX = 60;
-const T_RNG = [1, 24];
+const T_RNG = [1, 28];
 
 // ── PLATEAU ───────────────────────────────────────────────────────────────────
 const CELLS = (() => {
@@ -197,12 +196,14 @@ const mkState = () => ({
   palette: {
     lancement: Array.from({ length: 19 }, (_, i) => String(i + 1)),
     vermillon: Array.from({ length: 5  }, (_, i) => String(i + 20)),
+    archetypes: Array.from({ length: 4  }, (_, i) => String(i + 25)),
     other: [],
   },
   nid: 2,
   arrows: [],
   arrowNid: 0,
   banned: [],
+  markers: {},
 });
 let S = mkState();
 
@@ -213,6 +214,7 @@ function _palGroupOf(name) {
   const n = +name;
   if (n >= 1  && n <= 19) return 'lancement';
   if (n >= 20 && n <= 24) return 'vermillon';
+  if (n >= 25 && n <= 28) return 'archetypes';
   return 'other';
 }
 function _palAdd(name) {
@@ -251,7 +253,8 @@ const saveH = () => {
 const restH = entry => {
   const { arrows, arrowNid } = S;
   const restored = JSON.parse(entry);
-  if (!restored.banned) restored.banned = [];
+  if (!restored.banned)   restored.banned = [];
+  if (!restored.markers)  restored.markers = {};
   S = { ...restored, arrows, arrowNid };
   Arrows.clearSelected(); render();
 };
@@ -402,6 +405,26 @@ function _palRecruitOne(name) {
 let drag = null, dpos = null, justDropped = false;
 let mousePos = { x: 0, y: 0 };
 
+// ── RADIAL MENU HELPERS ───────────────────────────────────────────────────────
+// Buttons start at angle START_DEG (top = -90°) and step by STEP_DEG each.
+const RADIAL_START_DEG = -90;
+const RADIAL_STEP_DEG  = 45;
+const RADIAL_RADIUS    = 70; // px from center to button center
+
+function _radialPos(index) {
+  const deg = RADIAL_START_DEG + index * RADIAL_STEP_DEG;
+  const rad = deg * Math.PI / 180;
+  return {
+    x: Math.round(RADIAL_RADIUS * Math.cos(rad)),
+    y: Math.round(RADIAL_RADIUS * Math.sin(rad)),
+  };
+}
+
+function _positionRadialMenu(el, cx, cy) {
+  el.style.left = cx + 'px';
+  el.style.top  = cy + 'px';
+}
+
 // ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────
 let tokTb = null;
 let tokTbId = null;
@@ -410,23 +433,51 @@ function _mkTokToolbar() {
   if (tokTb) return tokTb;
   const el = document.createElement('div');
   el.id = 'tok-tb';
+  el.className = 'radial-menu';
+
+  // Buttons: [color, marker, delete]
   el.innerHTML = `
-    <button id="tok-color" title="Changer d'équipe"><span id="tok-dot"></span></button>
-    <div class="arr-sep"></div>
-    <button id="tok-del" class="arr-del" title="Supprimer">
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
+    <button id="tok-color" class="radial-btn radial-btn-color" title="Toggle team">
+      <span id="tok-dot" class="radial-dot"></span>
+    </button>
+    <button id="tok-marker" class="radial-btn" title="Marker">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
+      </svg>
+    </button>
+    <button id="tok-del" class="radial-btn radial-btn-del" title="Delete">
+      <svg width="16" height="16" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
       </svg>
     </button>`;
+
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
   el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+
+  // Position buttons radially
+  el.querySelectorAll('.radial-btn').forEach((btn, i) => {
+    const { x, y } = _radialPos(i);
+    btn.style.left = x + 'px';
+    btn.style.top  = y + 'px';
+  });
 
   const onColor = e => {
     e.stopPropagation();
     if (tokTbId === null) return;
     S.tokens = S.tokens.map(t => t.id === tokTbId ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
     tokTbId = null; _hideTokToolbar(); saveH(); render();
+  };
+  const onMarker = e => {
+    e.stopPropagation();
+    if (tokTbId === null) return;
+    const tok = S.tokens.find(t => t.id === tokTbId);
+    if (!tok) return;
+    const cellId = tok.cell;
+    const cell = LO.byId.get(cellId);
+    tokTbId = null; _hideTokToolbar();
+    if (cell) _placeMarkerToolbar(cellId, null);
+    render();
   };
   const onDel = e => {
     e.stopPropagation();
@@ -436,10 +487,12 @@ function _mkTokToolbar() {
     S.tokens = S.tokens.filter(t => t.id !== tokTbId);
     tokTbId = null; _hideTokToolbar(); saveH(); render();
   };
-  el.querySelector('#tok-color').addEventListener('click',      onColor);
-  el.querySelector('#tok-color').addEventListener('touchstart', onColor, { passive: false });
-  el.querySelector('#tok-del'  ).addEventListener('click',      onDel);
-  el.querySelector('#tok-del'  ).addEventListener('touchstart', onDel,   { passive: false });
+  el.querySelector('#tok-color' ).addEventListener('click',      onColor);
+  el.querySelector('#tok-color' ).addEventListener('touchstart', onColor,  { passive: false });
+  el.querySelector('#tok-marker').addEventListener('click',      onMarker);
+  el.querySelector('#tok-marker').addEventListener('touchstart', onMarker, { passive: false });
+  el.querySelector('#tok-del'   ).addEventListener('click',      onDel);
+  el.querySelector('#tok-del'   ).addEventListener('touchstart', onDel,    { passive: false });
 
   tokTb = el;
   return el;
@@ -456,20 +509,105 @@ function _placeTokToolbar() {
   const dot = el.querySelector('#tok-dot');
   dot.style.background  = tok.c === 'w' ? '#ffffff' : '#111111';
   dot.style.borderColor = tok.c === 'w' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
-  el.style.display = 'flex';
 
-  requestAnimationFrame(() => {
-    const pw = el.offsetWidth, ph = el.offsetHeight;
-    let px = Math.max(4, Math.min(LO.bW - pw - 4, cell.x + LO.r + 10));
-    let py = Math.max(4, Math.min(LO.H  - ph - 4, cell.y - ph / 2));
-    el.style.left = px + 'px';
-    el.style.top  = py + 'px';
-  });
+  _hideMarkerToolbar();
+  Arrows.clearSelected();
+
+  _positionRadialMenu(el, cell.x, cell.y);
+  el.classList.remove('open');
+  el.style.display = 'block';
+  void el.offsetWidth;
+  requestAnimationFrame(() => el.classList.add('open'));
 }
 
-function _hideTokToolbar() { if (tokTb) tokTb.style.display = 'none'; }
+function _hideTokToolbar() {
+  if (!tokTb) return;
+  tokTb.classList.remove('open');
+  tokTb.style.display = 'none';
+}
 
-// ── RIGHT-CLICK INTENT ────────────────────────────────────────────────────────
+// ── MARKER TOOLBAR ────────────────────────────────────────────────────────────
+const MARKER_TYPES = ['cap', 'dest', 'ghost', 'invo'];
+let markerTb     = null;
+let markerTbCell = null;
+
+function _mkMarkerToolbar() {
+  if (markerTb) return markerTb;
+  const el = document.createElement('div');
+  el.id = 'marker-tb';
+  el.className = 'radial-menu';
+
+  el.innerHTML = MARKER_TYPES.map(type => `
+    <button class="radial-btn marker-tb-btn" data-mtype="${type}" title="${type}">
+      <img src="ui/${type}.png" draggable="false" />
+    </button>`).join('');
+
+  document.getElementById('main').appendChild(el);
+  el.addEventListener('mousedown', e => e.stopPropagation());
+
+  // Position buttons radially
+  el.querySelectorAll('.radial-btn').forEach((btn, i) => {
+    const { x, y } = _radialPos(i);
+    btn.style.left = x + 'px';
+    btn.style.top  = y + 'px';
+  });
+
+  el.querySelectorAll('.marker-tb-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      if (markerTbCell === null) return;
+      const type = btn.dataset.mtype;
+      if (!S.markers) S.markers = {};
+      if (S.markers[markerTbCell] === type) {
+        delete S.markers[markerTbCell];
+      } else {
+        S.markers[markerTbCell] = type;
+      }
+      _hideMarkerToolbar();
+      saveH(); render();
+    });
+  });
+
+  markerTb = el;
+  return el;
+}
+
+function _placeMarkerToolbar(cellId, _fixedPos) {
+  markerTbCell = cellId;
+  const cell = LO.byId.get(cellId); if (!cell) return;
+  const el = _mkMarkerToolbar();
+
+  // Highlight active marker
+  el.querySelectorAll('.marker-tb-btn').forEach(btn => {
+    const active = S.markers && S.markers[cellId] === btn.dataset.mtype;
+    btn.classList.toggle('active', active);
+  });
+
+  tokTbId = null; _hideTokToolbar();
+  Arrows.clearSelected();
+
+  _positionRadialMenu(el, cell.x, cell.y);
+  // Force animation restart: remove open, display block, reflow, re-add open
+  el.classList.remove('open');
+  el.style.display = 'block';
+  void el.offsetWidth; // force reflow so transition fires fresh
+  requestAnimationFrame(() => el.classList.add('open'));
+}
+
+function _hideMarkerToolbar() {
+  if (!markerTb) return;
+  markerTb.classList.remove('open');
+  markerTb.style.display = 'none';
+  markerTbCell = null;
+}
+
+function _hideAllToolbars() {
+  tokTbId = null; _hideTokToolbar();
+  _hideMarkerToolbar();
+  Arrows.clearSelected();
+}
+
+
 // Distinguishes "right-click on token → toolbar" from "right-drag → arrow"
 let _rcPending = null;
 
@@ -494,11 +632,19 @@ function onDown(e) {
     }
     const tok = tokAt(x, y);
     if (tok) {
+      _hideMarkerToolbar();
       Arrows.clearSelected();
       _rcPending = { x, y, tokId: tok.id };
       return;
     }
     tokTbId = null; _hideTokToolbar();
+    _hideMarkerToolbar();
+    // Right-click on empty cell: wait for mouseup to distinguish click vs drag
+    const emptyCell = nearCell(x, y);
+    if (emptyCell) {
+      _rcPending = { x, y, cellId: emptyCell.id };
+      return;
+    }
     Arrows.onDown(e, x, y);
     return;
   }
@@ -522,6 +668,9 @@ function onDown(e) {
     if (!tok || tok.id !== tokTbId) { tokTbId = null; _hideTokToolbar(); }
   }
 
+  // Dismiss all toolbars on left click (they re-open if needed below)
+  _hideMarkerToolbar();
+
   if (inP) {
     const n = Palette.palAt(x, y);
     if (n) { drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y }; dpos = { x, y }; render(); }
@@ -542,7 +691,13 @@ function onMove(e) {
   mousePos = { x, y };
 
   if (_rcPending && Math.hypot(x - _rcPending.x, y - _rcPending.y) > 6) {
-    _rcCommitArrow(x, y);
+    if (_rcPending.tokId !== undefined) {
+      _rcCommitArrow(x, y);
+    } else if (_rcPending.cellId !== undefined) {
+      // Drag from empty cell → start arrow
+      Arrows.onDown({ button: 2, preventDefault: () => {} }, _rcPending.x, _rcPending.y);
+      _rcPending = null;
+    }
   }
 
   if (Arrows.onMove(x, y)) return;
@@ -555,10 +710,17 @@ function onUp(e) {
 
   if (e.button === 2 && _rcPending) {
     if (Math.hypot(x - _rcPending.x, y - _rcPending.y) <= 6) {
-      tokTbId = _rcPending.tokId;
-      _rcPending = null;
-      _placeTokToolbar(); render();
-      return;
+      if (_rcPending.tokId !== undefined) {
+        tokTbId = _rcPending.tokId;
+        _rcPending = null;
+        _placeTokToolbar(); render();
+        return;
+      } else if (_rcPending.cellId !== undefined) {
+        const cid = _rcPending.cellId;
+        _rcPending = null;
+        _placeMarkerToolbar(cid); render();
+        return;
+      }
     }
     _rcPending = null;
   }
@@ -622,9 +784,9 @@ function doLoad() {
   if (!raw) return;
   const { tokens, banned } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
-  const palette = { lancement: [], vermillon: [], other: [] };
+  const palette = { lancement: [], vermillon: [], archetypes: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [] };
+  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [], markers: {} };
   Arrows.clearSelected(); saveH(); render();
 }
 function doCopy() {
@@ -776,9 +938,68 @@ function _syncGhost() {
   ghost.style.height    = (r * 2) + 'px';
   ghost.style.opacity   = '1';
   ghost.style.boxShadow = showShadow ? '2px 3px 8px rgba(0,0,0,0.5)' : 'none';
+
+  // Trash icon feedback: show when dropping a board token over palette or outside board
+  let trashOverlay = ghost.querySelector('.ghost-trash');
+  const willDelete = drag.type === 'brd' && (Palette.inPalette(dpos.x, dpos.y) || !nearCell(dpos.x, dpos.y));
+  if (willDelete) {
+    const wasHidden = !trashOverlay || trashOverlay.style.display === 'none';
+    if (!trashOverlay) {
+      trashOverlay = document.createElement('div');
+      trashOverlay.className = 'ghost-trash';
+      trashOverlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+      ghost.appendChild(trashOverlay);
+    }
+    if (wasHidden) {
+      // Force animation restart
+      trashOverlay.style.animation = 'none';
+      trashOverlay.querySelector('svg').style.animation = 'none';
+      void trashOverlay.offsetWidth; // reflow
+      trashOverlay.style.animation = '';
+      trashOverlay.querySelector('svg').style.animation = 'trash-icon-bounce 0.30s cubic-bezier(0.22,1,0.36,1) both, trash-icon-pulse 1.1s 0.30s ease-in-out infinite';
+    }
+    trashOverlay.style.display = 'flex';
+  } else {
+    if (trashOverlay) trashOverlay.style.display = 'none';
+  }
 }
 
-// ── CURSOR ────────────────────────────────────────────────────────────────────
+// ── MARKER LAYER ──────────────────────────────────────────────────────────────
+function _syncMarkerLayer() {
+  let layer = document.getElementById('markers-layer');
+  if (!layer) return;
+  const { r, byId } = LO;
+  const markers = S.markers || {};
+  const existing = new Map();
+  for (const el of layer.children) existing.set(+el.dataset.mcell, el);
+
+  const seen = new Set();
+  for (const [cellIdStr, type] of Object.entries(markers)) {
+    const cellId = +cellIdStr;
+    const cell = byId.get(cellId); if (!cell) continue;
+    seen.add(cellId);
+    let el = existing.get(cellId);
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'html-marker';
+      el.dataset.mcell = cellId;
+      const img = document.createElement('img'); img.draggable = false;
+      el.appendChild(img);
+      layer.appendChild(el);
+    }
+    const d = r * 2 * 0.7;
+    el.style.left   = (cell.x - d / 2) + 'px';
+    el.style.top    = (cell.y - d / 2) + 'px';
+    el.style.width  = d + 'px';
+    el.style.height = d + 'px';
+    const img = el.querySelector('img');
+    const src = `ui/${type}.png`;
+    if (!img.src.endsWith(src)) img.src = src;
+  }
+  for (const [cid, el] of existing) { if (!seen.has(cid)) el.remove(); }
+}
+
+
 function _updateCursor(x, y) {
   const main = document.getElementById('main');
   if (!Arrows.updateCursor(main, x, y)) main.style.cursor = 'default';
@@ -791,6 +1012,7 @@ function render() {
   _syncLabelLayer();
   _syncDropTarget();
   _syncGhost();
+  _syncMarkerLayer();
   Outlines.render();
   Arrows.render();
   Palette.syncDOM();
@@ -803,9 +1025,9 @@ function loadStateFromURL() {
   if (!raw) return;
   const { tokens, banned } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
-  const palette = { lancement: [], vermillon: [], other: [] };
+  const palette = { lancement: [], vermillon: [], archetypes: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [] };
+  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [], markers: {} };
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -826,7 +1048,7 @@ function init() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
     if (e.key === 'ArrowLeft')  undo();
     if (e.key === 'ArrowRight') redo();
-    if (e.key === 'Escape') { tokTbId = null; _hideTokToolbar(); }
+    if (e.key === 'Escape') { _hideAllToolbars(); }
     Arrows.onKey(e);
   });
 
@@ -874,26 +1096,66 @@ function init() {
     if (e.target === document.getElementById('help-overlay')) _closeHelp();
   });
 
-  // Language switcher
-  document.querySelectorAll('.lang-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentLang = btn.dataset.lang;
+  // Language submenu
+  const langSubmenu  = document.getElementById('lang-submenu');
+  const langTrigger  = document.getElementById('lang-trigger');
+  const langLabel    = document.getElementById('lang-current-label');
+
+  const LANG_LABELS = { fr: 'Français', en: 'English' };
+
+  const _syncLangUI = () => {
+    langLabel.textContent = LANG_LABELS[currentLang] || currentLang;
+    langSubmenu.querySelectorAll('.lang-option').forEach(opt =>
+      opt.classList.toggle('active', opt.dataset.lang === currentLang)
+    );
+  };
+
+  const _closeLangMenu = () => langSubmenu.classList.remove('open');
+
+  const _openLangMenu = () => {
+    _syncLangUI();
+    const rowRect  = document.getElementById('row-lang').getBoundingClientRect();
+    const popup    = document.getElementById('settings-popup');
+    const popupRect = popup.getBoundingClientRect();
+    langSubmenu.style.top  = rowRect.top + 'px';
+    langSubmenu.style.left = (popupRect.right + 8) + 'px';
+    langSubmenu.classList.add('open');
+  };
+
+  document.getElementById('row-lang').addEventListener('click', e => {
+    e.stopPropagation();
+    langSubmenu.classList.contains('open') ? _closeLangMenu() : _openLangMenu();
+  });
+
+  langSubmenu.querySelectorAll('.lang-option').forEach(opt => {
+    opt.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      currentLang = opt.dataset.lang;
       localStorage.setItem('leaders-lang', currentLang);
+      _syncLangUI();
+      _closeLangMenu();
       _applyLang();
     });
   });
+
+  // Close submenu when clicking outside or closing settings
+  document.addEventListener('mousedown', e => {
+    if (!langSubmenu.contains(e.target) && e.target !== langTrigger)
+      _closeLangMenu();
+  });
+  document.getElementById('settings-close').addEventListener('click', _closeLangMenu);
+  document.getElementById('settings-overlay').addEventListener('mousedown', _closeLangMenu);
+
+  _syncLangUI();
 
   Arrows.init();
   Outlines.init();
   Palette.init();
   Palette.setOnCollapseChange(() => {
-    const main = document.getElementById('main');
-    main.classList.add('board-animating');
     relayout(); render();
-    clearTimeout(main._animTimer);
-    main._animTimer = setTimeout(() => main.classList.remove('board-animating'), 300);
   });
   _mkTokToolbar();
+  _mkMarkerToolbar();
 
   new ResizeObserver(() => { relayout(); render(); }).observe(main);
   relayout(); saveH(); render(); _applyLang();

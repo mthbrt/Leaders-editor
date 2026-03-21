@@ -9,8 +9,9 @@ const Palette = (() => {
   const CIRC_R  = 24;
 
   const GROUPS = [
-    { key: 'lancement', labelKey: 'secLancement', names: Array.from({length:19}, (_,i) => String(i+1))  },
-    { key: 'vermillon', labelKey: 'secVermillon', names: Array.from({length:5},  (_,i) => String(i+20)) },
+    { key: 'lancement',  labelKey: 'secLancement',  names: Array.from({length:19}, (_,i) => String(i+1))  },
+    { key: 'vermillon',  labelKey: 'secVermillon',  names: Array.from({length:5},  (_,i) => String(i+20)) },
+    { key: 'archetypes', labelKey: 'secArchetypes', names: Array.from({length:4},  (_,i) => String(i+25)) },
   ];
 
   let collapsed  = false;

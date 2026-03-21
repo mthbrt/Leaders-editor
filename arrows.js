@@ -95,14 +95,12 @@ const Arrows = (() => {
     el.id = 'arr-tb';
     el.innerHTML = `
       <button id="arr-color" title="Couleur"><span id="arr-dot"></span></button>
-      <div class="arr-sep"></div>
       <button id="arr-bend" title="Courbure">
-        <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <svg width="16" height="12" viewBox="-1 -1 16 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
           <path d="M1 9 Q7 1 13 9"/>
         </svg>
       </button>
-      <div class="arr-sep"></div>
-      <button id="arr-del" class="arr-del" title="Supprimer">
+      <button id="arr-del" title="Supprimer">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
         </svg>
@@ -119,9 +117,10 @@ const Arrows = (() => {
     el.querySelector('#arr-bend').addEventListener('click', e => {
       e.stopPropagation();
       const a = S.arrows.find(a => a.id === sel); if (!a) return;
-      const presets = [[0,0],[-40,0]];
-      const cur = presets.findIndex(([mx,my]) => Math.abs(a.mx-mx)<5 && Math.abs(a.my-my)<5);
-      [a.mx, a.my] = presets[(cur + 1) % presets.length];
+      const s = LO.byId.get(a.from_cell), d = LO.byId.get(a.to_cell); if (!s || !d) return;
+      const len = Math.hypot(d.x-s.x, d.y-s.y) || 1;
+      const amt = (Math.abs(a.mx) < 2 && Math.abs(a.my) < 2) ? Math.max(40, len * 0.25) : 0;
+      [a.mx, a.my] = [-(d.y-s.y)/len * amt, (d.x-s.x)/len * amt];
       saveH(); render(); _placeToolbar();
     });
     el.querySelector('#arr-del').addEventListener('click', e => {
@@ -142,25 +141,28 @@ const Arrows = (() => {
 
     const el = _mkToolbar();
     el.querySelector('#arr-dot').style.background = a.color;
-    el.style.display = 'flex';
 
-    requestAnimationFrame(() => {
-      const pw = el.offsetWidth, ph = el.offsetHeight;
-      const s = LO.byId.get(a.from_cell), d = LO.byId.get(a.to_cell);
-      if (!s || !d) { _hideToolbar(); return; }
-      const dx = d.x - s.x, dy = d.y - s.y, len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len, ny = dx / len;
-      const off = Math.max(52, LO.r * 1.5);
-      let px = g.mid.x + nx * off - pw / 2;
-      let py = g.mid.y + ny * off - ph / 2;
-      px = Math.max(4, Math.min(LO.bW - pw - 4, px));
-      py = Math.max(4, Math.min(LO.H  - ph - 4, py));
-      el.style.left = px + 'px';
-      el.style.top  = py + 'px';
-    });
+    const s = LO.byId.get(a.from_cell), d = LO.byId.get(a.to_cell);
+    if (!s || !d) { _hideToolbar(); return; }
+    const dx = d.x - s.x, dy = d.y - s.y, len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const off = Math.max(52, LO.r * 1.5);
+
+    el.style.left = (g.mid.x + nx * off) + 'px';
+    el.style.top  = (g.mid.y + ny * off) + 'px';
+
+    if (!el.classList.contains('open')) {
+      el.style.display = 'flex';
+      void el.offsetWidth;
+      el.classList.add('open');
+    }
   }
 
-  function _hideToolbar() { if (toolbar) toolbar.style.display = 'none'; }
+  function _hideToolbar() {
+    if (!toolbar) return;
+    toolbar.classList.remove('open');
+    toolbar.style.display = 'none';
+  }
 
   // ── Events ─────────────────────────────────────────────────────────────────
   function onDown(e, x, y) {
