@@ -94,13 +94,13 @@ const Arrows = (() => {
     const el = document.createElement('div');
     el.id = 'arr-tb';
     el.innerHTML = `
-      <button id="arr-color" title="Couleur"><span id="arr-dot"></span></button>
-      <button id="arr-bend" title="Courbure">
+      <button id="arr-color" title="Colour"><span id="arr-dot"></span></button>
+      <button id="arr-bend" title="Curve">
         <svg width="16" height="12" viewBox="-1 -1 16 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
           <path d="M1 9 Q7 1 13 9"/>
         </svg>
       </button>
-      <button id="arr-del" title="Supprimer">
+      <button id="arr-del" title="Delete">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
         </svg>

@@ -415,8 +415,8 @@ const RADIAL_STEP_DEG  = 45;
 // Clamped so the menu stays usable at very small or very large board sizes.
 function _radialMetrics() {
   const r     = (LO && LO.r) ? LO.r : 35;
-  const btnSz = Math.round(Math.max(28, Math.min(52, r * 0.9)));
-  const radius = Math.round(Math.max(48, Math.min(100, r * 1.6)));
+  const btnSz = Math.round(Math.max(30, Math.min(52, r * 0.9)));
+  const radius = Math.round(Math.max(50, Math.min(100, r * 1.6)));
   return { btnSz, radius };
 }
 
