@@ -2,12 +2,18 @@
   const fill   = document.getElementById('loader-bar-fill');
   const loader = document.getElementById('loader');
 
-  // Build the full list of token images to preload (1–24, noir + blanc)
-  const names = Array.from({ length: 24 }, (_, i) => String(i + 1));
+  // All token images: 1–28 (lancement 1-19, vermillon 20-24, archetypes 25-28)
+  const names = Array.from({ length: 28 }, (_, i) => String(i + 1));
   const srcs  = [];
   for (const n of names) {
     srcs.push(`jetons_noir/${n}.png`);
     srcs.push(`jetons_blanc/${n}.png`);
+  }
+
+  // UI images
+  const uiImages = ['cap', 'dest', 'ghost', 'invo', 'ban'];
+  for (const name of uiImages) {
+    srcs.push(`ui/${name}.png`);
   }
 
   let loaded = 0;
