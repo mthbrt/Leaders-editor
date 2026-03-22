@@ -11,7 +11,7 @@
   }
 
   // UI images
-  const uiImages = ['cap', 'dest', 'ghost', 'invo', 'ban'];
+  const uiImages = ['cap', 'dest', 'invo', 'ban'];
   for (const name of uiImages) {
     srcs.push(`ui/${name}.png`);
   }

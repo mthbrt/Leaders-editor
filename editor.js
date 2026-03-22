@@ -256,7 +256,7 @@ const restH = entry => {
   if (!restored.banned)   restored.banned = [];
   if (!restored.markers)  restored.markers = {};
   S = { ...restored, arrows, arrowNid };
-  Arrows.clearSelected(); render();
+  _hideAllToolbars(); Arrows.clearSelected(); render();
 };
 const undo = () => hidx > 0             && restH(hist[--hidx]);
 const redo = () => hidx < hist.length-1 && restH(hist[++hidx]);
@@ -268,6 +268,7 @@ let LO = {};
 const _palMargin = W => Math.max(10, Math.min(30, W * 0.04));
 
 function relayout() {
+  _hideAllToolbars();
   const main = document.getElementById('main');
   const W = main.clientWidth  || 800;
   const H = main.clientHeight || 560;
@@ -409,20 +410,38 @@ let mousePos = { x: 0, y: 0 };
 // Buttons start at angle START_DEG (top = -90°) and step by STEP_DEG each.
 const RADIAL_START_DEG = -90;
 const RADIAL_STEP_DEG  = 45;
-const RADIAL_RADIUS    = 70; // px from center to button center
+
+// Radius and button size scale with the token radius (LO.r).
+// Clamped so the menu stays usable at very small or very large board sizes.
+function _radialMetrics() {
+  const r     = (LO && LO.r) ? LO.r : 35;
+  const btnSz = Math.round(Math.max(28, Math.min(52, r * 0.9)));
+  const radius = Math.round(Math.max(48, Math.min(100, r * 1.6)));
+  return { btnSz, radius };
+}
 
 function _radialPos(index) {
+  const { radius } = _radialMetrics();
   const deg = RADIAL_START_DEG + index * RADIAL_STEP_DEG;
   const rad = deg * Math.PI / 180;
   return {
-    x: Math.round(RADIAL_RADIUS * Math.cos(rad)),
-    y: Math.round(RADIAL_RADIUS * Math.sin(rad)),
+    x: Math.round(radius * Math.cos(rad)),
+    y: Math.round(radius * Math.sin(rad)),
   };
 }
 
 function _positionRadialMenu(el, cx, cy) {
   el.style.left = cx + 'px';
   el.style.top  = cy + 'px';
+  // Apply dynamic button sizes and positions (overrides the CSS fixed 40px)
+  const { btnSz } = _radialMetrics();
+  el.querySelectorAll('.radial-btn').forEach((btn, i) => {
+    const { x, y } = _radialPos(i);
+    btn.style.left   = x + 'px';
+    btn.style.top    = y + 'px';
+    btn.style.width  = btnSz + 'px';
+    btn.style.height = btnSz + 'px';
+  });
 }
 
 // ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────
@@ -454,13 +473,6 @@ function _mkTokToolbar() {
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
   el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
-
-  // Position buttons radially
-  el.querySelectorAll('.radial-btn').forEach((btn, i) => {
-    const { x, y } = _radialPos(i);
-    btn.style.left = x + 'px';
-    btn.style.top  = y + 'px';
-  });
 
   const onColor = e => {
     e.stopPropagation();
@@ -527,7 +539,7 @@ function _hideTokToolbar() {
 }
 
 // ── MARKER TOOLBAR ────────────────────────────────────────────────────────────
-const MARKER_TYPES = ['cap', 'dest', 'ghost', 'invo'];
+const MARKER_TYPES = ['cap', 'dest', 'invo'];
 let markerTb     = null;
 let markerTbCell = null;
 
@@ -544,13 +556,6 @@ function _mkMarkerToolbar() {
 
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
-
-  // Position buttons radially
-  el.querySelectorAll('.radial-btn').forEach((btn, i) => {
-    const { x, y } = _radialPos(i);
-    btn.style.left = x + 'px';
-    btn.style.top  = y + 'px';
-  });
 
   el.querySelectorAll('.marker-tb-btn').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -777,8 +782,8 @@ function toggleC(id) {
   S.tokens = S.tokens.map(t => t.id === id ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
   saveH(); render();
 }
-function doClearArrows() { S.arrows = []; S.arrowNid = 0; Arrows.resetState(); saveH(); render(); }
-function doReset() { S = mkState(); hist = []; hidx = -1; Arrows.resetState(); saveH(); render(); }
+function doClearArrows() { _hideAllToolbars(); S.arrows = []; S.arrowNid = 0; Arrows.resetState(); saveH(); render(); }
+function doReset() { _hideAllToolbars(); S = mkState(); hist = []; hidx = -1; Arrows.resetState(); saveH(); render(); }
 function doLoad() {
   const raw = document.getElementById('input-state').value.trim();
   if (!raw) return;
@@ -787,7 +792,7 @@ function doLoad() {
   const palette = { lancement: [], vermillon: [], archetypes: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
   S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [], markers: {} };
-  Arrows.clearSelected(); saveH(); render();
+  _hideAllToolbars(); Arrows.clearSelected(); saveH(); render();
 }
 function doCopy() {
   navigator.clipboard.writeText(enc(S)).then(() => {
@@ -947,7 +952,7 @@ function _syncGhost() {
     if (!trashOverlay) {
       trashOverlay = document.createElement('div');
       trashOverlay.className = 'ghost-trash';
-      trashOverlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
+      trashOverlay.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0-1 14H6L5 6m5 4v6m4-6v6M9 6V4h6v2"/></svg>`;
       ghost.appendChild(trashOverlay);
     }
     if (wasHidden) {
@@ -987,7 +992,7 @@ function _syncMarkerLayer() {
       el.appendChild(img);
       layer.appendChild(el);
     }
-    const d = r * 2 * 0.7;
+    const d = r * 2;
     el.style.left   = (cell.x - d / 2) + 'px';
     el.style.top    = (cell.y - d / 2) + 'px';
     el.style.width  = d + 'px';

@@ -651,8 +651,8 @@ body {
 /* Marker image buttons */
 .radial-btn img {
   display: block;
-  width: 80%;
-  height: 80%;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
   -webkit-user-drag: none;
