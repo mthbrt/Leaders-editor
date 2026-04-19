@@ -607,6 +607,7 @@ function _mkTokToolbar() {
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
   el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+  el.addEventListener('touchend',   e => e.stopPropagation(), { passive: true });
 
   el.querySelector('#tok-color').addEventListener('click', e => {
     e.stopPropagation();
