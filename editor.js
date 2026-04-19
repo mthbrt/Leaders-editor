@@ -1,84 +1,92 @@
 // ── I18N ──────────────────────────────────────────────────────────────────────
 const LANGS = {
   fr: {
-    placeholder:    'Coller une configuration…',
-    btnCopy:        'Copier la configuration',
-    btnUndo:        'Annuler',
-    btnRedo:        'Rétablir',
-    btnClearArrows: 'Effacer toutes les flèches',
-    btnSettings:    'Paramètres',
-    copied:         'Copié !',
-    settingsTitle:  'Paramètres',
-    rowLabels:      'Indices plateau',
-    descLabels:     'Marque les coordonnées sur chaque case du plateau',
-    rowOutline:     'Bordures',
-    descOutline:    'Ajoute une bordure blanche ou noire sur chaque personnage',
-    rowShadow:      'Ombres',
-    descShadow:     'Ajoute une ombre sous chaque personnage',
-    rowLang:        'Langue',
-    palTitle:       'PERSONNAGES',
-    palReset:       'Réinitialiser',
-    secVermillon:   'Extension Vermillon',
-    secArchetypes:  'Archétypes',
-    btnHelp:          'Aide',
-    helpTitle:        'Commandes',
-    helpSecTokens:    'Personnages',
-    helpDragBoard:    'Clic gauche',
-    helpDragBoardDesc:'Déplacer les personnages par glisser-déposer',
-    helpMiddleTok:    'Clic molette',
-    helpMiddleTokDesc:'Plateau : changer équipe<br>Liste des personnages : bannir / débannir',
-    helpRightTok:     'Clic droit',
-    helpRightTokDesc: 'Plateau : menu (équipe / supprimer)<br>Liste des personnages : placer sur le plateau',
-    helpSecArrows:    'Flèches',
-    helpClickArrow:   'Clic gauche',
-    helpClickArrowDesc:'Sélectionner la flèche (couleur / supprimer)',
-    helpRightDrag:    'Clic droit',
-    helpRightDragDesc:'Maintenir appuyé et glisser vers une autre case pour tracer une flèche',
-    helpDelArrow:     'Suppr / Backspace',
-    helpDelArrowDesc: 'Supprimer la flèche sélectionnée',
-    helpSecGeneral:   'Général',
-    helpArrowKeys:    'Annuler / Rétablir',
-    helpEsc:          'Annuler action en cours',
+    btnUndo:          'Annuler',
+    btnRedo:          'Rétablir',
+    btnFlipColors:    'Inverser les couleurs',
+    btnFlipPos:       'Inverser horizontalement le plateau',
+    btnFlipPosV:      'Inverser verticalement le plateau',
+    btnSettings:      'Paramètres',
+    btnTogglePalette: 'Afficher/masquer les personnages',
+    copied:           'Copié !',
+    settingsTitle:    'Paramètres',
+    rowLabels:        'Indices plateau',
+    descLabels:       'Marque les coordonnées sur chaque case du plateau',
+    rowShadow:        'Ombres',
+    descShadow:       'Ajoute une ombre sous chaque personnage',
+    rowLang:          'Langue',
+    palTitle:         'PERSONNAGES',
+    palReset:         'Réinitialiser',
+    secVermillon:     'Extension Vermillon',
+    secArchetypes:    'Archétypes',
+    secLeaders:       'Leaders',
+    pal2Title:          'SAUVEGARDES',
+    pal2BtnClear:       'Tout effacer',
+    pal2AddSection:     'Nouvelle section',
+    pal2DefaultSection: 'Section',
+    pal2DefaultConfig:  'Position',
+    pal2LegacySection:  'Général',
+    pal2TitleNewSave:   'Nouvelle sauvegarde',
+    pal2TitleRename:    'Renommer',
+    pal2TitleDelete:    'Supprimer',
+    pal2TitleOverwrite: 'Écraser',
+    pal2TitleUpdate:    'Mettre à jour la sauvegarde',
+    btnHelp:            'Aide',
+    helpTitle:          'Commandes',
+    helpSecTokens:      'Personnages',
+    helpDragBoard:      'Clic gauche',
+    helpDragBoardDesc:  'Déplacer les personnages par glisser-déposer',
+    helpMiddleTok:      'Clic molette',
+    helpMiddleTokDesc:  'Plateau : changer équipe',
+    helpRightTok:       'Clic droit',
+    helpRightTokDesc:   'Plateau : menu (équipe / supprimer)<br>Liste des personnages : bannir / débannir',
+    helpSecGeneral:     'Général',
+    helpArrowKeys:      'Annuler / Rétablir',
+    helpEsc:            'Fermer le menu',
   },
   en: {
-    placeholder:    'Paste a configuration…',
-    btnCopy:        'Copy configuration',
-    btnUndo:        'Undo',
-    btnRedo:        'Redo',
-    btnClearArrows: 'Clear all arrows',
-    btnSettings:    'Settings',
-    copied:         'Copied!',
-    settingsTitle:  'Settings',
-    rowLabels:      'Board labels',
-    descLabels:     'Shows coordinates on each board cell',
-    rowOutline:     'Outlines',
-    descOutline:    'Adds a white or black outline on each character',
-    rowShadow:      'Shadows',
-    descShadow:     'Adds a shadow under each character',
-    rowLang:        'Language',
-    palTitle:       'CHARACTERS',
-    palReset:       'Reset',
-    secVermillon:   'Vermillon Expansion',
-    secArchetypes:  'Archetypes',
-    btnHelp:          'Help',
-    helpTitle:        'Controls',
-    helpSecTokens:    'Characters',
-    helpDragBoard:    'Left-click',
-    helpDragBoardDesc:'Move the characters by drag and drop',
-    helpMiddleTok:    'Middle-click',
-    helpMiddleTokDesc:'Board: toggle team<br>Character list: ban / unban',
-    helpRightTok:     'Right-click',
-    helpRightTokDesc: 'Board: menu (team / delete)<br>Character list: place on board',
-    helpSecArrows:    'Arrows',
-    helpClickArrow:   'Left-click',
-    helpClickArrowDesc:'Select the arrow (color / delete)',
-    helpRightDrag:    'Right-click',
-    helpRightDragDesc:'Hold and drag to another cell to draw an arrow',
-    helpDelArrow:     'Del / Backspace',
-    helpDelArrowDesc: 'Delete selected arrow',
-    helpSecGeneral:   'General',
-    helpArrowKeys:    'Undo / Redo',
-    helpEsc:          'Cancel current action',
+    btnUndo:          'Undo',
+    btnRedo:          'Redo',
+    btnFlipColors:    'Invert colors',
+    btnFlipPos:       'Mirror board horizontally',
+    btnFlipPosV:      'Mirror board vertically',
+    btnSettings:      'Settings',
+    btnTogglePalette: 'Show/hide characters',
+    copied:           'Copied!',
+    settingsTitle:    'Settings',
+    rowLabels:        'Board labels',
+    descLabels:       'Shows coordinates on each board cell',
+    rowShadow:        'Shadows',
+    descShadow:       'Adds a shadow under each character',
+    rowLang:          'Language',
+    palTitle:         'CHARACTERS',
+    palReset:         'Reset',
+    secVermillon:     'Vermillon Expansion',
+    secArchetypes:    'Archetypes',
+    secLeaders:       'Leaders',
+    pal2Title:          'SAVES',
+    pal2BtnClear:       'Clear all',
+    pal2AddSection:     'New section',
+    pal2DefaultSection: 'Section',
+    pal2DefaultConfig:  'Position',
+    pal2LegacySection:  'General',
+    pal2TitleNewSave:   'New save',
+    pal2TitleRename:    'Rename',
+    pal2TitleDelete:    'Delete',
+    pal2TitleOverwrite: 'Overwrite',
+    pal2TitleUpdate:    'Update save',
+    btnHelp:            'Help',
+    helpTitle:          'Controls',
+    helpSecTokens:      'Characters',
+    helpDragBoard:      'Left-click',
+    helpDragBoardDesc:  'Move the characters by drag and drop',
+    helpMiddleTok:      'Middle-click',
+    helpMiddleTokDesc:  'Board: toggle team',
+    helpRightTok:       'Right-click',
+    helpRightTokDesc:   'Board: menu (team / delete)<br>Character list: ban / unban',
+    helpSecGeneral:     'General',
+    helpArrowKeys:      'Undo / Redo',
+    helpEsc:            'Close menu',
   }
 };
 
@@ -87,26 +95,31 @@ let currentLang = localStorage.getItem('leaders-lang') || _browserLang;
 const t = key => (LANGS[currentLang] || LANGS.fr)[key] || key;
 
 function _applyLang() {
-  document.getElementById('input-state').placeholder            = t('placeholder');
-  document.getElementById('btn-copy').title                     = t('btnCopy');
-  document.getElementById('btn-undo').title                     = t('btnUndo');
-  document.getElementById('btn-redo').title                     = t('btnRedo');
-  document.getElementById('btn-clear-arrows').title             = t('btnClearArrows');
-  document.getElementById('btn-settings').title                 = t('btnSettings');
-  document.getElementById('btn-help').title                     = t('btnHelp');
-  document.getElementById('settings-title').textContent         = t('settingsTitle');
-  document.getElementById('help-title').textContent             = t('helpTitle');
-  document.querySelector('#row-labels  .setting-name').textContent = t('rowLabels');
-  document.querySelector('#row-labels  .setting-desc').textContent = t('descLabels');
-  document.querySelector('#row-outline .setting-name').textContent = t('rowOutline');
-  document.querySelector('#row-outline .setting-desc').textContent = t('descOutline');
-  document.querySelector('#row-shadow  .setting-name').textContent = t('rowShadow');
-  document.querySelector('#row-shadow  .setting-desc').textContent = t('descShadow');
-  document.querySelector('#row-lang    .setting-name').textContent = t('rowLang');
+  document.getElementById('btn-undo').dataset.tooltip           = t('btnUndo');
+  document.getElementById('btn-redo').dataset.tooltip           = t('btnRedo');
+  document.getElementById('btn-flip-colors').dataset.tooltip    = t('btnFlipColors');
+  document.getElementById('btn-flip-pos').dataset.tooltip       = t('btnFlipPos');
+  document.getElementById('btn-flip-pos-v').dataset.tooltip     = t('btnFlipPosV');
+  document.getElementById('btn-settings').dataset.tooltip       = t('btnSettings');
+  document.getElementById('btn-toggle-palette').dataset.tooltip = t('btnTogglePalette');
+  document.getElementById('btn-help').dataset.tooltip           = t('btnHelp');
+  // Retirer les title natifs pour désactiver le tooltip navigateur
+  ['btn-undo','btn-redo','btn-flip-colors','btn-flip-pos','btn-flip-pos-v','btn-settings','btn-toggle-palette','btn-help'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.removeAttribute('title');
+  });
+  document.getElementById('settings-title').textContent = t('settingsTitle');
+  document.getElementById('help-title').textContent     = t('helpTitle');
+  document.querySelector('#row-labels .setting-name').textContent = t('rowLabels');
+  document.querySelector('#row-labels .setting-desc').textContent = t('descLabels');
+  document.querySelector('#row-shadow .setting-name').textContent = t('rowShadow');
+  document.querySelector('#row-shadow .setting-desc').textContent = t('descShadow');
+  document.querySelector('#row-lang   .setting-name').textContent = t('rowLang');
   document.querySelectorAll('#help-popup [data-i18n]').forEach(el =>
     el.innerHTML = t(el.dataset.i18n)
   );
   Palette.applyLang();
+  if (typeof Palette2 !== 'undefined') Palette2.applyLang();
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -114,7 +127,9 @@ const R     = 3;
 const SQ3   = Math.sqrt(3);
 const CR    = 0.79;
 const H_MAX = 60;
-const T_RNG = [1, 28];
+const ALL_NAMES_LIST = [
+  ...Array.from({ length: 26 }, (_, i) => String(i + 1))
+];
 
 // ── PLATEAU ───────────────────────────────────────────────────────────────────
 const CELLS = (() => {
@@ -151,10 +166,8 @@ function enc({ tokens, banned }) {
 }
 
 function dec(raw) {
-  // Legacy format support: "état|..." or "A1:name:c,..."
   if (raw.startsWith('état|')) raw = raw.slice(5);
 
-  // New format: white=a1:2,b3:4&black=c5:6&ban=1,2
   if (raw.includes('=')) {
     const params = {};
     for (const part of raw.split('&')) {
@@ -180,7 +193,7 @@ function dec(raw) {
     return { tokens, banned };
   }
 
-  // Legacy fallback: "A1:name:c,..."
+  // Legacy fallback
   const [ts] = raw.split('|');
   const tokens = (ts ? ts.split(',') : []).flatMap(p => {
     const [ref, name, c] = p.split(':');
@@ -194,27 +207,24 @@ function dec(raw) {
 const mkState = () => ({
   tokens: [{ id: 0, cell: 21, name: '1', c: 'b' }, { id: 1, cell: 15, name: '2', c: 'w' }],
   palette: {
-    lancement: Array.from({ length: 19 }, (_, i) => String(i + 1)),
+    lancement: Array.from({ length: 17 }, (_, i) => String(i + 3)),
     vermillon: Array.from({ length: 5  }, (_, i) => String(i + 20)),
-    archetypes: Array.from({ length: 4  }, (_, i) => String(i + 25)),
+    leaders: ['1', '2', '25'],
     other: [],
   },
   nid: 2,
-  arrows: [],
-  arrowNid: 0,
   banned: [],
-  markers: {},
 });
 let S = mkState();
 
 // ── PALETTE HELPERS ───────────────────────────────────────────────────────────
-const ALL_NAMES = Array.from({ length: T_RNG[1] - T_RNG[0] + 1 }, (_, i) => String(i + T_RNG[0]));
+const ALL_NAMES = ALL_NAMES_LIST;
 
 function _palGroupOf(name) {
   const n = +name;
-  if (n >= 1  && n <= 19) return 'lancement';
+  if (n === 1 || n === 2 || n === 25) return 'leaders';
+  if (n >= 3  && n <= 19) return 'lancement';
   if (n >= 20 && n <= 24) return 'vermillon';
-  if (n >= 25 && n <= 28) return 'archetypes';
   return 'other';
 }
 function _palAdd(name) {
@@ -242,7 +252,7 @@ function doUnban(name) {
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 let hist = [], hidx = -1;
-const _snapS = () => { const { arrows, arrowNid, ...rest } = S; return JSON.stringify(rest); };
+const _snapS = () => JSON.stringify(S);
 const saveH = () => {
   const snap = _snapS();
   if (hidx >= 0 && hist[hidx] === snap) return;
@@ -251,12 +261,10 @@ const saveH = () => {
   if (++hidx, hist.length > H_MAX) { hist.shift(); hidx--; }
 };
 const restH = entry => {
-  const { arrows, arrowNid } = S;
   const restored = JSON.parse(entry);
-  if (!restored.banned)   restored.banned = [];
-  if (!restored.markers)  restored.markers = {};
-  S = { ...restored, arrows, arrowNid };
-  _hideAllToolbars(); Arrows.clearSelected(); render();
+  if (!restored.banned) restored.banned = [];
+  S = restored;
+  _hideTokToolbar(); render();
 };
 const undo = () => hidx > 0             && restH(hist[--hidx]);
 const redo = () => hidx < hist.length-1 && restH(hist[++hidx]);
@@ -264,11 +272,8 @@ const redo = () => hidx < hist.length-1 && restH(hist[++hidx]);
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
 let LO = {};
 
-// Shared margin formula — must stay in sync with palette.js
-const _palMargin = W => Math.max(10, Math.min(30, W * 0.04));
-
 function relayout() {
-  _hideAllToolbars();
+  _hideTokToolbar();
   const main = document.getElementById('main');
   const W = main.clientWidth  || 800;
   const H = main.clientHeight || 560;
@@ -276,43 +281,27 @@ function relayout() {
   const BOARD_COLS = (2*R + 1) * 1.5 + 0.5;
   const BOARD_ROWS = (2*R + 1.5) * SQ3;
 
-  const palCollapsed   = Palette.isCollapsed();
   const rEst           = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90 * CR;
+  const pal2Layout     = (typeof Palette2 !== 'undefined') ? Palette2.layout(W, H, rEst) : { palW: 0 };
   const palLayout      = Palette.layout(W, H, rEst);
   const { palX, palY, palW, palH } = palLayout;
   const palBottomSheet = !!palLayout._bottomSheet;
 
-  // In portrait (bottom sheet), the sheet slides over the board —
-  // fit the board above the collapsed handle tab only.
   const HANDLE_H = 48;
   const availH   = palBottomSheet ? H - HANDLE_H : H;
 
-  // Board scale — always full size, never shrunk for the palette
   const sp = Math.min(W / BOARD_COLS, availH / BOARD_ROWS) * 0.90;
   const r  = sp * CR;
 
-  // Horizontal centre
-  // Gap between board right edge and palette left edge matches PAL_MARGIN
-  // so both sides of the screen have the same breathing room.
-  const MARGIN = _palMargin(W);
-  let cx;
-
-  if (palBottomSheet || palCollapsed) {
-    // Portrait, or landscape with palette hidden → centre on full width
-    cx = W / 2;
-  } else {
-    // Landscape + palette visible: shift board left to clear palette if possible.
-    // Never shrink — if it can't shift without violating the left margin, overlap.
-    const bHalf      = sp * (BOARD_COLS / 2);
-    const cxForClear = palX - MARGIN - bHalf; // cx so right edge = palX - MARGIN
-    const leftEdge   = cxForClear - bHalf;
-
-    cx = leftEdge >= MARGIN
-      ? Math.min(W / 2, cxForClear) // shift (never past centre)
-      : W / 2;                       // can't shift cleanly → centre, palette overlaps
-  }
-
+  const pal2Collapsed = (typeof Palette2 !== 'undefined') && Palette2.isCollapsed();
+  const pal2Right = palBottomSheet ? 0 : (pal2Collapsed ? 0 : (pal2Layout.palW || 0));
+  const pal1Left  = palBottomSheet ? W : (Palette.isCollapsed() ? W : palX);
+  const cx = (pal2Right + pal1Left) / 2;
   const cy = palBottomSheet ? availH / 2 : H / 2;
+
+  // Masquer le bouton palette2 en mode bottom-sheet
+  const btnPal2 = document.getElementById('btn-toggle-pal2');
+  if (btnPal2) btnPal2.style.display = palBottomSheet ? 'none' : '';
 
   const cells = CELLS.map(c => ({
     ...c,
@@ -323,7 +312,8 @@ function relayout() {
   const hs   = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
 
   LO = { W, H, bW: W, r, cx, cy, cells, byId, hs, psz: r * 2,
-         palX, palY, palW, palH, _palBottomSheet: palBottomSheet };
+         palX, palY, palW, palH, _palBottomSheet: palBottomSheet,
+         palItemSz: palBottomSheet ? r : Math.round(rEst * 2 * 0.90) / 2 };
 
   const boardLayer = document.getElementById('board-layer');
   if (boardLayer) {
@@ -334,15 +324,6 @@ function relayout() {
     boardLayer.style.height = bh + 'px';
     _updateBoardClip(boardLayer, bw, bh, hs);
   }
-
-  for (const id of ['arrows-svg', 'outlines-svg']) {
-    const el = document.getElementById(id);
-    if (el) {
-      el.setAttribute('width', W); el.setAttribute('height', H);
-      el.style.width = W + 'px';  el.style.height = H + 'px';
-    }
-  }
-  Outlines.syncSize(W, H);
 }
 
 function _updateBoardClip(el, bw, bh, hs) {
@@ -355,9 +336,8 @@ function _updateBoardClip(el, bw, bh, hs) {
 
 // ── SETTINGS ─────────────────────────────────────────────────────────────────
 const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
-let showLabels  = _loadSetting('leaders-labels',  true);
-let showOutline = _loadSetting('leaders-outline', false);
-let showShadow  = _loadSetting('leaders-shadow',  true);
+let showLabels = _loadSetting('leaders-labels', true);
+let showShadow = _loadSetting('leaders-shadow', true);
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
 function _mainXY(e) {
@@ -406,108 +386,253 @@ function _palRecruitOne(name) {
 let drag = null, dpos = null, justDropped = false;
 let mousePos = { x: 0, y: 0 };
 
-// ── RADIAL MENU HELPERS ───────────────────────────────────────────────────────
-// Buttons start at angle START_DEG (top = -90°) and step by STEP_DEG each.
-const RADIAL_START_DEG = -90;
-const RADIAL_STEP_DEG  = 45;
+// ── SELECTION STATE (souris + tactile) ────────────────────────────────────────
+// Mode clic-select : clic sur jeton → sélection, clic sur case → déplace
+// Fonctionne pour la souris (clic simple sans drag) ET le tactile (tap)
+let _selected = null;  // { type:'brd'|'pal', id?, name?, c? }
 
-// Radius and button size scale with the token radius (LO.r).
-// Clamped so the menu stays usable at very small or very large board sizes.
-function _radialMetrics() {
-  const r     = (LO && LO.r) ? LO.r : 35;
-  const btnSz = Math.round(Math.max(30, Math.min(52, r * 0.9)));
-  const radius = Math.round(Math.max(50, Math.min(100, r * 1.6)));
-  return { btnSz, radius };
+// ── LONG-PRESS STATE ──────────────────────────────────────────────────────────
+let _longPressTimer = null;
+const LONG_PRESS_MS = 500;
+let _longPressFired = false;
+// Timestamp du dernier long-press déclenché. Sert à ignorer le contextmenu natif
+// que Chrome Android émet après un long-press (qui rouvrirait le menu bannir) et
+// les éventuels ghost taps synthétiques sur touchstart/touchend.
+let _longPressEndTime = 0;
+const GHOST_TAP_MS = 600;
+
+function _isTouchDevice() {
+  return window.matchMedia('(pointer: coarse)').matches;
 }
 
-function _radialPos(index) {
-  const { radius } = _radialMetrics();
-  const deg = RADIAL_START_DEG + index * RADIAL_STEP_DEG;
-  const rad = deg * Math.PI / 180;
-  return {
-    x: Math.round(radius * Math.cos(rad)),
-    y: Math.round(radius * Math.sin(rad)),
-  };
+// Highlight de sélection (souris + tactile)
+function _syncTouchSelectionHighlight() {
+  document.querySelectorAll('.touch-selected').forEach(el => el.classList.remove('touch-selected'));
+  if (!_selected) return;
+  if (_selected.type === 'brd') {
+    const el = document.querySelector(`#tokens-layer .html-token[data-tid="${_selected.id}"]`);
+    if (el) el.classList.add('touch-selected');
+  } else if (_selected.type === 'pal') {
+    const el = document.querySelector(`#pal-panel .pal-item[data-name="${_selected.name}"]`);
+    if (el) el.classList.add('touch-selected');
+  }
 }
 
-function _positionRadialMenu(el, cx, cy) {
-  el.style.left = cx + 'px';
-  el.style.top  = cy + 'px';
-  // Apply dynamic button sizes and positions (overrides the CSS fixed 40px)
-  const { btnSz } = _radialMetrics();
-  el.querySelectorAll('.radial-btn').forEach((btn, i) => {
-    const { x, y } = _radialPos(i);
-    btn.style.left   = x + 'px';
-    btn.style.top    = y + 'px';
-    btn.style.width  = btnSz + 'px';
-    btn.style.height = btnSz + 'px';
-  });
+function _cancelTouchSelection() {
+  _selected = null;
+  _syncTouchSelectionHighlight();
 }
 
-// ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────
-let tokTb = null;
+// ── Simule un right-click (pour long-press) ───────────────────────────────────
+function _simulateRightClick(x, y) {
+  const inP = Palette.inPalette(x, y);
+  if (inP) {
+    // Appel direct (pas de dispatchEvent) : le listener contextmenu du panel
+    // est ignoré via le guard _longPressEndTime pour éviter la double ouverture.
+    const name = Palette.palAt(x, y);
+    if (name) {
+      const palItem = document.querySelector(`#pal-panel .pal-item[data-name="${name}"]`);
+      if (palItem) { Tooltip.hide(); Palette.openPalToolbar(name, palItem); }
+    }
+    return;
+  }
+  // Sur le plateau
+  const tok = tokAt(x, y);
+  if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(); render(); }
+}
+
+// ── Gestionnaires touch ───────────────────────────────────────────────────────
+function _touchXY(touch) {
+  const b = document.getElementById('main').getBoundingClientRect();
+  return { x: touch.clientX - b.left, y: touch.clientY - b.top };
+}
+
+function onTouchStart(e) {
+  if (e.touches.length !== 1) { _cancelLongPress(); return; }
+
+  // Absorber les ghost taps synthétiques émis par le navigateur après un long-press
+  if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
+
+  const touch = e.touches[0];
+  const { x, y } = _touchXY(touch);
+
+  // Fermer toolbars si tap hors de celles-ci
+  if (tokTbId !== null) {
+    const tb = document.getElementById('tok-tb');
+    if (!tb || !tb.contains(e.target)) _hideTokToolbar();
+  }
+  if (typeof Palette !== 'undefined' && Palette.isPalTbOpen && Palette.isPalTbOpen()) {
+    const palTbEl = document.getElementById('pal-tok-tb');
+    if (!palTbEl || !palTbEl.contains(e.target)) Palette.hidePalToolbar();
+  }
+
+  // Long-press → right-click (menu contextuel)
+  _cancelLongPress();
+  const _lpX = x, _lpY = y, _lpTarget = e.target;
+  _longPressTimer = setTimeout(() => {
+    _longPressTimer = null;
+    _longPressFired = true;   // bloquer le touchend suivant
+    _longPressEndTime = Date.now();
+    if (navigator.vibrate) navigator.vibrate(40);
+    _cancelTouchSelection();
+    _simulateRightClick(_lpX, _lpY, _lpTarget);
+  }, LONG_PRESS_MS);
+
+  // Stocker position de départ pour détecter un glissement (annule long-press)
+  onTouchStart._startX = touch.clientX;
+  onTouchStart._startY = touch.clientY;
+}
+
+function _cancelLongPress() {
+  if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+}
+
+function onTouchMove(e) {
+  if (!e.touches.length) return;
+  const touch = e.touches[0];
+  const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
+  const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
+  // Annuler le long-press si déplacement > 8px
+  if (Math.hypot(dx, dy) > 8) _cancelLongPress();
+}
+
+function onTouchEnd(e) {
+  _cancelLongPress();
+  if (e.changedTouches.length !== 1) return;
+
+  // Absorber les ghost taps synthétiques émis par le navigateur après un long-press
+  if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
+
+  // Si le long-press a été déclenché, bloquer ce touchend
+  if (_longPressFired) { _longPressFired = false; e.preventDefault(); return; }
+
+  const touch = e.changedTouches[0];
+  const { x, y } = _touchXY(touch);
+
+  // Vérifier que c'est bien un tap (pas un glissement)
+  const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
+  const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
+  if (Math.hypot(dx, dy) > 10) return;
+
+  // Ne pas interférer avec les éléments UI (boutons, toolbar, etc.)
+  if (e.target.closest('#tok-tb, #pal-tok-tb, #toolbar, #settings-overlay, #help-overlay')) return;
+
+  const inP = Palette.inPalette(x, y);
+
+  // ── Phase 2 : on a déjà une sélection ────────────────────────────────────
+  if (_selected) {
+    if (_selected.type === 'brd') {
+      const destCell = nearCell(x, y);
+
+      if (inP) {
+        // Destination = palette → supprimer du plateau
+        const tok = S.tokens.find(t => t.id === _selected.id);
+        if (tok) { S.tokens = S.tokens.filter(t => t.id !== _selected.id); _palAdd(tok.name); saveH(); }
+        _cancelTouchSelection(); render(); e.preventDefault(); return;
+      }
+
+      if (destCell) {
+        const srcTok = S.tokens.find(t => t.id === _selected.id);
+        if (srcTok) {
+          const destTok = S.tokens.find(t => t.cell === destCell.id && t.id !== _selected.id);
+          if (destTok) {
+            const from = srcTok.cell;
+            S.tokens = S.tokens.map(t =>
+              t.id === _selected.id ? { ...t, cell: destCell.id } :
+              t.id === destTok.id   ? { ...t, cell: from }        : t
+            );
+          } else {
+            S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCell.id } : t);
+          }
+          saveH();
+        }
+        _cancelTouchSelection(); render(); e.preventDefault(); return;
+      }
+
+      // Tap dans le vide → désélectionner
+      _cancelTouchSelection(); render(); e.preventDefault(); return;
+    }
+    // (pas de type 'pal' en phase 2 : la palette place toujours directement)
+  }
+
+  // ── Phase 1 : pas de sélection ────────────────────────────────────────────
+
+  if (inP) {
+    const name = Palette.palAt(x, y);
+    if (name) {
+      e.preventDefault();
+      // Tap palette → placer directement au centre (pas de sélection intermédiaire)
+      _palRecruitOne(name);
+    }
+    return;
+  }
+
+  const tok = tokAt(x, y);
+  if (tok) {
+    e.preventDefault();
+    _selected = { type: 'brd', id: tok.id };
+    _syncTouchSelectionHighlight(); render();
+    return;
+  }
+
+  // Tap dans le vide → désélectionner
+  _cancelTouchSelection(); render();
+}
+
+function _initTouchEvents() {
+  const main = document.getElementById('main');
+  main.addEventListener('touchstart', onTouchStart, { passive: false });
+  main.addEventListener('touchmove',  onTouchMove,  { passive: true });
+  main.addEventListener('touchend',   onTouchEnd,   { passive: false });
+  main.addEventListener('touchcancel', () => { _cancelLongPress(); _cancelTouchSelection(); render(); });
+}
+
+// ── TOKEN TOOLBAR — pill-bar à droite du jeton ────────────────────────────────
+let tokTb   = null;
 let tokTbId = null;
 
 function _mkTokToolbar() {
   if (tokTb) return tokTb;
   const el = document.createElement('div');
   el.id = 'tok-tb';
-  el.className = 'radial-menu';
-
-  // Buttons: [color, marker, delete]
   el.innerHTML = `
-    <button id="tok-color" class="radial-btn radial-btn-color" title="Toggle team">
-      <span id="tok-dot" class="radial-dot"></span>
+    <button id="tok-color" class="tok-tb-btn">
+      <span id="tok-color-label"></span>
     </button>
-    <button id="tok-marker" class="radial-btn" title="Marker">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/>
-      </svg>
-    </button>
-    <button id="tok-del" class="radial-btn radial-btn-del" title="Delete">
-      <svg width="16" height="16" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
-      </svg>
+    <div class="tok-tb-sep"></div>
+    <button id="tok-del" class="tok-tb-btn">
+      <span id="tok-del-label"></span>
     </button>`;
 
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
   el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
 
-  const onColor = e => {
+  el.querySelector('#tok-color').addEventListener('click', e => {
     e.stopPropagation();
     if (tokTbId === null) return;
     S.tokens = S.tokens.map(t => t.id === tokTbId ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
-    tokTbId = null; _hideTokToolbar(); saveH(); render();
-  };
-  const onMarker = e => {
-    e.stopPropagation();
-    if (tokTbId === null) return;
-    const tok = S.tokens.find(t => t.id === tokTbId);
-    if (!tok) return;
-    const cellId = tok.cell;
-    const cell = LO.byId.get(cellId);
-    tokTbId = null; _hideTokToolbar();
-    if (cell) _placeMarkerToolbar(cellId, null);
-    render();
-  };
-  const onDel = e => {
+    _hideTokToolbar(); saveH(); render();
+  });
+
+  el.querySelector('#tok-del').addEventListener('click', e => {
     e.stopPropagation();
     if (tokTbId === null) return;
     const tok = S.tokens.find(t => t.id === tokTbId);
     if (tok) _palAdd(tok.name);
     S.tokens = S.tokens.filter(t => t.id !== tokTbId);
-    tokTbId = null; _hideTokToolbar(); saveH(); render();
-  };
-  el.querySelector('#tok-color' ).addEventListener('click',      onColor);
-  el.querySelector('#tok-color' ).addEventListener('touchstart', onColor,  { passive: false });
-  el.querySelector('#tok-marker').addEventListener('click',      onMarker);
-  el.querySelector('#tok-marker').addEventListener('touchstart', onMarker, { passive: false });
-  el.querySelector('#tok-del'   ).addEventListener('click',      onDel);
-  el.querySelector('#tok-del'   ).addEventListener('touchstart', onDel,    { passive: false });
+    _hideTokToolbar(); saveH(); render();
+  });
 
   tokTb = el;
   return el;
+}
+
+function _updateTokDot(c, used) {
+  const label = document.getElementById('tok-color-label');
+  const del   = document.getElementById('tok-del-label');
+  if (label) label.textContent = currentLang === 'fr' ? 'Changer de couleur' : 'Toggle color';
+  if (del)   del.textContent   = currentLang === 'fr' ? 'Supprimer' : 'Delete';
 }
 
 function _placeTokToolbar() {
@@ -518,109 +643,52 @@ function _placeTokToolbar() {
   if (!cell) { _hideTokToolbar(); return; }
 
   const el = _mkTokToolbar();
-  const dot = el.querySelector('#tok-dot');
-  dot.style.background  = tok.c === 'w' ? '#ffffff' : '#111111';
-  dot.style.borderColor = tok.c === 'w' ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)';
+  _updateTokDot(tok.c, !!tok.used);
 
-  _hideMarkerToolbar();
-  Arrows.clearSelected();
-
-  _positionRadialMenu(el, cell.x, cell.y);
-  el.classList.remove('open');
-  el.style.display = 'block';
+  // Mesurer sans transition ni visibilité
+  el.classList.remove('open', 'arrow-left', 'arrow-right');
+  el.style.display    = 'flex';
+  el.style.visibility = 'hidden';
+  el.style.transition = 'none';
   void el.offsetWidth;
-  requestAnimationFrame(() => el.classList.add('open'));
+
+  const elW = el.offsetWidth;
+  const elH = el.offsetHeight;
+  const GAP = 12;
+  const r   = LO.r;
+
+  // Position : droite du jeton par défaut
+  let x = cell.x + r + GAP;
+  let y = cell.y - elH / 2;
+
+  const goLeft = x + elW + 4 > LO.W;
+  if (goLeft) x = cell.x - r - GAP - elW;
+
+  y = Math.max(4, Math.min(y, LO.H - elH - 4));
+
+  // Flèche alignée sur le centre du jeton
+  const arrowY = Math.max(14, Math.min(cell.y - y, elH - 14));
+  el.style.setProperty('--arrow-y', arrowY + 'px');
+  el.classList.add(goLeft ? 'arrow-right' : 'arrow-left');
+
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+
+  // Rétablir la transition et animer l'ouverture
+  requestAnimationFrame(() => {
+    el.style.transition = '';
+    el.style.visibility = '';
+    el.classList.add('open');
+  });
 }
 
 function _hideTokToolbar() {
   if (!tokTb) return;
   tokTb.classList.remove('open');
-  tokTb.style.display = 'none';
-}
-
-// ── MARKER TOOLBAR ────────────────────────────────────────────────────────────
-const MARKER_TYPES = ['cap', 'dest', 'invo'];
-let markerTb     = null;
-let markerTbCell = null;
-
-function _mkMarkerToolbar() {
-  if (markerTb) return markerTb;
-  const el = document.createElement('div');
-  el.id = 'marker-tb';
-  el.className = 'radial-menu';
-
-  el.innerHTML = MARKER_TYPES.map(type => `
-    <button class="radial-btn marker-tb-btn" data-mtype="${type}" title="${type}">
-      <img src="ui/${type}.png" draggable="false" />
-    </button>`).join('');
-
-  document.getElementById('main').appendChild(el);
-  el.addEventListener('mousedown', e => e.stopPropagation());
-
-  el.querySelectorAll('.marker-tb-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      if (markerTbCell === null) return;
-      const type = btn.dataset.mtype;
-      if (!S.markers) S.markers = {};
-      if (S.markers[markerTbCell] === type) {
-        delete S.markers[markerTbCell];
-      } else {
-        S.markers[markerTbCell] = type;
-      }
-      _hideMarkerToolbar();
-      saveH(); render();
-    });
-  });
-
-  markerTb = el;
-  return el;
-}
-
-function _placeMarkerToolbar(cellId, _fixedPos) {
-  markerTbCell = cellId;
-  const cell = LO.byId.get(cellId); if (!cell) return;
-  const el = _mkMarkerToolbar();
-
-  // Highlight active marker
-  el.querySelectorAll('.marker-tb-btn').forEach(btn => {
-    const active = S.markers && S.markers[cellId] === btn.dataset.mtype;
-    btn.classList.toggle('active', active);
-  });
-
-  tokTbId = null; _hideTokToolbar();
-  Arrows.clearSelected();
-
-  _positionRadialMenu(el, cell.x, cell.y);
-  // Force animation restart: remove open, display block, reflow, re-add open
-  el.classList.remove('open');
-  el.style.display = 'block';
-  void el.offsetWidth; // force reflow so transition fires fresh
-  requestAnimationFrame(() => el.classList.add('open'));
-}
-
-function _hideMarkerToolbar() {
-  if (!markerTb) return;
-  markerTb.classList.remove('open');
-  markerTb.style.display = 'none';
-  markerTbCell = null;
-}
-
-function _hideAllToolbars() {
-  tokTbId = null; _hideTokToolbar();
-  _hideMarkerToolbar();
-  Arrows.clearSelected();
-}
-
-
-// Distinguishes "right-click on token → toolbar" from "right-drag → arrow"
-let _rcPending = null;
-
-function _rcCommitArrow(x, y) {
-  if (!_rcPending) return;
-  tokTbId = null; _hideTokToolbar();
-  Arrows.onDown({ button: 2, preventDefault: () => {} }, _rcPending.x, _rcPending.y);
-  _rcPending = null;
+  tokTb.style.display    = 'none';
+  tokTb.style.visibility = '';
+  tokTb.style.transition = '';
+  tokTbId = null;
 }
 
 // ── EVENT HANDLERS ────────────────────────────────────────────────────────────
@@ -628,109 +696,138 @@ function onDown(e) {
   const { x, y } = _mainXY(e);
   const inP = Palette.inPalette(x, y);
 
+  // Toujours fermer la toolbar si on clique n'importe où (sauf sur la toolbar elle-même)
+  if (tokTbId !== null) {
+    const tb = document.getElementById('tok-tb');
+    const clickOnTb = tb && tb.contains(e.target);
+    if (!clickOnTb) _hideTokToolbar();
+  }
+  // Fermer aussi le menu bannir de la palette si ouvert
+  if (typeof Palette !== 'undefined' && Palette.isPalTbOpen && Palette.isPalTbOpen()) {
+    const palTbEl = document.getElementById('pal-tok-tb');
+    if (!palTbEl || !palTbEl.contains(e.target)) {
+      Palette.hidePalToolbar();
+    }
+  }
+
   if (e.button === 2) {
     e.preventDefault();
-    if (inP) {
-      const n = Palette.palAt(x, y);
-      if (n) _palRecruitOne(n);
-      return;
-    }
+    // Clic droit sur la palette : géré par palette.js (contextmenu)
+    if (inP) return;
     const tok = tokAt(x, y);
     if (tok) {
-      _hideMarkerToolbar();
-      Arrows.clearSelected();
-      _rcPending = { x, y, tokId: tok.id };
+      tokTbId = tok.id;
+      Tooltip.hide();
+      _placeTokToolbar(); render();
       return;
     }
-    tokTbId = null; _hideTokToolbar();
-    _hideMarkerToolbar();
-    // Right-click on empty cell: wait for mouseup to distinguish click vs drag
-    const emptyCell = nearCell(x, y);
-    if (emptyCell) {
-      _rcPending = { x, y, cellId: emptyCell.id };
-      return;
-    }
-    Arrows.onDown(e, x, y);
     return;
   }
 
   if (e.button === 1) {
     e.preventDefault();
-    if (!inP) {
-      const tok = tokAt(x, y);
-      if (tok) toggleC(tok.id);
-    } else {
-      const n = Palette.palAt(x, y);
-      if (n) isBanned(n) ? doUnban(n) : doBan(n);
-    }
+    // Clic molette palette : géré par palette.js
+    if (inP) return;
+    const tok = tokAt(x, y);
+    if (tok) toggleC(tok.id);
     return;
   }
 
   if (e.button !== 0) return;
 
-  if (!inP) {
-    const tok = tokAt(x, y);
-    if (!tok || tok.id !== tokTbId) { tokTbId = null; _hideTokToolbar(); }
-  }
-
-  // Dismiss all toolbars on left click (they re-open if needed below)
-  _hideMarkerToolbar();
-
   if (inP) {
     const n = Palette.palAt(x, y);
-    if (n) { drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y }; dpos = { x, y }; render(); }
+    if (n) {
+      // Palette : toujours drag (clic simple = recruter au centre, drag = déposer sur case)
+      // La distinction se fait dans onUp selon la distance parcourue
+      drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y };
+      dpos = { x, y };
+      render();
+    }
     return;
   }
 
-  if (Arrows.onDown(e, x, y)) return;
-
+  // ── Jeton de plateau : mémoriser pour distinguer clic vs drag dans onUp ──
   const tok = tokAt(x, y);
   if (tok) {
-    tokTbId = null; _hideTokToolbar();
-    drag = { type: 'brd', id: tok.id, _startX: x, _startY: y }; dpos = { x, y }; render();
+    // On démarre un drag "pending" — le vrai drag ne s'active qu'au mouvement (> 6px)
+    drag = { type: 'brd', id: tok.id, _startX: x, _startY: y, _pending: true };
+    dpos = { x, y };
+    render();
+    return;
   }
+
+  // ── Clic dans le vide avec une sélection active : déplacer vers la case cliquée ──
+  if (_selected && _selected.type === 'brd') {
+    const destCell = nearCell(x, y);
+    if (destCell) {
+      const srcTok = S.tokens.find(t => t.id === _selected.id);
+      if (srcTok) {
+        const destTok = S.tokens.find(t => t.cell === destCell.id && t.id !== _selected.id);
+        if (destTok) {
+          const from = srcTok.cell;
+          S.tokens = S.tokens.map(t =>
+            t.id === _selected.id ? { ...t, cell: destCell.id } :
+            t.id === destTok.id   ? { ...t, cell: from }        : t
+          );
+        } else {
+          S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCell.id } : t);
+        }
+        saveH();
+      }
+    }
+    _cancelTouchSelection(); render();
+    return;
+  }
+
+  // Clic dans le vide → désélectionner
+  if (_selected) { _cancelTouchSelection(); render(); }
 }
 
 function onMove(e) {
   const { x, y } = _mainXY(e);
   mousePos = { x, y };
 
-  if (_rcPending && Math.hypot(x - _rcPending.x, y - _rcPending.y) > 6) {
-    if (_rcPending.tokId !== undefined) {
-      _rcCommitArrow(x, y);
-    } else if (_rcPending.cellId !== undefined) {
-      // Drag from empty cell → start arrow
-      Arrows.onDown({ button: 2, preventDefault: () => {} }, _rcPending.x, _rcPending.y);
-      _rcPending = null;
+  // Activer le drag réel si le pending a dépassé le seuil
+  if (drag && drag._pending) {
+    const moved = Math.hypot(x - drag._startX, y - drag._startY);
+    if (moved >= 6) {
+      // Seuil atteint : on passe en drag actif, la sélection est annulée
+      drag._pending = false;
+      _cancelTouchSelection();
     }
   }
 
-  if (Arrows.onMove(x, y)) return;
+  // Tooltip — figé si la toolbar de jeton est ouverte OU si menu palette ouvert
+  if (tokTbId === null && !(typeof Palette !== 'undefined' && Palette.isPalTbOpen && Palette.isPalTbOpen())) {
+    if (Palette.inPalette(x, y)) {
+      Palette.onMove(x, y);
+    } else {
+      const hoveredTok = tokAt(x, y);
+      if (hoveredTok && !drag) {
+        const cell = LO.byId.get(hoveredTok.cell);
+        if (cell) {
+          const mainRect = document.getElementById('main').getBoundingClientRect();
+          Tooltip.scheduleBoard(
+            hoveredTok.name,
+            mainRect.left + cell.x,
+            mainRect.top  + cell.y,
+            'board:' + hoveredTok.id,
+            LO.r
+          );
+        }
+      } else {
+        Tooltip.hide();
+      }
+    }
+  }
+
   if (drag) { dpos = { x, y }; render(); }
-  _updateCursor(x, y);
+  document.getElementById('main').style.cursor = 'default';
 }
 
 function onUp(e) {
   const { x, y } = _mainXY(e);
-
-  if (e.button === 2 && _rcPending) {
-    if (Math.hypot(x - _rcPending.x, y - _rcPending.y) <= 6) {
-      if (_rcPending.tokId !== undefined) {
-        tokTbId = _rcPending.tokId;
-        _rcPending = null;
-        _placeTokToolbar(); render();
-        return;
-      } else if (_rcPending.cellId !== undefined) {
-        const cid = _rcPending.cellId;
-        _rcPending = null;
-        _placeMarkerToolbar(cid); render();
-        return;
-      }
-    }
-    _rcPending = null;
-  }
-
-  if (Arrows.onUp(e, x, y)) return;
   if (!drag || e.button !== 0) return;
 
   const cell = nearCell(x, y);
@@ -739,30 +836,68 @@ function onUp(e) {
   if (drag.type === 'brd') {
     const tok = S.tokens.find(t => t.id === drag.id);
     if (tok) {
-      if (inP || !cell) {
-        // Drop in palette OR outside the board entirely → remove token, return to palette
-        S.tokens = S.tokens.filter(t => t.id !== drag.id);
-        _palAdd(tok.name); saveH();
-      } else {
-        const other = S.tokens.find(t => t.cell === cell.id && t.id !== drag.id);
-        if (other) {
-          const from = tok.cell;
-          S.tokens = S.tokens.map(t =>
-            t.id === drag.id ? { ...t, cell: cell.id } :
-            t.id === other.id ? { ...t, cell: from } : t
-          );
+      if (drag._pending) {
+        // ── Clic simple (pas de drag) → logique de sélection ──────────────
+        const wasSelf = _selected && _selected.type === 'brd' && _selected.id === tok.id;
+        if (wasSelf) {
+          // Re-clic sur le jeton déjà sélectionné → désélectionner
+          _cancelTouchSelection();
+        } else if (_selected && _selected.type === 'brd') {
+          // Un autre jeton était sélectionné → déplacer le sélectionné sur la case du tok cliqué
+          // (comportement : échanger ou déplacer)
+          const srcTok = S.tokens.find(t => t.id === _selected.id);
+          if (srcTok) {
+            const destCell2 = LO.byId.get(tok.cell);
+            if (destCell2) {
+              const destTok = S.tokens.find(t => t.cell === destCell2.id && t.id !== _selected.id);
+              if (destTok) {
+                const from = srcTok.cell;
+                S.tokens = S.tokens.map(t =>
+                  t.id === _selected.id ? { ...t, cell: destCell2.id } :
+                  t.id === destTok.id   ? { ...t, cell: from }         : t
+                );
+              } else {
+                S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCell2.id } : t);
+              }
+              saveH();
+            }
+          }
+          _cancelTouchSelection();
         } else {
-          S.tokens = S.tokens.map(t => t.id === drag.id ? { ...t, cell: cell.id } : t);
+          // Aucune sélection active → sélectionner ce jeton
+          _selected = { type: 'brd', id: tok.id };
+          _syncTouchSelectionHighlight();
         }
-        saveH();
+      } else {
+        // ── Drag réel → déposer ────────────────────────────────────────────
+        if (inP || !cell) {
+          S.tokens = S.tokens.filter(t => t.id !== drag.id);
+          _palAdd(tok.name);
+          saveH();
+        } else {
+          const other = S.tokens.find(t => t.cell === cell.id && t.id !== drag.id);
+          if (other) {
+            const from = tok.cell;
+            S.tokens = S.tokens.map(t =>
+              t.id === drag.id  ? { ...t, cell: cell.id } :
+              t.id === other.id ? { ...t, cell: from }    : t
+            );
+          } else {
+            S.tokens = S.tokens.map(t => t.id === drag.id ? { ...t, cell: cell.id } : t);
+          }
+          saveH();
+        }
       }
     }
   } else if (drag.type === 'pal') {
     const moved = Math.hypot(x - drag._startX, y - drag._startY);
-    if (moved >= 6 && !inP && cell) {
+    if (moved < 6) {
+      // Clic simple → placer au centre du plateau
+      _palRecruitOne(drag.name);
+    } else if (!inP && cell) {
+      // Drag → déposer sur la case ciblée
       const other = S.tokens.find(t => t.cell === cell.id);
       if (other) {
-        // Cell occupied → swap: return existing token to palette, place dragged one
         _palAdd(other.name);
         S.tokens = S.tokens.map(t =>
           t.id === other.id ? { ...t, name: drag.name, c: drag.c } : t
@@ -770,7 +905,8 @@ function onUp(e) {
       } else {
         S.tokens = [...S.tokens, { id: S.nid++, cell: cell.id, name: drag.name, c: drag.c }];
       }
-      _palRemove(drag.name); saveH();
+      _palRemove(drag.name);
+      saveH();
     }
   }
 
@@ -782,21 +918,57 @@ function toggleC(id) {
   S.tokens = S.tokens.map(t => t.id === id ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
   saveH(); render();
 }
-function doClearArrows() { _hideAllToolbars(); S.arrows = []; S.arrowNid = 0; Arrows.resetState(); saveH(); render(); }
-function doReset() { _hideAllToolbars(); S = mkState(); hist = []; hidx = -1; Arrows.resetState(); saveH(); render(); }
+function doFlipColors() {
+  _hideTokToolbar(); _cancelTouchSelection();
+  S.tokens = S.tokens.map(t => ({ ...t, c: t.c === 'w' ? 'b' : 'w' }));
+  saveH(); render();
+}
+function doFlipPositions() {
+  _hideTokToolbar(); _cancelTouchSelection();
+  const coordToId = new Map();
+  for (const c of CELLS) coordToId.set(`${c.q},${c.r}`, c.id);
+  S.tokens = S.tokens.map(t => {
+    const cell = CELLS.find(c => c.id === t.cell);
+    if (!cell) return t;
+    const newR = -cell.q - cell.r;
+    const newId = coordToId.get(`${cell.q},${newR}`);
+    return newId !== undefined ? { ...t, cell: newId } : t;
+  });
+  saveH(); render();
+}
+function doFlipPositionsV() {
+  _hideTokToolbar(); _cancelTouchSelection();
+  const coordToId = new Map();
+  for (const c of CELLS) coordToId.set(`${c.q},${c.r}`, c.id);
+  S.tokens = S.tokens.map(t => {
+    const cell = CELLS.find(c => c.id === t.cell);
+    if (!cell) return t;
+    const newQ = -cell.q;
+    const newR = cell.r + cell.q;
+    const newId = coordToId.get(`${newQ},${newR}`);
+    return newId !== undefined ? { ...t, cell: newId } : t;
+  });
+  saveH(); render();
+}
+function doReset() {
+  _hideTokToolbar(); _cancelTouchSelection();
+  S = mkState();
+  hist = []; hidx = -1; saveH(); render();
+}
 function doLoad() {
-  const raw = document.getElementById('input-state').value.trim();
+  const raw = document.getElementById('_hidden-input-state').value.trim();
   if (!raw) return;
   const { tokens, banned } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
-  const palette = { lancement: [], vermillon: [], archetypes: [], other: [] };
+  const palette = { lancement: [], vermillon: [], leaders: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [], markers: {} };
-  _hideAllToolbars(); Arrows.clearSelected(); saveH(); render();
+  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, banned: banned || [] };
+  _hideTokToolbar(); saveH(); render();
 }
 function doCopy() {
   navigator.clipboard.writeText(enc(S)).then(() => {
-    const b = document.getElementById('btn-copy');
+    const b = document.getElementById('pal-btn-copy');
+    if (!b) return;
     if (b._copyTimer) clearTimeout(b._copyTimer);
     const originalHTML = b.innerHTML;
     b.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
@@ -836,15 +1008,23 @@ function _syncTokenLayer() {
     const img = el.querySelector('img');
     const src = `jetons_${color}/${t.name}.png`;
     if (!img.src.endsWith(src)) img.src = src;
+    el.dataset.imgKey = '';
+
+    const lbl = el.querySelector('.board-token-label');
+    if (lbl) lbl.remove();
 
     el.style.left      = (cell.x - d/2) + 'px';
     el.style.top       = (cell.y - d/2) + 'px';
     el.style.width     = d + 'px';
     el.style.height    = d + 'px';
+    el.style.position  = 'absolute';
     el.style.overflow  = 'visible';
-    el.style.boxShadow = showShadow ? `${r*0.05}px ${r*0.07}px ${r*0.15}px rgba(0,0,0,0.6)` : 'none';
-    el.style.outline   = 'none';
-    el.querySelector('img').style.boxShadow = 'none';
+    el.style.boxShadow  = showShadow ? `${r*0.05}px ${r*0.06}px ${r*0.12}px rgba(0,0,0,0.6)` : 'none';
+    img.style.boxShadow = 'none';
+    img.style.filter    = t.used ? 'grayscale(1) opacity(0.5)' : '';
+    // Anneau tactile : débordement = 5% du diamètre, arrondi au pair
+    const ringInset = Math.round(d * 0.05 / 2) * 2;
+    el.style.setProperty('--ring-inset', `${ringInset}px`);
   }
   for (const [tid, el] of existing) { if (!seen.has(tid)) el.remove(); }
 }
@@ -881,9 +1061,9 @@ function _syncLabelLayer() {
     let el = existing.get(c.id);
     if (!el) {
       el = document.createElement('div');
-      el.className  = 'html-label';
+      el.className   = 'html-label';
       el.dataset.cid = c.id;
-      el.innerHTML  = `<span style="color:rgb(168,164,148)">${letter}</span><span style="color:${numCol}">${num}</span>`;
+      el.innerHTML   = `<span style="color:rgb(168,164,148)">${letter}</span><span style="color:${numCol}">${num}</span>`;
       layer.appendChild(el);
     }
     el.style.left     = c.x + 'px';
@@ -896,6 +1076,7 @@ function _syncLabelLayer() {
 
 function _dragMoved() {
   if (!drag || !dpos) return false;
+  if (drag._pending) return false;  // pending = pas encore un vrai drag
   return Math.hypot(dpos.x - (drag._startX ?? dpos.x), dpos.y - (drag._startY ?? dpos.y)) >= 6;
 }
 
@@ -903,14 +1084,32 @@ function _syncDropTarget() {
   const layer = document.getElementById('droptarget-layer');
   if (!layer) return;
   layer.innerHTML = '';
-  if (!drag || !dpos || !_dragMoved()) return;
-  const dtgt = nearCell(dpos.x, dpos.y);
-  if (!dtgt) return;
-  const { r } = LO;
-  const div = document.createElement('div');
-  div.className = 'html-droptarget';
-  div.style.cssText = `left:${dtgt.x-r}px;top:${dtgt.y-r}px;width:${r*2}px;height:${r*2}px;`;
-  layer.appendChild(div);
+
+  // Mode souris : drag en cours
+  if (drag && dpos && _dragMoved()) {
+    const dtgt = nearCell(dpos.x, dpos.y);
+    if (dtgt) {
+      const { r } = LO;
+      const div = document.createElement('div');
+      div.className = 'html-droptarget';
+      div.style.cssText = `left:${dtgt.x-r}px;top:${dtgt.y-r}px;width:${r*2}px;height:${r*2}px;`;
+      layer.appendChild(div);
+    }
+    return;
+  }
+
+  // Mode sélection (souris ou tactile) : jeton sélectionné → pulse sur toutes les cases
+  if (_selected && (_isTouchDevice() || !drag)) {
+    const { r } = LO;
+    if (_selected.type === 'brd' || _selected.type === 'pal') {
+      for (const c of LO.cells) {
+        const div = document.createElement('div');
+        div.className = 'html-droptarget touch-hint';
+        div.style.cssText = `left:${c.x-r}px;top:${c.y-r}px;width:${r*2}px;height:${r*2}px;`;
+        layer.appendChild(div);
+      }
+    }
+  }
 }
 
 function _syncGhost() {
@@ -931,12 +1130,19 @@ function _syncGhost() {
     document.getElementById('main').appendChild(ghost);
   }
 
-  const r   = drag.type === 'brd' ? LO.r : (LO._palBottomSheet ? LO.r : LO.psz / 2 * 0.90);
-  const src = `jetons_${t.c === 'w' ? 'blanc' : 'noir'}/${t.name}.png`;
+  const r = drag.type === 'brd' ? LO.r : LO.palItemSz;
+  const color = t.c === 'w' ? 'blanc' : 'noir';
   const img = ghost.querySelector('img');
+  const src = `jetons_${color}/${t.name}.png`;
   if (!img.src.endsWith(src)) img.src = src;
+  ghost.dataset.imgKey = '';
+
+  const lbl = ghost.querySelector('.board-token-label');
+  if (lbl) lbl.remove();
 
   ghost.style.display   = 'block';
+  ghost.style.position  = 'absolute';
+  ghost.style.overflow  = 'visible';
   ghost.style.left      = (dpos.x - r) + 'px';
   ghost.style.top       = (dpos.y - r) + 'px';
   ghost.style.width     = (r * 2) + 'px';
@@ -944,7 +1150,6 @@ function _syncGhost() {
   ghost.style.opacity   = '1';
   ghost.style.boxShadow = showShadow ? '2px 3px 8px rgba(0,0,0,0.5)' : 'none';
 
-  // Trash icon feedback: show when dropping a board token over palette or outside board
   let trashOverlay = ghost.querySelector('.ghost-trash');
   const willDelete = drag.type === 'brd' && (Palette.inPalette(dpos.x, dpos.y) || !nearCell(dpos.x, dpos.y));
   if (willDelete) {
@@ -956,10 +1161,9 @@ function _syncGhost() {
       ghost.appendChild(trashOverlay);
     }
     if (wasHidden) {
-      // Force animation restart
       trashOverlay.style.animation = 'none';
       trashOverlay.querySelector('svg').style.animation = 'none';
-      void trashOverlay.offsetWidth; // reflow
+      void trashOverlay.offsetWidth;
       trashOverlay.style.animation = '';
       trashOverlay.querySelector('svg').style.animation = 'trash-icon-bounce 0.30s cubic-bezier(0.22,1,0.36,1) both, trash-icon-pulse 1.1s 0.30s ease-in-out infinite';
     }
@@ -969,47 +1173,6 @@ function _syncGhost() {
   }
 }
 
-// ── MARKER LAYER ──────────────────────────────────────────────────────────────
-function _syncMarkerLayer() {
-  let layer = document.getElementById('markers-layer');
-  if (!layer) return;
-  const { r, byId } = LO;
-  const markers = S.markers || {};
-  const existing = new Map();
-  for (const el of layer.children) existing.set(+el.dataset.mcell, el);
-
-  const seen = new Set();
-  for (const [cellIdStr, type] of Object.entries(markers)) {
-    const cellId = +cellIdStr;
-    const cell = byId.get(cellId); if (!cell) continue;
-    seen.add(cellId);
-    let el = existing.get(cellId);
-    if (!el) {
-      el = document.createElement('div');
-      el.className = 'html-marker';
-      el.dataset.mcell = cellId;
-      const img = document.createElement('img'); img.draggable = false;
-      el.appendChild(img);
-      layer.appendChild(el);
-    }
-    const d = r * 2;
-    el.style.left   = (cell.x - d / 2) + 'px';
-    el.style.top    = (cell.y - d / 2) + 'px';
-    el.style.width  = d + 'px';
-    el.style.height = d + 'px';
-    const img = el.querySelector('img');
-    const src = `ui/${type}.png`;
-    if (!img.src.endsWith(src)) img.src = src;
-  }
-  for (const [cid, el] of existing) { if (!seen.has(cid)) el.remove(); }
-}
-
-
-function _updateCursor(x, y) {
-  const main = document.getElementById('main');
-  if (!Arrows.updateCursor(main, x, y)) main.style.cursor = 'default';
-}
-
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function render() {
   history.replaceState(null, '', '#' + enc(S));
@@ -1017,10 +1180,9 @@ function render() {
   _syncLabelLayer();
   _syncDropTarget();
   _syncGhost();
-  _syncMarkerLayer();
-  Outlines.render();
-  Arrows.render();
+  _syncTouchSelectionHighlight();
   Palette.syncDOM();
+  if (typeof Palette2 !== 'undefined') Palette2.syncDOM();
   if (tokTbId !== null) _placeTokToolbar();
 }
 
@@ -1030,9 +1192,9 @@ function loadStateFromURL() {
   if (!raw) return;
   const { tokens, banned } = dec(raw);
   const used = new Set(tokens.map(t => t.name));
-  const palette = { lancement: [], vermillon: [], archetypes: [], other: [] };
+  const palette = { lancement: [], vermillon: [], leaders: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, arrows: [], arrowNid: 0, banned: banned || [], markers: {} };
+  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, banned: banned || [] };
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -1045,7 +1207,12 @@ function init() {
   main.addEventListener('mouseup',     onUp);
   main.addEventListener('click',       () => { if (justDropped) justDropped = false; });
   main.addEventListener('contextmenu', e => e.preventDefault());
+  // mouseleave : annuler le drag en cours (pas la sélection clic)
   main.addEventListener('mouseleave',  () => { drag = null; dpos = null; render(); });
+  // mouseup global : si le bouton est relâché hors du plateau pendant un drag
+  document.addEventListener('mouseup', e => {
+    if (drag && e.button === 0) { drag = null; dpos = null; render(); }
+  });
 
   window.addEventListener('keydown', e => {
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
@@ -1053,15 +1220,25 @@ function init() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
     if (e.key === 'ArrowLeft')  undo();
     if (e.key === 'ArrowRight') redo();
-    if (e.key === 'Escape') { _hideAllToolbars(); }
-    Arrows.onKey(e);
+    if (e.key === 'Escape') {
+      _hideTokToolbar(); _cancelTouchSelection();
+      document.getElementById('settings-overlay').classList.add('hidden');
+      document.getElementById('help-overlay').classList.add('hidden');
+      document.getElementById('lang-submenu').classList.remove('open');
+      if (typeof Palette !== 'undefined' && Palette.hidePalToolbar) Palette.hidePalToolbar();
+    }
   });
 
-  document.getElementById('input-state'    ).addEventListener('keydown', e => { if (e.key === 'Enter') doLoad(); });
-  document.getElementById('btn-copy'       ).addEventListener('click', doCopy);
-  document.getElementById('btn-undo'       ).addEventListener('click', undo);
-  document.getElementById('btn-redo'       ).addEventListener('click', redo);
-  document.getElementById('btn-clear-arrows').addEventListener('click', doClearArrows);
+  document.getElementById('btn-undo'          ).addEventListener('click', undo);
+  document.getElementById('btn-redo'          ).addEventListener('click', redo);
+  document.getElementById('btn-flip-colors'   ).addEventListener('click', doFlipColors);
+  document.getElementById('btn-flip-pos'      ).addEventListener('click', doFlipPositions);
+  document.getElementById('btn-flip-pos-v'    ).addEventListener('click', doFlipPositionsV);
+  document.getElementById('btn-toggle-palette').addEventListener('click', () => { Palette.toggleCollapse(); });
+
+  document.getElementById('btn-toggle-pal2').addEventListener('click', () => {
+    if (typeof Palette2 !== 'undefined') Palette2.toggleCollapse();
+  });
 
   // Settings
   const _syncToggle = (id, val) => {
@@ -1070,9 +1247,8 @@ function init() {
     el.setAttribute('aria-checked', val);
   };
   const _openSettings = () => {
-    _syncToggle('tog-labels',  showLabels);
-    _syncToggle('tog-outline', showOutline);
-    _syncToggle('tog-shadow',  showShadow);
+    _syncToggle('tog-labels', showLabels);
+    _syncToggle('tog-shadow', showShadow);
     document.getElementById('settings-overlay').classList.remove('hidden');
   };
   const _closeSettings = () => document.getElementById('settings-overlay').classList.add('hidden');
@@ -1082,29 +1258,28 @@ function init() {
   document.getElementById('settings-overlay').addEventListener('mousedown', e => {
     if (e.target === document.getElementById('settings-overlay')) _closeSettings();
   });
-  document.getElementById('row-labels' ).addEventListener('click', () => {
-    showLabels  = !showLabels;  localStorage.setItem('leaders-labels',  showLabels);  _syncToggle('tog-labels',  showLabels);  render();
+  document.getElementById('row-labels').addEventListener('click', () => {
+    showLabels = !showLabels; localStorage.setItem('leaders-labels', showLabels);
+    _syncToggle('tog-labels', showLabels); render();
   });
-  document.getElementById('row-outline').addEventListener('click', () => {
-    showOutline = !showOutline; localStorage.setItem('leaders-outline', showOutline); _syncToggle('tog-outline', showOutline); render();
-  });
-  document.getElementById('row-shadow' ).addEventListener('click', () => {
-    showShadow  = !showShadow;  localStorage.setItem('leaders-shadow',  showShadow);  _syncToggle('tog-shadow',  showShadow);  render();
+  document.getElementById('row-shadow').addEventListener('click', () => {
+    showShadow = !showShadow; localStorage.setItem('leaders-shadow', showShadow);
+    _syncToggle('tog-shadow', showShadow); render();
   });
 
   // Help
   const _openHelp  = () => document.getElementById('help-overlay').classList.remove('hidden');
   const _closeHelp = () => document.getElementById('help-overlay').classList.add('hidden');
-  document.getElementById('btn-help'     ).addEventListener('click', _openHelp);
-  document.getElementById('help-close'   ).addEventListener('click', _closeHelp);
-  document.getElementById('help-overlay' ).addEventListener('mousedown', e => {
+  document.getElementById('btn-help'    ).addEventListener('click', _openHelp);
+  document.getElementById('help-close'  ).addEventListener('click', _closeHelp);
+  document.getElementById('help-overlay').addEventListener('mousedown', e => {
     if (e.target === document.getElementById('help-overlay')) _closeHelp();
   });
 
   // Language submenu
-  const langSubmenu  = document.getElementById('lang-submenu');
-  const langTrigger  = document.getElementById('lang-trigger');
-  const langLabel    = document.getElementById('lang-current-label');
+  const langSubmenu = document.getElementById('lang-submenu');
+  const langTrigger = document.getElementById('lang-trigger');
+  const langLabel   = document.getElementById('lang-current-label');
 
   const LANG_LABELS = { fr: 'Français', en: 'English' };
 
@@ -1116,12 +1291,10 @@ function init() {
   };
 
   const _closeLangMenu = () => langSubmenu.classList.remove('open');
-
-  const _openLangMenu = () => {
+  const _openLangMenu  = () => {
     _syncLangUI();
-    const rowRect  = document.getElementById('row-lang').getBoundingClientRect();
-    const popup    = document.getElementById('settings-popup');
-    const popupRect = popup.getBoundingClientRect();
+    const rowRect   = document.getElementById('row-lang').getBoundingClientRect();
+    const popupRect = document.getElementById('settings-popup').getBoundingClientRect();
     langSubmenu.style.top  = rowRect.top + 'px';
     langSubmenu.style.left = (popupRect.right + 8) + 'px';
     langSubmenu.classList.add('open');
@@ -1137,30 +1310,27 @@ function init() {
       e.stopPropagation();
       currentLang = opt.dataset.lang;
       localStorage.setItem('leaders-lang', currentLang);
-      _syncLangUI();
-      _closeLangMenu();
-      _applyLang();
+      _syncLangUI(); _closeLangMenu(); _applyLang();
     });
   });
 
-  // Close submenu when clicking outside or closing settings
   document.addEventListener('mousedown', e => {
-    if (!langSubmenu.contains(e.target) && e.target !== langTrigger)
-      _closeLangMenu();
+    if (!langSubmenu.contains(e.target) && e.target !== langTrigger) _closeLangMenu();
   });
   document.getElementById('settings-close').addEventListener('click', _closeLangMenu);
   document.getElementById('settings-overlay').addEventListener('mousedown', _closeLangMenu);
 
   _syncLangUI();
 
-  Arrows.init();
-  Outlines.init();
   Palette.init();
-  Palette.setOnCollapseChange(() => {
-    relayout(); render();
-  });
+  Palette.setOnCollapseChange(() => { relayout(); render(); });
+  if (typeof Palette2 !== 'undefined') {
+    Palette2.init();
+    Palette2.setOnCollapseChange(() => { relayout(); render(); });
+  }
   _mkTokToolbar();
-  _mkMarkerToolbar();
+  if (typeof initButtonTooltips === 'function') initButtonTooltips();
+  _initTouchEvents();
 
   new ResizeObserver(() => { relayout(); render(); }).observe(main);
   relayout(); saveH(); render(); _applyLang();

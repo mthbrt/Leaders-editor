@@ -10,6 +10,7 @@
   --border-hl: #3a3a70;
   --accent:    #5050c0;
   --text:      #d0d0ff;
+  --text-desc: #7878b0;
   --btn-bg:    #1e1e3a;
   --btn-bg-h:  #2a2a50;
   --btn-bd:    #3a3a70;
@@ -32,7 +33,7 @@ body {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 0 clamp(12px, 2.778vw, 30px);
+  padding: 0 10px;
   height: 50px;
   background: var(--box-bg);
   border-bottom: 1px solid var(--border);
@@ -41,17 +42,24 @@ body {
   gap: 8px;
 }
 
+#toolbar .left-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 #toolbar .logo {
-  color: #9090e0;
-  font-weight: 700;
-  font-size: 17px;
+  color: var(--btn-c);
+  font-weight: 600;
+  font-size: 18px;
   white-space: nowrap;
   text-decoration: none;
   transition: color 0.15s;
   cursor: pointer;
   flex-shrink: 0;
 }
-#toolbar .logo:hover { color: #c0c0ff; }
+#toolbar .logo:hover { color: #ffffff; }
 
 #toolbar .center-group {
   display: flex;
@@ -105,8 +113,8 @@ body {
   height: 32px;
   padding: 0;
   border-radius: 6px;
-  border: 1px solid var(--btn-bd);
-  background: var(--btn-bg);
+  border: none;
+  background: none;
   color: var(--btn-c);
   font-size: 16px;
   cursor: pointer;
@@ -114,26 +122,24 @@ body {
   transition: background 0.12s;
   flex-shrink: 0;
 }
-.btn:hover { background: var(--btn-bg-h); }
+.btn:hover { background: #141424; color: #ffffff; }
 
 /* ── Responsive toolbar ── */
 
 /* Narrow: hide clear-arrows, tighten padding */
 @media (max-width: 520px) {
-  #toolbar { padding: 0 10px; gap: 4px; }
+  #toolbar { gap: 4px; }
   #toolbar .center-group { gap: 4px; }
   .toolbar-sep { margin: 0; }
   #btn-clear-arrows { display: none; }
-  #input-state { font-size: 12px; }
 }
 
 /* Very narrow: hide logo text + help button, hide toolbar separator */
 @media (max-width: 380px) {
   #toolbar .logo { display: none; }
-  #toolbar { grid-template-columns: 1fr auto; }
+  #toolbar { grid-template-columns: auto 1fr auto; }
   #btn-help { display: none; }
   #toolbar .center-group > .toolbar-sep { display: none; }
-  #toolbar { padding: 0 8px; }
 }
 
 /* ── Main area ── */
@@ -152,7 +158,6 @@ body {
   pointer-events: none;
   z-index: 1;
 }
-
 
 #droptarget-layer {
   position: absolute;
@@ -173,33 +178,6 @@ body {
   inset: 0;
   pointer-events: none;
   z-index: 4;
-}
-
-#outlines-svg {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 5;
-  cursor: default;
-}
-
-#arrows-svg {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 30;
-  cursor: default;
-}
-
-#outlines-drag-svg {
-  position: absolute;
-  inset: 0;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 71;
-  cursor: default;
 }
 
 /* ── Jetons HTML ── */
@@ -268,9 +246,7 @@ body {
   height: 45%;
   color: #fff;
   stroke: #fff;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
 }
-
 
 .html-droptarget {
   position: absolute;
@@ -283,17 +259,18 @@ body {
 #pal-panel {
   position: absolute;
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  border: none;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   z-index: 40;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  transition: opacity 0.15s, transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  transition: opacity 0.2s, transform 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 
 #pal-panel.collapsed {
+  transform: translateX(100%);
   opacity: 0;
   pointer-events: none;
 }
@@ -332,7 +309,7 @@ body {
 
 #pal-header {
   padding: 0 20px;
-  height: 60px;
+  height: 50px;
   display: flex;
   align-items: center;
   border-bottom: 1px solid rgba(70,70,160,0.2);
@@ -340,7 +317,7 @@ body {
 }
 
 #pal-title {
-  color: rgba(150,150,210,0.85);
+  color: rgb(132,132,186);
   font-size: 16px;
   letter-spacing: 0.05em;
 }
@@ -354,8 +331,14 @@ body {
 }
 #pal-body::-webkit-scrollbar { display: none; }
 
-.pal-section { border-bottom: 1px solid rgba(70,70,160,0.15); }
-.pal-section:last-child { border-bottom: none; }
+.pal-section { position: relative; }
+.pal-section:not(:last-child)::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin: 0 20px;
+}
 
 .pal-sec-hdr {
   display: flex;
@@ -363,6 +346,10 @@ body {
   padding: 0 20px;
   height: 40px;
   user-select: none;
+}
+
+.pal-sec-hdr-creation {
+  padding-right: 12px; /* tighter right pad to give edit btn room */
 }
 
 .pal-sec-label {
@@ -374,7 +361,7 @@ body {
   display: none;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 8px 20px 10px;
+  padding: 6px 20px 20px;
 }
 .pal-grid.open { display: flex; }
 
@@ -406,6 +393,8 @@ body {
   cursor: default;
   border-radius: 50%;
   flex-shrink: 0;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
 }
 
 .pal-item img {
@@ -420,7 +409,7 @@ body {
 
 .pal-item-banned > img {
   filter: grayscale(60%);
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 .pal-item-ban-overlay {
@@ -431,21 +420,22 @@ body {
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  z-index: 1; 
 }
 .pal-item-ban-overlay img {
-  width: 70%;
-  height: 70%;
+  width: 100%;
+  height: 100%;
   border-radius: 0;
   object-fit: contain;
 }
 
 .pal-badge {
   position: absolute;
-  top: 0px;
-  right: 0px;
-  background: #2a2a50;
-  color: #e0e0ff;
-  font-size: 12px;
+  top: 2px;
+  right: 2px;
+  background: #d7ca8a;
+  color: var(--box-bg);
+  font-size: 14px;
   font-weight: bold;
   font-family: 'Segoe UI', sans-serif;
   border-radius: 50%;
@@ -455,6 +445,22 @@ body {
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  z-index: 3;
+}
+
+.pal-item-on-board::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  border: 3px solid #d7ca8a;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.pal-item-on-board .pal-item-ban-overlay {
+  border-radius: 50%;
+  overflow: hidden;
 }
 
 #pal-footer {
@@ -480,219 +486,154 @@ body {
 }
 #pal-reset:hover { background: var(--btn-bg-h); }
 
-/* Ruban toggle */
-#pal-ruban {
-  position: absolute;
-  width: 84px;
-  height: 40px;
-  cursor: pointer;
-  z-index: 39;
-  user-select: none;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-/* Bubble (état collapsed) */
-#pal-bubble {
+/* ── Token toolbar — même style que les tooltips, à droite du jeton ── */
+#tok-tb {
   position: absolute;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  cursor: pointer;
-  z-index: 41;
   display: none;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-  border: 1.5px solid var(--border);
+  flex-direction: column;
+  align-items: stretch;
   background: var(--box-bg);
-  align-items: center;
-  justify-content: center;
-}
-#pal-bubble.visible { display: flex; }
-
-/* ── Markers layer ── */
-#markers-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.html-marker {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: marker-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.html-marker img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-@keyframes marker-pop {
-  from { opacity: 0; transform: scale(0.55); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-
-/* ── Radial menus (token + marker) ── */
-.radial-menu {
-  position: absolute;
-  display: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
   z-index: 61;
-  pointer-events: none;
-}
-.radial-menu.open {
-  display: block;
-  pointer-events: none;
-}
-
-.radial-btn {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1.5px solid var(--btn-bd);
-  background: var(--btn-bg);
-  color: var(--btn-c);
-  cursor: pointer;
+  isolation: isolate;
   pointer-events: all;
-  transform: translate(-50%, -50%) scale(0.4);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  min-width: 152px;
   opacity: 0;
-  transition:
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity   0.18s ease;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.6);
-  will-change: transform, opacity;
+  scale: 0.92;
+  transform-origin: left center;
+  transition: opacity 0.15s ease, scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.radial-menu.open .radial-btn {
-  transform: translate(-50%, -50%) scale(1);
-  opacity: 1;
-}
-.radial-btn:hover { background: var(--btn-bg-h); }
-
-/* Color / team button */
-.radial-btn-color .radial-dot {
-  display: block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  pointer-events: none;
-  flex-shrink: 0;
-}
-
-/* Delete button */
-.radial-btn-del {
-  color: #9e5151;
-  border-color: #852c2c;
-  background: #2f0c0c;
-}
-.radial-btn-del:hover {
-  background: #4d0d0d;
-  color: #cb6767;
-}
-
-/* Marker active state */
-.radial-btn.active {
-  background: rgba(80,60,180,0.45);
-}
-
-/* Stagger delays for open animation */
-.radial-btn:nth-child(1) { transition-delay: 0ms; }
-.radial-btn:nth-child(2) { transition-delay: 30ms; }
-.radial-btn:nth-child(3) { transition-delay: 60ms; }
-.radial-btn:nth-child(4) { transition-delay: 90ms; }
-.radial-btn:nth-child(5) { transition-delay: 120ms; }
-.radial-btn:nth-child(6) { transition-delay: 150ms; }
-
-/* Marker image buttons */
-.radial-btn img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  -webkit-user-drag: none;
-  pointer-events: none;
-}
-
-/* Legacy ids — kept for JS references, now zero-size wrappers */
-#tok-tb  { position: absolute; width: 0; height: 0; display: none; z-index: 61; pointer-events: none; }
-#tok-tb.open { display: block; }
-#marker-tb { position: absolute; width: 0; height: 0; display: none; z-index: 61; pointer-events: none; }
-#marker-tb.open { display: block; }
-
-/* ── Arrow floating toolbar — pill bar ── */
-#arr-tb {
-  position: absolute;
-  display: none;
-  align-items: center;
-  gap: 0;
-  background: var(--btn-bg);
-  border: 1px solid var(--btn-bd);
-  border-radius: 999px;
-  padding: 0;
-  z-index: 61;
-  pointer-events: all;
-  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
-  transform: translate(-50%, -50%);
-  overflow: hidden;
-  opacity: 0;
-  scale: 0.75;
-  transition: opacity 0.18s ease, scale 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-}
-#arr-tb.open {
+#tok-tb.arrow-right { transform-origin: right center; }
+#tok-tb.open {
   display: flex;
   opacity: 1;
   scale: 1;
 }
 
-#arr-tb button {
+/* ── Palette token toolbar — même design, attaché au body (position:fixed) ── */
+#pal-tok-tb {
+  position: fixed;
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  background: var(--box-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 200;
+  isolation: isolate;
+  pointer-events: all;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  min-width: 120px;
+  opacity: 0;
+  scale: 0.92;
+  transition: opacity 0.15s ease, scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#pal-tok-tb.pal-tb-arrow-right { transform-origin: right center; }
+#pal-tok-tb.pal-tb-arrow-left  { transform-origin: left center; }
+#pal-tok-tb.open {
+  display: flex;
+  opacity: 1;
+  scale: 1;
+}
+
+/* Flèche pointant vers la droite (menu à gauche du jeton, flèche sur bord droit) */
+#pal-tok-tb.pal-tb-arrow-right::before {
+  content: '';
+  position: absolute;
+  right: -5px;
+  top: var(--arrow-y, 50%);
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--box-bg);
+  border-right: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-radius: 0 3px 0 0;
+  z-index: -1;
+}
+
+/* Flèche pointant vers la gauche (menu à droite du jeton, flèche sur bord gauche) */
+#pal-tok-tb.pal-tb-arrow-left::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: var(--arrow-y, 50%);
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--box-bg);
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 0 0 3px;
+  z-index: -1;
+}
+
+/* Flèche pointant vers la gauche (toolbar à droite du jeton) */
+#tok-tb::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: var(--arrow-y, 50%);
+  transform: translateY(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  background: var(--box-bg);
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 0 0 3px;
+  z-index: -1;
+}
+
+/* Flèche pointant vers la droite (toolbar à gauche du jeton) */
+#tok-tb.arrow-right::before {
+  left: auto;
+  right: -5px;
+  border-left: none;
+  border-bottom: none;
+  border-right: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-radius: 0 3px 0 0;
+  z-index: -1;
+}
+
+.tok-tb-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  gap: 8px;
+  padding: 6px 8px;
+  height: 32px;
   background: transparent;
   border: none;
-  color: var(--btn-c);
+  color: var(--text);
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+  font-family: 'Segoe UI', sans-serif;
+  border-radius: 5px;
+  transition: background 0.08s, color 0.08s;
+  white-space: nowrap;
   flex-shrink: 0;
-  transition: color 0.12s;
+  width: 100%;
+  text-align: left;
 }
-#arr-tb button:hover {
-  background: var(--btn-bg-h);
-  border: 1px solid var(--btn-bd);
-  color: #e0e0ff;
+.tok-tb-btn:hover { background: var(--btn-bg-h); color: #ffffff; }
+
+.tok-tb-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
 }
 
-#arr-dot {
-  display: block;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.25);
-  pointer-events: none;
-  flex-shrink: 0;
-}
 
-#arr-del { color: #9e5151; }
-#arr-del:hover {
-  background: #4d0d0d !important;
-  border: 1px solid #852c2c !important;
-  color: #cb6767 !important;
+#tok-del { color: #e05555; }
+#tok-del:hover {
+  background: rgba(224,85,85,0.12) !important;
+  color: #f47474 !important;
 }
 
 /* ── Settings overlay + popup ── */
@@ -728,7 +669,7 @@ body {
 #settings-title {
   font-size: 16px;
   font-weight: 700;
-  color: #c8c8ff;
+  color: var(--text);
   letter-spacing: 0.03em;
   text-align: center;
   grid-column: 2;
@@ -748,7 +689,7 @@ body {
   transition: color 0.12s;
   grid-column: 3;
 }
-#settings-close:hover { color: #d0d0ff; }
+#settings-close:hover { color: var(--text); }
 
 #settings-body {
   padding: 10px;
@@ -777,12 +718,12 @@ body {
 .setting-name {
   font-size: 14px;
   font-weight: 700;
-  color: #c8c8ff;
+  color: var(--text);
   margin-bottom: 4px;
 }
 .setting-desc {
   font-size: 12px;
-  color: #5a5a90;
+  color: var(--text-desc);
   line-height: 1.45;
 }
 
@@ -791,7 +732,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #7878b8;
+  color: var(--text-desc);
   font-size: 12px;
   font-weight: 600;
   font-family: 'Segoe UI', sans-serif;
@@ -904,7 +845,7 @@ body {
 #help-title {
   font-size: 16px;
   font-weight: 700;
-  color: #c8c8ff;
+  color: var(--test);
   letter-spacing: 0.03em;
   text-align: center;
   grid-column: 2;
@@ -924,7 +865,7 @@ body {
   transition: color 0.12s;
   grid-column: 3;
 }
-#help-close:hover { color: #d0d0ff; }
+#help-close:hover { color: var(--test); }
 
 #help-body {
   overflow-y: auto;
@@ -947,7 +888,7 @@ body {
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(150,150,210,0.85);
+  color: var(--test);
   padding: 10px 2px 5px;
 }
 
@@ -971,7 +912,7 @@ body {
   font-size: 11px;
   font-weight: 600;
   font-family: 'Segoe UI', sans-serif;
-  color: #7070a8;
+  color: var(--text-desc);
   background: var(--box-bg);
   border-radius: 6px;
   padding: 5px 5px;
@@ -983,7 +924,426 @@ body {
 .help-desc {
   flex: 1;
   font-size: 12px;
-  color: #7070a8;
+  color: var(--text-desc);
   line-height: 1.4;
   background: transparent;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PALETTE 2 — SAUVEGARDES
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Panneau ── */
+#pal2-panel {
+  position: absolute;
+  top: 0; left: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--box-bg);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  z-index: 40;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+}
+#pal2-panel.collapsed {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+
+/* ── Header — identique à #pal-header / #pal-title ── */
+#pal2-header {
+  padding: 0 20px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#pal2-title {
+  color: rgb(132,132,186);
+  font-size: 16px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Body ── */
+#pal2-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  scrollbar-width: none;
+}
+#pal2-body::-webkit-scrollbar { display: none; }
+
+#pal2-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Section — même séparation que .pal-section ── */
+.pal2-section { position: relative; }
+.pal2-section:not(:last-of-type)::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background: var(--border);
+  margin: 0 20px;
+}
+
+/* ── Section header ── */
+.pal2-section-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 20px;
+  height: 40px;
+  user-select: none;
+}
+
+.pal2-sec-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  cursor: pointer;
+  flex: 1;
+}
+
+/* Flèche de pliage */
+.pal2-sec-arrow {
+  flex-shrink: 0;
+  color: rgb(100,100,160);
+  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), color 0.15s;
+  transform: rotate(-90deg);
+}
+.pal2-sec-arrow.open {
+  transform: rotate(0deg);
+  color: rgb(132,132,186);
+}
+
+/* Nom de section — même style que .pal-sec-label */
+.pal2-sec-name {
+  font-size: 16px;
+  color: rgb(132,132,186);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Badge compteur */
+.pal2-sec-count {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(110,110,170);
+  background: #2a2a50;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+/* Boutons section — visibles au hover */
+.pal2-sec-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.pal2-section-hdr:hover .pal2-sec-actions {
+  opacity: 1;
+}
+
+/* Boutons section */
+.pal2-sec-actions .pal2-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--btn-c);
+}
+.pal2-sec-actions .pal2-action-btn:hover {
+  background: #141424;
+  color: #ffffff;
+}
+
+/* ── Section body (collapsible) ── */
+.pal2-section-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.22s cubic-bezier(0.4,0,0.2,1);
+}
+.pal2-section-body.open {
+  max-height: 2000px;
+}
+
+/* ── Config list ── */
+.pal2-config-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 8px 20px;
+}
+
+/* ── Config rows ── */
+.pal2-row {
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.pal2-row:hover {
+  background: var(--btn-bg-h);
+}
+
+.pal2-row-main {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 2px 0 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  gap: 8px;
+}
+
+/* Icône point */
+.pal2-row-icon {
+  flex-shrink: 0;
+  color: rgb(100,100,160);
+  display: flex;
+  align-items: center;
+}
+
+/* Boutons config — visibles au hover */
+.pal2-row-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.pal2-row:hover .pal2-row-actions {
+  opacity: 1;
+}
+
+/* Active config row */
+.pal2-row-active {
+  background: rgba(80, 60, 180, 0.18);
+}
+.pal2-row-active .pal2-row-icon {
+  color: #a0a0ff;
+}
+.pal2-row-active .pal2-row-name {
+  color: #c8c8ff;
+  font-weight: 700;
+}
+.pal2-row-active:hover {
+  background: rgba(80, 60, 180, 0.28);
+}
+
+/* Nom de config */
+.pal2-row-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Segoe UI', sans-serif;
+  color: rgb(160,160,210);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Nom en mode édition */
+.pal2-row-name.editing {
+  overflow: visible;
+  white-space: normal;
+  flex: 1;
+}
+
+/* ── Boutons d'action partagés ── */
+.pal2-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--btn-c);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+.pal2-action-btn:hover {
+  background: var(--btn-bg);
+  color: rgb(208,208,255);
+}
+
+/* ── Inline rename input ── */
+.pal2-inline-edit {
+  display: contents;
+}
+.pal2-inline-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  letter-spacing: inherit;
+  outline: none;
+  height: 22px;
+  transition: border-color 0.12s;
+}
+.pal2-inline-input:focus {
+  border-bottom-color: #8080e0;
+}
+
+/* ── + Nouvelle section — même style que .pal-sec-hdr ── */
+.pal2-add-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  cursor: pointer;
+  color: rgb(100,100,160);
+  font-size: 13px;
+  font-family: 'Segoe UI', sans-serif;
+}
+.pal2-add-section-row:hover {
+  color: rgb(180,180,240);
+  background: var(--btn-bg);
+}
+
+/* ── Footer — identique à #pal-footer / #pal-reset ── */
+#pal2-footer {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+#pal2-btn-add-section {
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-bd);
+  border-radius: 20px;
+  color: var(--btn-c);
+  font-size: 13px;
+  font-family: 'Segoe UI', sans-serif;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  width: 50%;
+  max-width: 160px;
+  text-align: center;
+}
+#pal2-btn-add-section:hover {
+  background: var(--btn-bg-h);
+}
+
+/* ── Tooltips Discord-style ── */
+.dc-tooltip-el {
+  display: none;
+  position: fixed;
+  z-index: 200;
+  isolation: isolate;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease, transform 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dc-tooltip-el.tt-above  { transform: translateY(-5px) scale(0.96); }
+.dc-tooltip-el.tt-below  { transform: translateY(5px)  scale(0.96); }
+.dc-tooltip-el.visible   { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Pointe arrondie commune — carré rotatif avec border-radius côté exposé */
+.dc-tooltip-el::after {
+  content: '';
+  position: absolute;
+  left: var(--arrow-x, 50%);
+  transform: translateX(-50%) rotate(45deg);
+  width: 10px;
+  height: 10px;
+  z-index: -1;
+}
+
+/* Pointe vers le bas (tooltip au-dessus) */
+.dc-tooltip-el.tt-above::after {
+  bottom: -5px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 0 3px 0;
+  background: var(--box-bg);
+}
+/* Pointe vers le haut (tooltip en-dessous) */
+.dc-tooltip-el.tt-below::after {
+  top: -5px;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  border-radius: 3px 0 0 0;
+  background: var(--box-bg);
+}
+
+/* tt-simple surcharge le fond de la pointe pour matcher exactement */
+.dc-tooltip-el.tt-simple.tt-below::after { background: var(--box-bg); }
+.dc-tooltip-el.tt-simple.tt-above::after { background: var(--box-bg); }
+
+/* Tooltip simple — label bouton toolbar */
+.dc-tooltip-el.tt-simple {
+  background: var(--box-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 11px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+}
+.dc-tt-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  font-family: 'Segoe UI', sans-serif;
+  white-space: nowrap;
+}
+
+/* Tooltip riche — jeton (nom + icône type + description) */
+.dc-tooltip-el.tt-rich {
+  background: var(--box-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  max-width: 230px;
+}
+.dc-tt-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 6px;
+}
+.dc-tt-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'Segoe UI', sans-serif;
+  letter-spacing: 0.01em;
+}
+.dc-tt-icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.dc-tt-ability {
+  font-size: 12px;
+  color: var(--text-desc);
+  line-height: 1.5;
+  font-family: 'Segoe UI', sans-serif;
 }

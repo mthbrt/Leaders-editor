@@ -7,6 +7,8 @@
   <title>LEADERS Editor</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="loader.css" />
+  <link rel="stylesheet" href="tooltip.css" />
+  <link rel="stylesheet" href="touch.css" />
 </head>
 <body>
 
@@ -24,41 +26,43 @@
 
   <!-- ── Barre d'outils ── -->
   <div id="toolbar">
-    <a href="https://mthbrt.github.io/Leaders-editor/" class="logo">LEADERS</a>
+    <div class="left-group">
+      <button id="btn-toggle-pal2" class="btn" title="Stratégies">
+        <svg height="18px" width="18px" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm120-80v-560H200v560h120Zm80 0h360v-560H400v560Zm-80 0H200h120Z"/></svg>
+      </button>
+      <a href="https://mthbrt.github.io/Leaders-editor/" class="logo">LEADERS</a>
+    </div>
 
     <div class="center-group">
       <button id="btn-undo" class="btn" title="Undo">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5.5 9H14C16.485 9 18.5 11.015 18.5 13.5C18.5 15.985 16.485 18 14 18H10.5"/>
-          <polyline points="8.5 6 5.5 9 8.5 12"/>
-        </svg>
+        <svg height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M280-200v-80h284q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l104 104-56 56-200-200 200-200 56 56-104 104h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H280Z"/></svg>
       </button>
       <button id="btn-redo" class="btn" title="Redo">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18.5 9H10C7.515 9 5.5 11.015 5.5 13.5C5.5 15.985 7.515 18 10 18H13.5"/>
-          <polyline points="15.5 6 18.5 9 15.5 12"/>
-        </svg>
-      </button>
-      <button id="btn-clear-arrows" class="btn" title="Clear all arrows">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/>
-          <line x1="3" y1="3" x2="21" y2="21" stroke-width="2" opacity="0.6"/>
-        </svg>
+        <svg height="18" viewBox="0 -960 960 960" width="18" fill="currentColor"><path d="M396-200q-97 0-166.5-63T160-420q0-94 69.5-157T396-640h252L544-744l56-56 200 200-200 200-56-56 104-104H396q-63 0-109.5 40T240-420q0 60 46.5 100T396-280h284v80H396Z"/></svg>
       </button>
       <div class="toolbar-sep"></div>
-      <input id="input-state" type="text" placeholder="Paste a configuration…"
-        autocomplete="off" spellcheck="false" />
-      <button id="btn-copy" class="btn" title="Copy configuration">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      <button id="btn-flip-colors" class="btn" title="Invert colors">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 3 A9 9 0 0 1 12 21 Z" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+      <button id="btn-flip-pos" class="btn" title="Swap point of view">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 16V4m0 0L3 8m4-4 4 4"/>
+          <path d="M17 8v12m0 0 4-4m-4 4-4-4"/>
+        </svg>
+      </button>
+      <button id="btn-flip-pos-v" class="btn" title="Swap point of view (vertical)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" transform="rotate(90)scale(-1 1)">
+          <path d="M7 16V4m0 0L3 8m4-4 4 4m6 0v12m0 0 4-4m-4 4-4-4"/>
         </svg>
       </button>
     </div>
 
     <div class="right-group">
       <button id="btn-help" class="btn" title="Aide / Help">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/>
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -66,12 +70,18 @@
       </button>
       <button id="btn-settings" class="btn" title="Paramètres">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          <circle cx="12" cy="12" r="2.5"/>
+          <path d="M18.5 14.5a1.4 1.4 0 0 0 .3 1.6l.05.05a1.8 1.8 0 0 1-2.55 2.55l-.05-.05a1.4 1.4 0 0 0-1.6-.3 1.4 1.4 0 0 0-.9 1.3V20a1.8 1.8 0 0 1-3.6 0v-.05a1.4 1.4 0 0 0-.9-1.3 1.4 1.4 0 0 0-1.6.3L7.6 19a1.8 1.8 0 0 1-2.55-2.55l.05-.05a1.4 1.4 0 0 0 .3-1.6 1.4 1.4 0 0 0-1.3-.9H4a1.8 1.8 0 0 1 0-3.6h.05a1.4 1.4 0 0 0 1.3-.9 1.4 1.4 0 0 0-.3-1.6L5 7.75A1.8 1.8 0 1 1 7.55 5.2l.05.05a1.4 1.4 0 0 0 1.6.3h.02a1.4 1.4 0 0 0 .88-1.28V4a1.8 1.8 0 0 1 3.6 0v.05a1.4 1.4 0 0 0 .9 1.3 1.4 1.4 0 0 0 1.6-.3l.05-.05a1.8 1.8 0 1 1 2.55 2.55l-.05.05a1.4 1.4 0 0 0-.3 1.6v.02a1.4 1.4 0 0 0 1.28.88H20a1.8 1.8 0 0 1 0 3.6h-.05a1.4 1.4 0 0 0-1.3.9z"/>
         </svg>
+      </button>
+      <button id="btn-toggle-palette" class="btn" title="Afficher/masquer les personnages">
+        <svg height="18" width="18" viewBox="0 -960 960 960" fill="currentColor" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" transform="matrix(-1,0,0,1,0,0)"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm120-80v-560H200v560h120Zm80 0h360v-560H400v560Zm-80 0H200h120Z"></path></svg>
       </button>
     </div>
   </div>
+
+  <!-- Hidden input for clipboard load -->
+  <input id="_hidden-input-state" type="text" style="position:absolute;left:-9999px;opacity:0;pointer-events:none;" autocomplete="off" />
 
   <!-- ── Plateau principal ── -->
   <div id="main">
@@ -80,9 +90,7 @@
     <div id="labels-layer"></div>
     <div id="tokens-layer"></div>
     <div id="markers-layer"></div>
-    <svg id="outlines-svg" xmlns="http://www.w3.org/2000/svg"></svg>
     <svg id="arrows-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-    <svg id="outlines-drag-svg" xmlns="http://www.w3.org/2000/svg"></svg>
   </div>
 
   <!-- Help popup -->
@@ -102,12 +110,6 @@
           <div class="help-row"><span class="help-key" data-i18n="helpDragBoard"></span><span class="help-desc" data-i18n="helpDragBoardDesc"></span></div>
           <div class="help-row"><span class="help-key" data-i18n="helpMiddleTok"></span><span class="help-desc" data-i18n="helpMiddleTokDesc"></span></div>
           <div class="help-row"><span class="help-key" data-i18n="helpRightTok"></span><span class="help-desc" data-i18n="helpRightTokDesc"></span></div>
-        </div>
-        <div class="help-section">
-          <div class="help-section-title" data-i18n="helpSecArrows"></div>
-          <div class="help-row"><span class="help-key" data-i18n="helpRightDrag"></span><span class="help-desc" data-i18n="helpRightDragDesc"></span></div>
-          <div class="help-row"><span class="help-key" data-i18n="helpClickArrow"></span><span class="help-desc" data-i18n="helpClickArrowDesc"></span></div>
-          <div class="help-row"><span class="help-key" data-i18n="helpDelArrow"></span><span class="help-desc" data-i18n="helpDelArrowDesc"></span></div>
         </div>
         <div class="help-section">
           <div class="help-section-title" data-i18n="helpSecGeneral"></div>
@@ -138,13 +140,6 @@
           </div>
           <button class="toggle active" id="tog-labels" role="switch" aria-checked="true"></button>
         </div>
-        <div class="setting-row" id="row-outline">
-          <div class="setting-info">
-            <div class="setting-name">Bordures</div>
-            <div class="setting-desc">Ajoute une bordure blanche ou noire sur chaque personnage</div>
-          </div>
-          <button class="toggle" id="tog-outline" role="switch" aria-checked="false"></button>
-        </div>
         <div class="setting-row" id="row-shadow">
           <div class="setting-info">
             <div class="setting-name">Ombres</div>
@@ -171,9 +166,9 @@
     </div>
   </div>
 
-  <script src="outline.js"></script>
-  <script src="arrows.js"></script>
   <script src="palette.js"></script>
+  <script src="palette2.js"></script>
+  <script src="tooltip.js"></script>
   <script src="editor.js"></script>
   <script src="loader.js"></script>
 

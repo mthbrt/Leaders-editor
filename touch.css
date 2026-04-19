@@ -1,0 +1,63 @@
+/* ── TOUCH SUPPORT STYLES ──────────────────────────────────────────────────── */
+
+/* Empêcher le scroll/zoom natif sur le plateau en mode tactile */
+#main {
+  touch-action: none;
+}
+
+/* Sélection tactile d'un jeton sur le plateau — anneau tournant dégradé */
+.html-token.touch-selected {
+  overflow: visible;
+}
+
+.html-token.touch-selected::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% + var(--ring-inset, 8px) * 2);
+  height: calc(100% + var(--ring-inset, 8px) * 2);
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    #edc360,
+    #ec7a00,
+    #edc360
+  );
+  animation: touch-ring-spin 1s linear infinite;
+  transform-origin: center;
+  z-index: -1;
+}
+
+.html-token.touch-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0px;
+  border-radius: 50%;
+  background: transparent;
+  z-index: -1;
+}
+
+@keyframes touch-ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Indicateurs de cases disponibles en mode tactile */
+.html-droptarget.touch-hint {
+  background: transparent;
+}
+
+/* Supprimer le highlight natif au tap sur mobile */
+#main, #main * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Zone tactile agrandie pour les boutons de la toolbar */
+@media (pointer: coarse) {
+  .tok-tb-btn {
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+}
