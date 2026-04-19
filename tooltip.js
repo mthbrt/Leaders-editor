@@ -19,7 +19,7 @@ const TOKEN_ICONS = {
 // Remplis les champs "name", "type" et "ability" pour chaque jeton.
 // "name" sera affiché en titre, "type" détermine l'icône (a/b/c ou absent),
 // "ability" comme description.
-const TOKEN_DATA = {
+const TOKEN_DATA_EN = {
   '1':  { name: 'Leader King', type: 'd', ability: '' },
   '2':  { name: 'Leader Queen', type: 'd', ability: '' },
   '3':  { name: 'Acrobat',   type: 'a', ability: 'Jumps in a straight line over an adjacent character. MAY jump twice consecutively.' },
@@ -47,6 +47,42 @@ const TOKEN_DATA = {
   '25': { name: 'Leader Vermilion', type: 'd', ability: '' },
 };
 
+const TOKEN_DATA_FR = {
+  '1':  { name: 'Leader Roi',       type: 'd', ability: '' },
+  '2':  { name: 'Leader Reine',     type: 'd', ability: '' },
+  '3':  { name: 'Acrobate',         type: 'a', ability: 'Saute en ligne droite par-dessus un Personnage adjacent. PEUT effectuer jusqu’à deux sauts consécutifs.' },
+  '4':  { name: 'Archère',          type: 'b', ability: 'Participe à la Capture du Leader adverse uniquement à une distance de deux cases en ligne droite, même s’il n’est pas visible.' },
+  '5':  { name: 'Assassin',         type: 'b', ability: 'Capture le Leader adverse, même sans autre allié participant.' },
+  '6':  { name: 'Cavalier',         type: 'a', ability: 'Se déplace de deux cases en ligne droite.' },
+  '7':  { name: 'Cogneur',          type: 'a', ability: 'Se déplace sur la case d’un ennemi adjacent et le pousse sur l’une des trois cases opposées de votre choix.' },
+  '8':  { name: 'Garde Royal',      type: 'a', ability: 'Se déplace sur une case adjacente à votre Leader, puis PEUT se déplacer d’une case.' },
+  '9':  { name: 'Geôlier',          type: 'b', ability: 'Les ennemis adjacents ne peuvent pas utiliser leur compétence active.' },
+  '10': { name: 'Illusionniste',    type: 'a', ability: 'Échange de position avec un Personnage visible en ligne droite et non-adjacent.' },
+  '11': { name: 'Lance-Grappin',    type: 'a', ability: 'Se déplace jusqu’à un Personnage visible en ligne droite OU l’attire jusqu’à lui.' },
+  '12': { name: 'Manipulatrice',    type: 'a', ability: 'Déplace d’une case un ennemi visible en ligne droite et non-adjacent.' },
+  '13': { name: 'Némésis',          type: 'c', ability: 'Ne peut pas faire d’actions. Dès que le Leader adverse est déplacé, la Némésis DOIT se déplacer de deux cases. La case d’arrivée doit être différente de la case de départ.' },
+  '14': { name: 'Protecteur',       type: 'b', ability: 'Les compétences des ennemis ne peuvent déplacer ni le Protecteur, ni ses alliés adjacents.' },
+  '15': { name: 'Rôdeuse',          type: 'a', ability: 'Se déplace sur n’importe quelle case non-adjacente à un ennemi.' },
+  '16': { name: 'Tavernier',        type: 'a', ability: 'Déplace d’une case un allié adjacent.' },
+  '17': { name: 'Vieil ours',       type: 'c', ability: 'Recrutez le Vieil Ours et l’Ourson. Vous pouvez en déplacer un seul ou les deux à la suite. L’Ourson ne participe pas à la Capture du Leader adverse.' },
+  '18': { name: 'Ourson',           type: 'c', ability: 'Recrutez le Vieil Ours et l’Ourson. Vous pouvez en déplacer un seul ou les deux à la suite. L’Ourson ne participe pas à la Capture du Leader adverse.' },
+  '19': { name: 'Vizir',            type: 'b', ability: 'Votre Leader PEUT se déplacer d’une case supplémentaire lors de son action.' },
+  '20': { name: 'Feu follet',       type: 'c', ability: 'Se déplace sur n’importe quelle case vide du plateau. Ne participe pas à la Capture du Leader adverse.' },
+  '21': { name: 'Chaman',           type: 'a', ability: 'Transforme en Grenouille un Personnage non-Leader visible en ligne droite jusqu’à la fin du tour adverse.' },
+  '22': { name: 'Grenouille',       type: 'c', ability: 'Se déplace jusqu’à deux cases. Peut traverser une case occupée par un Personnage. Ne participe pas à la Capture du Leader adverse.' },
+  '23': { name: 'Sniper',           type: 'b', ability: 'Au début de votre tour, Capture le Leader adverse, même sans autre allié participant, s’il est à une distance de trois cases ou plus en ligne droite, même s’il n’est pas visible.' },
+  '24': { name: 'Tacticienne',      type: 'a', ability: 'Si un allié est adjacent au Leader adverse: déplace d’une case un allié non-Leader, qui ne peut plus utiliser sa capacité active ce tour-ci.' },
+  '25': { name: 'Leader Vermillon', type: 'd', ability: '' },
+};
+
+function _getTokenData(name) {
+
+  const data = (typeof currentLang !== 'undefined' && currentLang === 'fr')
+    ? TOKEN_DATA_FR
+    : TOKEN_DATA_EN;
+  return data[name];
+}
+
 // ── TOOLTIP ENGINE ────────────────────────────────────────────────────────────
 const Tooltip = (() => {
   const DELAY  = 800;
@@ -69,7 +105,7 @@ const Tooltip = (() => {
   }
 
   function _show(name, cx, cy, r) {
-    const data = TOKEN_DATA[name];
+    const data = _getTokenData(name);
     if (!data) return;
 
     el.querySelector('#tt-name').textContent    = data.name;
