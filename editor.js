@@ -95,19 +95,23 @@ let currentLang = localStorage.getItem('leaders-lang') || _browserLang;
 const t = key => (LANGS[currentLang] || LANGS.fr)[key] || key;
 
 function _applyLang() {
-  document.getElementById('btn-undo').dataset.tooltip           = t('btnUndo');
-  document.getElementById('btn-redo').dataset.tooltip           = t('btnRedo');
-  document.getElementById('btn-flip-colors').dataset.tooltip    = t('btnFlipColors');
-  document.getElementById('btn-flip-pos').dataset.tooltip       = t('btnFlipPos');
-  document.getElementById('btn-flip-pos-v').dataset.tooltip     = t('btnFlipPosV');
-  document.getElementById('btn-settings').dataset.tooltip       = t('btnSettings');
-  document.getElementById('btn-toggle-palette').dataset.tooltip = t('btnTogglePalette');
-  document.getElementById('btn-help').dataset.tooltip           = t('btnHelp');
-  // Retirer les title natifs pour désactiver le tooltip navigateur
-  ['btn-undo','btn-redo','btn-flip-colors','btn-flip-pos','btn-flip-pos-v','btn-settings','btn-toggle-palette','btn-help'].forEach(id => {
+  const TOOLTIP_IDS = [
+    ['btn-undo',           'btnUndo'],
+    ['btn-redo',           'btnRedo'],
+    ['btn-flip-colors',    'btnFlipColors'],
+    ['btn-flip-pos',       'btnFlipPos'],
+    ['btn-flip-pos-v',     'btnFlipPosV'],
+    ['btn-settings',       'btnSettings'],
+    ['btn-toggle-palette', 'btnTogglePalette'],
+    ['btn-help',           'btnHelp'],
+  ];
+  for (const [id, key] of TOOLTIP_IDS) {
     const el = document.getElementById(id);
-    if (el) el.removeAttribute('title');
-  });
+    if (!el) continue;
+    el.dataset.tooltip = t(key);
+    el.removeAttribute('title');
+  }
+
   document.getElementById('settings-title').textContent = t('settingsTitle');
   document.getElementById('help-title').textContent     = t('helpTitle');
   document.querySelector('#row-labels .setting-name').textContent = t('rowLabels');
@@ -115,9 +119,8 @@ function _applyLang() {
   document.querySelector('#row-shadow .setting-name').textContent = t('rowShadow');
   document.querySelector('#row-shadow .setting-desc').textContent = t('descShadow');
   document.querySelector('#row-lang   .setting-name').textContent = t('rowLang');
-  document.querySelectorAll('#help-popup [data-i18n]').forEach(el =>
-    el.innerHTML = t(el.dataset.i18n)
-  );
+  document.querySelectorAll('#help-popup [data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
+
   Palette.applyLang();
   if (typeof Palette2 !== 'undefined') Palette2.applyLang();
 }
@@ -127,15 +130,13 @@ const R     = 3;
 const SQ3   = Math.sqrt(3);
 const CR    = 0.79;
 const H_MAX = 60;
-const ALL_NAMES_LIST = [
-  ...Array.from({ length: 26 }, (_, i) => String(i + 1))
-];
+const ALL_NAMES_LIST = Array.from({ length: 26 }, (_, i) => String(i + 1));
 
 // ── PLATEAU ───────────────────────────────────────────────────────────────────
 const CELLS = (() => {
   const a = []; let id = 0;
   for (let q = -R; q <= R; q++)
-    for (let r = Math.max(-R, -q-R); r <= Math.min(R, -q+R); r++)
+    for (let r = Math.max(-R, -q - R); r <= Math.min(R, -q + R); r++)
       a.push({ q, r, id: id++ });
   return a;
 })();
@@ -155,13 +156,11 @@ const L2ID = Object.fromEntries(Object.entries(LABELS).map(([id, l]) => [l, +id]
 function enc({ tokens, banned }) {
   const whites = tokens.filter(t => t.c === 'w');
   const blacks  = tokens.filter(t => t.c === 'b');
-  const parts = [];
-  if (whites.length)
-    parts.push('white=' + whites.map(t => `${(LABELS[t.cell] ?? t.cell).toLowerCase()}:${t.name}`).join(','));
-  if (blacks.length)
-    parts.push('black=' + blacks.map(t => `${(LABELS[t.cell] ?? t.cell).toLowerCase()}:${t.name}`).join(','));
-  if (banned && banned.length)
-    parts.push('ban=' + banned.join(','));
+  const parts   = [];
+  const fmt     = t => `${(LABELS[t.cell] ?? t.cell).toLowerCase()}:${t.name}`;
+  if (whites.length) parts.push('white=' + whites.map(fmt).join(','));
+  if (blacks.length) parts.push('black=' + blacks.map(fmt).join(','));
+  if (banned?.length) parts.push('ban=' + banned.join(','));
   return parts.join('&');
 }
 
@@ -172,14 +171,13 @@ function dec(raw) {
     const params = {};
     for (const part of raw.split('&')) {
       const eq = part.indexOf('=');
-      if (eq === -1) continue;
-      params[part.slice(0, eq)] = part.slice(eq + 1);
+      if (eq !== -1) params[part.slice(0, eq)] = part.slice(eq + 1);
     }
     const tokens = [];
     const parseGroup = (str, c) => {
       if (!str) return;
       for (const entry of str.split(',')) {
-        const col = entry.indexOf(':');
+        const col  = entry.indexOf(':');
         if (col === -1) continue;
         const ref  = entry.slice(0, col).toUpperCase();
         const name = entry.slice(col + 1).trim();
@@ -239,35 +237,33 @@ function _palRemove(name) {
 }
 
 // ── BAN HELPERS ───────────────────────────────────────────────────────────────
-function isBanned(name) { return (S.banned || []).includes(name); }
-function doBan(name) {
-  if (isBanned(name)) return;
-  S.banned = [...(S.banned || []), name];
-  saveH(); render();
-}
-function doUnban(name) {
-  S.banned = (S.banned || []).filter(n => n !== name);
-  saveH(); render();
-}
+function isBanned(name)  { return (S.banned || []).includes(name); }
+function doBan(name)     { if (isBanned(name)) return; S.banned = [...(S.banned || []), name]; saveH(); render(); }
+function doUnban(name)   { S.banned = (S.banned || []).filter(n => n !== name); saveH(); render(); }
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 let hist = [], hidx = -1;
-const _snapS = () => JSON.stringify(S);
+
 const saveH = () => {
-  const snap = _snapS();
+  const snap = JSON.stringify(S);
   if (hidx >= 0 && hist[hidx] === snap) return;
   hist = hist.slice(0, hidx + 1);
   hist.push(snap);
   if (++hidx, hist.length > H_MAX) { hist.shift(); hidx--; }
 };
 const restH = entry => {
-  const restored = JSON.parse(entry);
-  if (!restored.banned) restored.banned = [];
-  S = restored;
-  _hideTokToolbar(); render();
+  S = JSON.parse(entry);
+  if (!S.banned) S.banned = [];
+  _hideTokToolbar();
+  render();
 };
 const undo = () => hidx > 0             && restH(hist[--hidx]);
 const redo = () => hidx < hist.length-1 && restH(hist[++hidx]);
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
+let showLabels = _loadSetting('leaders-labels', true);
+let showShadow = _loadSetting('leaders-shadow', true);
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
 let LO = {};
@@ -278,20 +274,19 @@ function relayout() {
   const W = main.clientWidth  || 800;
   const H = main.clientHeight || 560;
 
-  const BOARD_COLS = (2*R + 1) * 1.5 + 0.5;
-  const BOARD_ROWS = (2*R + 1.5) * SQ3;
+  const BOARD_COLS = (2 * R + 1) * 1.5 + 0.5;
+  const BOARD_ROWS = (2 * R + 1.5) * SQ3;
 
-  const rEst           = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90 * CR;
-  const pal2Layout     = (typeof Palette2 !== 'undefined') ? Palette2.layout(W, H, rEst) : { palW: 0 };
-  const palLayout      = Palette.layout(W, H, rEst);
+  const rEst       = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90 * CR;
+  const pal2Layout = (typeof Palette2 !== 'undefined') ? Palette2.layout(W, H, rEst) : { palW: 0 };
+  const palLayout  = Palette.layout(W, H, rEst);
   const { palX, palY, palW, palH } = palLayout;
   const palBottomSheet = !!palLayout._bottomSheet;
 
   const HANDLE_H = 48;
   const availH   = palBottomSheet ? H - HANDLE_H : H;
-
-  const sp = Math.min(W / BOARD_COLS, availH / BOARD_ROWS) * 0.90;
-  const r  = sp * CR;
+  const sp       = Math.min(W / BOARD_COLS, availH / BOARD_ROWS) * 0.90;
+  const r        = sp * CR;
 
   const pal2Collapsed = (typeof Palette2 !== 'undefined') && Palette2.isCollapsed();
   const pal2Right = palBottomSheet ? 0 : (pal2Collapsed ? 0 : (pal2Layout.palW || 0));
@@ -299,14 +294,13 @@ function relayout() {
   const cx = (pal2Right + pal1Left) / 2;
   const cy = palBottomSheet ? availH / 2 : H / 2;
 
-  // Masquer le bouton palette2 en mode bottom-sheet
   const btnPal2 = document.getElementById('btn-toggle-pal2');
   if (btnPal2) btnPal2.style.display = palBottomSheet ? 'none' : '';
 
   const cells = CELLS.map(c => ({
     ...c,
     x: cx + sp * 1.5 * c.q,
-    y: cy + sp * (SQ3/2 * c.q + SQ3 * c.r),
+    y: cy + sp * (SQ3 / 2 * c.q + SQ3 * c.r),
   }));
   const byId = new Map(cells.map(c => [c.id, c]));
   const hs   = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
@@ -318,8 +312,8 @@ function relayout() {
   const boardLayer = document.getElementById('board-layer');
   if (boardLayer) {
     const bw = hs * Math.sqrt(3), bh = hs * 2;
-    boardLayer.style.left   = (cx - bw/2) + 'px';
-    boardLayer.style.top    = (cy - bh/2) + 'px';
+    boardLayer.style.left   = (cx - bw / 2) + 'px';
+    boardLayer.style.top    = (cy - bh / 2) + 'px';
     boardLayer.style.width  = bw + 'px';
     boardLayer.style.height = bh + 'px';
     _updateBoardClip(boardLayer, bw, bh, hs);
@@ -328,16 +322,11 @@ function relayout() {
 
 function _updateBoardClip(el, bw, bh, hs) {
   const pts = Array.from({ length: 6 }, (_, i) => {
-    const a = Math.PI/3 * i + Math.PI/6;
+    const a = Math.PI / 3 * i + Math.PI / 6;
     return `${(50 + hs * Math.cos(a) / bw * 100).toFixed(3)}% ${(50 + hs * Math.sin(a) / bh * 100).toFixed(3)}%`;
   });
   el.style.clipPath = `polygon(${pts.join(', ')})`;
 }
-
-// ── SETTINGS ─────────────────────────────────────────────────────────────────
-const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
-let showLabels = _loadSetting('leaders-labels', true);
-let showShadow = _loadSetting('leaders-shadow', true);
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
 function _mainXY(e) {
@@ -356,8 +345,8 @@ function nearCell(x, y) {
 
 function tokAt(x, y) {
   for (let i = S.tokens.length - 1; i >= 0; i--) {
-    const t = S.tokens[i], c = LO.byId.get(t.cell);
-    if (c && Math.hypot(x - c.x, y - c.y) < LO.r * 0.9) return t;
+    const tk = S.tokens[i], c = LO.byId.get(tk.cell);
+    if (c && Math.hypot(x - c.x, y - c.y) < LO.r * 0.9) return tk;
   }
   return null;
 }
@@ -382,39 +371,40 @@ function _palRecruitOne(name) {
   saveH(); render();
 }
 
+// ── MOVE SELECTED TOKEN — helper partagé souris + tactile ─────────────────────
+// Déplace le jeton sélectionné (_selected.id) vers destCellId.
+// Échange si la case est déjà occupée. Retourne true si un mouvement a eu lieu.
+function _moveSelectedToCell(destCellId) {
+  const srcTok = S.tokens.find(t => t.id === _selected.id);
+  if (!srcTok) return false;
+  const destTok = S.tokens.find(t => t.cell === destCellId && t.id !== _selected.id);
+  if (destTok) {
+    const from = srcTok.cell;
+    S.tokens = S.tokens.map(t =>
+      t.id === _selected.id ? { ...t, cell: destCellId } :
+      t.id === destTok.id   ? { ...t, cell: from }       : t
+    );
+  } else {
+    S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCellId } : t);
+  }
+  saveH();
+  return true;
+}
+
 // ── INTERACTION STATE ─────────────────────────────────────────────────────────
 let drag = null, dpos = null, justDropped = false;
 let mousePos = { x: 0, y: 0 };
 
-// ── SELECTION STATE (souris + tactile) ────────────────────────────────────────
-// Mode clic-select : clic sur jeton → sélection, clic sur case → déplace
-// Fonctionne pour la souris (clic simple sans drag) ET le tactile (tap)
-let _selected = null;  // { type:'brd'|'pal', id?, name?, c? }
+// ── SELECTION STATE ───────────────────────────────────────────────────────────
+let _selected = null; // { type: 'brd'|'pal', id?, name? }
 
-// ── LONG-PRESS STATE ──────────────────────────────────────────────────────────
-let _longPressTimer = null;
-const LONG_PRESS_MS = 500;
-let _longPressFired = false;
-// Timestamp du dernier long-press déclenché. Sert à ignorer le contextmenu natif
-// que Chrome Android émet après un long-press (qui rouvrirait le menu bannir) et
-// les éventuels ghost taps synthétiques sur touchstart/touchend.
-let _longPressEndTime = 0;
-const GHOST_TAP_MS = 600;
-
-function _isTouchDevice() {
-  return window.matchMedia('(pointer: coarse)').matches;
-}
-
-// Highlight de sélection (souris + tactile)
 function _syncTouchSelectionHighlight() {
   document.querySelectorAll('.touch-selected').forEach(el => el.classList.remove('touch-selected'));
   if (!_selected) return;
   if (_selected.type === 'brd') {
-    const el = document.querySelector(`#tokens-layer .html-token[data-tid="${_selected.id}"]`);
-    if (el) el.classList.add('touch-selected');
+    document.querySelector(`#tokens-layer .html-token[data-tid="${_selected.id}"]`)?.classList.add('touch-selected');
   } else if (_selected.type === 'pal') {
-    const el = document.querySelector(`#pal-panel .pal-item[data-name="${_selected.name}"]`);
-    if (el) el.classList.add('touch-selected');
+    document.querySelector(`#pal-panel .pal-item[data-name="${_selected.name}"]`)?.classList.add('touch-selected');
   }
 }
 
@@ -423,25 +413,46 @@ function _cancelTouchSelection() {
   _syncTouchSelectionHighlight();
 }
 
-// ── Simule un right-click (pour long-press) ───────────────────────────────────
+// ── LONG-PRESS STATE ──────────────────────────────────────────────────────────
+let _longPressTimer = null;
+let _longPressFired = false;
+let _longPressEndTime = 0;
+const LONG_PRESS_MS = 500;
+const GHOST_TAP_MS  = 600;
+
+function _isTouchDevice() { return window.matchMedia('(pointer: coarse)').matches; }
+
+function _cancelLongPress() {
+  if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+}
+
+// ── TOOLBAR HELPERS — fermeture groupée ──────────────────────────────────────
+function _closeAllToolbars(target) {
+  if (tokTbId !== null) {
+    const tb = document.getElementById('tok-tb');
+    if (!tb || !tb.contains(target)) _hideTokToolbar();
+  }
+  if (Palette.isPalTbOpen?.()) {
+    const palTb = document.getElementById('pal-tok-tb');
+    if (!palTb || !palTb.contains(target)) Palette.hidePalToolbar();
+  }
+}
+
+// ── RIGHT-CLICK / LONG-PRESS → menu contextuel ───────────────────────────────
 function _simulateRightClick(x, y) {
-  const inP = Palette.inPalette(x, y);
-  if (inP) {
-    // Appel direct (pas de dispatchEvent) : le listener contextmenu du panel
-    // est ignoré via le guard _longPressEndTime pour éviter la double ouverture.
+  if (Palette.inPalette(x, y)) {
     const name = Palette.palAt(x, y);
     if (name) {
-      const palItem = document.querySelector(`#pal-panel .pal-item[data-name="${name}"]`);
-      if (palItem) { Tooltip.hide(); Palette.openPalToolbar(name, palItem); }
+      const item = document.querySelector(`#pal-panel .pal-item[data-name="${name}"]`);
+      if (item) { Tooltip.hide(); Palette.openPalToolbar(name, item); }
     }
     return;
   }
-  // Sur le plateau
   const tok = tokAt(x, y);
   if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(); render(); }
 }
 
-// ── Gestionnaires touch ───────────────────────────────────────────────────────
+// ── TOUCH EVENTS ──────────────────────────────────────────────────────────────
 function _touchXY(touch) {
   const b = document.getElementById('main').getBoundingClientRect();
   return { x: touch.clientX - b.left, y: touch.clientY - b.top };
@@ -449,42 +460,25 @@ function _touchXY(touch) {
 
 function onTouchStart(e) {
   if (e.touches.length !== 1) { _cancelLongPress(); return; }
-
-  // Absorber les ghost taps synthétiques émis par le navigateur après un long-press
   if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
 
   const touch = e.touches[0];
   const { x, y } = _touchXY(touch);
 
-  // Fermer toolbars si tap hors de celles-ci
-  if (tokTbId !== null) {
-    const tb = document.getElementById('tok-tb');
-    if (!tb || !tb.contains(e.target)) _hideTokToolbar();
-  }
-  if (typeof Palette !== 'undefined' && Palette.isPalTbOpen && Palette.isPalTbOpen()) {
-    const palTbEl = document.getElementById('pal-tok-tb');
-    if (!palTbEl || !palTbEl.contains(e.target)) Palette.hidePalToolbar();
-  }
-
-  // Long-press → right-click (menu contextuel)
+  _closeAllToolbars(e.target);
   _cancelLongPress();
-  const _lpX = x, _lpY = y, _lpTarget = e.target;
+
+  onTouchStart._startX = touch.clientX;
+  onTouchStart._startY = touch.clientY;
+
   _longPressTimer = setTimeout(() => {
-    _longPressTimer = null;
-    _longPressFired = true;   // bloquer le touchend suivant
+    _longPressTimer   = null;
+    _longPressFired   = true;
     _longPressEndTime = Date.now();
     if (navigator.vibrate) navigator.vibrate(40);
     _cancelTouchSelection();
-    _simulateRightClick(_lpX, _lpY, _lpTarget);
+    _simulateRightClick(x, y);
   }, LONG_PRESS_MS);
-
-  // Stocker position de départ pour détecter un glissement (annule long-press)
-  onTouchStart._startX = touch.clientX;
-  onTouchStart._startY = touch.clientY;
-}
-
-function _cancelLongPress() {
-  if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
 }
 
 function onTouchMove(e) {
@@ -492,76 +486,46 @@ function onTouchMove(e) {
   const touch = e.touches[0];
   const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
   const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
-  // Annuler le long-press si déplacement > 8px
   if (Math.hypot(dx, dy) > 8) _cancelLongPress();
 }
 
 function onTouchEnd(e) {
   _cancelLongPress();
   if (e.changedTouches.length !== 1) return;
-
-  // Absorber les ghost taps synthétiques émis par le navigateur après un long-press
   if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
-
-  // Si le long-press a été déclenché, bloquer ce touchend
   if (_longPressFired) { _longPressFired = false; e.preventDefault(); return; }
 
   const touch = e.changedTouches[0];
   const { x, y } = _touchXY(touch);
 
-  // Vérifier que c'est bien un tap (pas un glissement)
   const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
   const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
   if (Math.hypot(dx, dy) > 10) return;
 
-  // Ne pas interférer avec les éléments UI (boutons, toolbar, etc.)
   if (e.target.closest('#tok-tb, #pal-tok-tb, #toolbar, #settings-overlay, #help-overlay')) return;
 
   const inP = Palette.inPalette(x, y);
 
-  // ── Phase 2 : on a déjà une sélection ────────────────────────────────────
-  if (_selected) {
-    if (_selected.type === 'brd') {
-      const destCell = nearCell(x, y);
-
-      if (inP) {
-        // Destination = palette → supprimer du plateau
+  if (_selected?.type === 'brd') {
+    const destCell = nearCell(x, y);
+    if (destCell) {
+      _moveSelectedToCell(destCell.id);
+    } else if (inP) {
+      const palName = Palette.palAt(x, y);
+      if (palName) {
         const tok = S.tokens.find(t => t.id === _selected.id);
-        if (tok) { S.tokens = S.tokens.filter(t => t.id !== _selected.id); _palAdd(tok.name); saveH(); }
-        _cancelTouchSelection(); render(); e.preventDefault(); return;
+        if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName } : t); _palRemove(palName); saveH(); }
       }
-
-      if (destCell) {
-        const srcTok = S.tokens.find(t => t.id === _selected.id);
-        if (srcTok) {
-          const destTok = S.tokens.find(t => t.cell === destCell.id && t.id !== _selected.id);
-          if (destTok) {
-            const from = srcTok.cell;
-            S.tokens = S.tokens.map(t =>
-              t.id === _selected.id ? { ...t, cell: destCell.id } :
-              t.id === destTok.id   ? { ...t, cell: from }        : t
-            );
-          } else {
-            S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCell.id } : t);
-          }
-          saveH();
-        }
-        _cancelTouchSelection(); render(); e.preventDefault(); return;
-      }
-
-      // Tap dans le vide → désélectionner
-      _cancelTouchSelection(); render(); e.preventDefault(); return;
+    } else {
+      // Clic hors plateau → déselectionner seulement (pas de suppression)
     }
-    // (pas de type 'pal' en phase 2 : la palette place toujours directement)
+    _cancelTouchSelection(); render(); e.preventDefault(); return;
   }
-
-  // ── Phase 1 : pas de sélection ────────────────────────────────────────────
 
   if (inP) {
     const name = Palette.palAt(x, y);
     if (name) {
       e.preventDefault();
-      // Tap palette → placer directement au centre (pas de sélection intermédiaire)
       _palRecruitOne(name);
     }
     return;
@@ -575,19 +539,18 @@ function onTouchEnd(e) {
     return;
   }
 
-  // Tap dans le vide → désélectionner
   _cancelTouchSelection(); render();
 }
 
 function _initTouchEvents() {
   const main = document.getElementById('main');
-  main.addEventListener('touchstart', onTouchStart, { passive: false });
-  main.addEventListener('touchmove',  onTouchMove,  { passive: true });
-  main.addEventListener('touchend',   onTouchEnd,   { passive: false });
+  main.addEventListener('touchstart',  onTouchStart,  { passive: false });
+  main.addEventListener('touchmove',   onTouchMove,   { passive: true });
+  main.addEventListener('touchend',    onTouchEnd,    { passive: false });
   main.addEventListener('touchcancel', () => { _cancelLongPress(); _cancelTouchSelection(); render(); });
 }
 
-// ── TOKEN TOOLBAR — pill-bar à droite du jeton ────────────────────────────────
+// ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────
 let tokTb   = null;
 let tokTbId = null;
 
@@ -596,13 +559,9 @@ function _mkTokToolbar() {
   const el = document.createElement('div');
   el.id = 'tok-tb';
   el.innerHTML = `
-    <button id="tok-color" class="tok-tb-btn">
-      <span id="tok-color-label"></span>
-    </button>
+    <button id="tok-color" class="tok-tb-btn"><span id="tok-color-label"></span></button>
     <div class="tok-tb-sep"></div>
-    <button id="tok-del" class="tok-tb-btn">
-      <span id="tok-del-label"></span>
-    </button>`;
+    <button id="tok-del" class="tok-tb-btn"><span id="tok-del-label"></span></button>`;
 
   document.getElementById('main').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
@@ -629,53 +588,45 @@ function _mkTokToolbar() {
   return el;
 }
 
-function _updateTokDot(c, used) {
+function _updateTokToolbarLabels() {
+  const fr = currentLang === 'fr';
   const label = document.getElementById('tok-color-label');
   const del   = document.getElementById('tok-del-label');
-  if (label) label.textContent = currentLang === 'fr' ? 'Changer de couleur' : 'Toggle color';
-  if (del)   del.textContent   = currentLang === 'fr' ? 'Supprimer' : 'Delete';
+  if (label) label.textContent = fr ? 'Changer de couleur' : 'Toggle color';
+  if (del)   del.textContent   = fr ? 'Supprimer' : 'Delete';
 }
 
 function _placeTokToolbar() {
   if (tokTbId === null) { _hideTokToolbar(); return; }
-  const tok = S.tokens.find(t => t.id === tokTbId);
-  if (!tok) { _hideTokToolbar(); return; }
+  const tok  = S.tokens.find(t => t.id === tokTbId);
+  if (!tok)  { _hideTokToolbar(); return; }
   const cell = LO.byId.get(tok.cell);
   if (!cell) { _hideTokToolbar(); return; }
 
   const el = _mkTokToolbar();
-  _updateTokDot(tok.c, !!tok.used);
+  _updateTokToolbarLabels();
 
-  // Mesurer sans transition ni visibilité
   el.classList.remove('open', 'arrow-left', 'arrow-right');
   el.style.display    = 'flex';
   el.style.visibility = 'hidden';
   el.style.transition = 'none';
   void el.offsetWidth;
 
-  const elW = el.offsetWidth;
-  const elH = el.offsetHeight;
-  const GAP = 12;
-  const r   = LO.r;
+  const elW = el.offsetWidth, elH = el.offsetHeight;
+  const GAP = 12, r = LO.r;
 
-  // Position : droite du jeton par défaut
   let x = cell.x + r + GAP;
   let y = cell.y - elH / 2;
-
   const goLeft = x + elW + 4 > LO.W;
   if (goLeft) x = cell.x - r - GAP - elW;
-
   y = Math.max(4, Math.min(y, LO.H - elH - 4));
 
-  // Flèche alignée sur le centre du jeton
   const arrowY = Math.max(14, Math.min(cell.y - y, elH - 14));
   el.style.setProperty('--arrow-y', arrowY + 'px');
   el.classList.add(goLeft ? 'arrow-right' : 'arrow-left');
-
   el.style.left = x + 'px';
   el.style.top  = y + 'px';
 
-  // Rétablir la transition et animer l'ouverture
   requestAnimationFrame(() => {
     el.style.transition = '';
     el.style.visibility = '';
@@ -697,37 +648,18 @@ function onDown(e) {
   const { x, y } = _mainXY(e);
   const inP = Palette.inPalette(x, y);
 
-  // Toujours fermer la toolbar si on clique n'importe où (sauf sur la toolbar elle-même)
-  if (tokTbId !== null) {
-    const tb = document.getElementById('tok-tb');
-    const clickOnTb = tb && tb.contains(e.target);
-    if (!clickOnTb) _hideTokToolbar();
-  }
-  // Fermer aussi le menu bannir de la palette si ouvert
-  if (typeof Palette !== 'undefined' && Palette.isPalTbOpen && Palette.isPalTbOpen()) {
-    const palTbEl = document.getElementById('pal-tok-tb');
-    if (!palTbEl || !palTbEl.contains(e.target)) {
-      Palette.hidePalToolbar();
-    }
-  }
+  _closeAllToolbars(e.target);
 
   if (e.button === 2) {
     e.preventDefault();
-    // Clic droit sur la palette : géré par palette.js (contextmenu)
     if (inP) return;
     const tok = tokAt(x, y);
-    if (tok) {
-      tokTbId = tok.id;
-      Tooltip.hide();
-      _placeTokToolbar(); render();
-      return;
-    }
+    if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(); render(); }
     return;
   }
 
   if (e.button === 1) {
     e.preventDefault();
-    // Clic molette palette : géré par palette.js
     if (inP) return;
     const tok = tokAt(x, y);
     if (tok) toggleC(tok.id);
@@ -738,50 +670,33 @@ function onDown(e) {
 
   if (inP) {
     const n = Palette.palAt(x, y);
-    if (n) {
-      // Palette : toujours drag (clic simple = recruter au centre, drag = déposer sur case)
-      // La distinction se fait dans onUp selon la distance parcourue
-      drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y };
-      dpos = { x, y };
-      render();
+    if (n && _selected?.type === 'brd') {
+      const tok = S.tokens.find(t => t.id === _selected.id);
+      if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: n } : t); _palRemove(n); saveH(); }
+      _cancelTouchSelection(); render(); return;
     }
+    if (n) { drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y }; dpos = { x, y }; render(); }
     return;
   }
 
-  // ── Jeton de plateau : mémoriser pour distinguer clic vs drag dans onUp ──
   const tok = tokAt(x, y);
   if (tok) {
-    // On démarre un drag "pending" — le vrai drag ne s'active qu'au mouvement (> 6px)
     drag = { type: 'brd', id: tok.id, _startX: x, _startY: y, _pending: true };
     dpos = { x, y };
     render();
     return;
   }
 
-  // ── Clic dans le vide avec une sélection active : déplacer vers la case cliquée ──
-  if (_selected && _selected.type === 'brd') {
+  if (_selected?.type === 'brd') {
     const destCell = nearCell(x, y);
     if (destCell) {
-      const srcTok = S.tokens.find(t => t.id === _selected.id);
-      if (srcTok) {
-        const destTok = S.tokens.find(t => t.cell === destCell.id && t.id !== _selected.id);
-        if (destTok) {
-          const from = srcTok.cell;
-          S.tokens = S.tokens.map(t =>
-            t.id === _selected.id ? { ...t, cell: destCell.id } :
-            t.id === destTok.id   ? { ...t, cell: from }        : t
-          );
-        } else {
-          S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCell.id } : t);
-        }
-        saveH();
-      }
+      _moveSelectedToCell(destCell.id);
     }
+    // Sinon (clic hors plateau) → déselectionner seulement, pas de suppression
     _cancelTouchSelection(); render();
     return;
   }
 
-  // Clic dans le vide → désélectionner
   if (_selected) { _cancelTouchSelection(); render(); }
 }
 
@@ -789,18 +704,12 @@ function onMove(e) {
   const { x, y } = _mainXY(e);
   mousePos = { x, y };
 
-  // Activer le drag réel si le pending a dépassé le seuil
-  if (drag && drag._pending) {
-    const moved = Math.hypot(x - drag._startX, y - drag._startY);
-    if (moved >= 6) {
-      // Seuil atteint : on passe en drag actif, la sélection est annulée
-      drag._pending = false;
-      _cancelTouchSelection();
-    }
+  if (drag?._pending && Math.hypot(x - drag._startX, y - drag._startY) >= 6) {
+    drag._pending = false;
+    _cancelTouchSelection();
   }
 
-  // Tooltip — figé si la toolbar de jeton est ouverte OU si menu palette ouvert
-  if (tokTbId === null && !(typeof Palette !== 'undefined' && Palette.isPalTbOpen && Palette.isPalTbOpen())) {
+  if (tokTbId === null && !Palette.isPalTbOpen?.()) {
     if (Palette.inPalette(x, y)) {
       Palette.onMove(x, y);
     } else {
@@ -809,13 +718,7 @@ function onMove(e) {
         const cell = LO.byId.get(hoveredTok.cell);
         if (cell) {
           const mainRect = document.getElementById('main').getBoundingClientRect();
-          Tooltip.scheduleBoard(
-            hoveredTok.name,
-            mainRect.left + cell.x,
-            mainRect.top  + cell.y,
-            'board:' + hoveredTok.id,
-            LO.r
-          );
+          Tooltip.scheduleBoard(hoveredTok.name, mainRect.left + cell.x, mainRect.top + cell.y, 'board:' + hoveredTok.id, LO.r);
         }
       } else {
         Tooltip.hide();
@@ -838,43 +741,22 @@ function onUp(e) {
     const tok = S.tokens.find(t => t.id === drag.id);
     if (tok) {
       if (drag._pending) {
-        // ── Clic simple (pas de drag) → logique de sélection ──────────────
-        const wasSelf = _selected && _selected.type === 'brd' && _selected.id === tok.id;
+        // Clic simple → logique de sélection
+        const wasSelf = _selected?.type === 'brd' && _selected.id === tok.id;
         if (wasSelf) {
-          // Re-clic sur le jeton déjà sélectionné → désélectionner
           _cancelTouchSelection();
-        } else if (_selected && _selected.type === 'brd') {
-          // Un autre jeton était sélectionné → déplacer le sélectionné sur la case du tok cliqué
-          // (comportement : échanger ou déplacer)
-          const srcTok = S.tokens.find(t => t.id === _selected.id);
-          if (srcTok) {
-            const destCell2 = LO.byId.get(tok.cell);
-            if (destCell2) {
-              const destTok = S.tokens.find(t => t.cell === destCell2.id && t.id !== _selected.id);
-              if (destTok) {
-                const from = srcTok.cell;
-                S.tokens = S.tokens.map(t =>
-                  t.id === _selected.id ? { ...t, cell: destCell2.id } :
-                  t.id === destTok.id   ? { ...t, cell: from }         : t
-                );
-              } else {
-                S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, cell: destCell2.id } : t);
-              }
-              saveH();
-            }
-          }
+        } else if (_selected?.type === 'brd') {
+          _moveSelectedToCell(tok.cell);
           _cancelTouchSelection();
         } else {
-          // Aucune sélection active → sélectionner ce jeton
           _selected = { type: 'brd', id: tok.id };
           _syncTouchSelectionHighlight();
         }
       } else {
-        // ── Drag réel → déposer ────────────────────────────────────────────
+        // Drag réel → déposer
         if (inP || !cell) {
           S.tokens = S.tokens.filter(t => t.id !== drag.id);
           _palAdd(tok.name);
-          saveH();
         } else {
           const other = S.tokens.find(t => t.cell === cell.id && t.id !== drag.id);
           if (other) {
@@ -886,23 +768,19 @@ function onUp(e) {
           } else {
             S.tokens = S.tokens.map(t => t.id === drag.id ? { ...t, cell: cell.id } : t);
           }
-          saveH();
         }
+        saveH();
       }
     }
   } else if (drag.type === 'pal') {
     const moved = Math.hypot(x - drag._startX, y - drag._startY);
     if (moved < 6) {
-      // Clic simple → placer au centre du plateau
       _palRecruitOne(drag.name);
     } else if (!inP && cell) {
-      // Drag → déposer sur la case ciblée
       const other = S.tokens.find(t => t.cell === cell.id);
       if (other) {
         _palAdd(other.name);
-        S.tokens = S.tokens.map(t =>
-          t.id === other.id ? { ...t, name: drag.name, c: drag.c } : t
-        );
+        S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, name: drag.name, c: drag.c } : t);
       } else {
         S.tokens = [...S.tokens, { id: S.nid++, cell: cell.id, name: drag.name, c: drag.c }];
       }
@@ -919,53 +797,54 @@ function toggleC(id) {
   S.tokens = S.tokens.map(t => t.id === id ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
   saveH(); render();
 }
+
 function doFlipColors() {
   _hideTokToolbar(); _cancelTouchSelection();
   S.tokens = S.tokens.map(t => ({ ...t, c: t.c === 'w' ? 'b' : 'w' }));
   saveH(); render();
 }
-function doFlipPositions() {
+
+function _flipTokens(transformCoord) {
   _hideTokToolbar(); _cancelTouchSelection();
-  const coordToId = new Map();
-  for (const c of CELLS) coordToId.set(`${c.q},${c.r}`, c.id);
+  const coordToId = new Map(CELLS.map(c => [`${c.q},${c.r}`, c.id]));
   S.tokens = S.tokens.map(t => {
     const cell = CELLS.find(c => c.id === t.cell);
     if (!cell) return t;
-    const newR = -cell.q - cell.r;
-    const newId = coordToId.get(`${cell.q},${newR}`);
+    const [nq, nr] = transformCoord(cell.q, cell.r);
+    const newId = coordToId.get(`${nq},${nr}`);
     return newId !== undefined ? { ...t, cell: newId } : t;
   });
   saveH(); render();
 }
-function doFlipPositionsV() {
-  _hideTokToolbar(); _cancelTouchSelection();
-  const coordToId = new Map();
-  for (const c of CELLS) coordToId.set(`${c.q},${c.r}`, c.id);
-  S.tokens = S.tokens.map(t => {
-    const cell = CELLS.find(c => c.id === t.cell);
-    if (!cell) return t;
-    const newQ = -cell.q;
-    const newR = cell.r + cell.q;
-    const newId = coordToId.get(`${newQ},${newR}`);
-    return newId !== undefined ? { ...t, cell: newId } : t;
-  });
-  saveH(); render();
-}
+
+function doFlipPositions()  { _flipTokens((q, r) => [q,  -q - r]); }
+function doFlipPositionsV() { _flipTokens((q, r) => [-q,  r + q]); }
+
 function doReset() {
   _hideTokToolbar(); _cancelTouchSelection();
   S = mkState();
   hist = []; hidx = -1; saveH(); render();
 }
-function doLoad() {
-  const raw = document.getElementById('_hidden-input-state').value.trim();
-  if (!raw) return;
-  const { tokens, banned } = dec(raw);
+
+function _loadState({ tokens, banned }) {
   const used = new Set(tokens.map(t => t.name));
   const palette = { lancement: [], vermillon: [], leaders: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
   S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, banned: banned || [] };
+}
+
+function doLoad() {
+  const raw = document.getElementById('_hidden-input-state').value.trim();
+  if (!raw) return;
+  _loadState(dec(raw));
   _hideTokToolbar(); saveH(); render();
 }
+
+function loadStateFromURL() {
+  const raw = window.location.hash.slice(1);
+  if (raw) _loadState(dec(raw));
+}
+
 function doCopy() {
   navigator.clipboard.writeText(enc(S)).then(() => {
     const b = document.getElementById('pal-btn-copy');
@@ -978,6 +857,11 @@ function doCopy() {
 }
 
 // ── HTML LAYERS ───────────────────────────────────────────────────────────────
+function _dragMoved() {
+  if (!drag || !dpos || drag._pending) return false;
+  return Math.hypot(dpos.x - (drag._startX ?? dpos.x), dpos.y - (drag._startY ?? dpos.y)) >= 6;
+}
+
 function _syncTokenLayer() {
   const layer = document.getElementById('tokens-layer');
   if (!layer) return;
@@ -988,44 +872,35 @@ function _syncTokenLayer() {
   for (const el of layer.children) existing.set(+el.dataset.tid, el);
 
   const seen = new Set();
-  for (const t of S.tokens) {
-    if (drag?.type === 'brd' && drag.id === t.id && _dragMoved()) continue;
-    const cell = byId.get(t.cell);
+  for (const tok of S.tokens) {
+    if (drag?.type === 'brd' && drag.id === tok.id && _dragMoved()) continue;
+    const cell = byId.get(tok.cell);
     if (!cell) continue;
-    seen.add(t.id);
+    seen.add(tok.id);
 
-    let el = existing.get(t.id);
+    let el = existing.get(tok.id);
     if (!el) {
       el = document.createElement('div');
-      el.className = 'html-token';
-      el.dataset.tid = t.id;
+      el.className   = 'html-token';
+      el.dataset.tid = tok.id;
       const img = document.createElement('img');
-      img.draggable = false;
+      img.draggable  = false;
       el.appendChild(img);
       layer.appendChild(el);
     }
 
-    const color = t.c === 'w' ? 'blanc' : 'noir';
-    const img = el.querySelector('img');
-    const src = `jetons_${color}/${t.name}.png`;
+    const color = tok.c === 'w' ? 'blanc' : 'noir';
+    const img   = el.querySelector('img');
+    const src   = `jetons_${color}/${tok.name}.png`;
     if (!img.src.endsWith(src)) img.src = src;
     el.dataset.imgKey = '';
+    el.querySelector('.board-token-label')?.remove();
 
-    const lbl = el.querySelector('.board-token-label');
-    if (lbl) lbl.remove();
-
-    el.style.left      = (cell.x - d/2) + 'px';
-    el.style.top       = (cell.y - d/2) + 'px';
-    el.style.width     = d + 'px';
-    el.style.height    = d + 'px';
-    el.style.position  = 'absolute';
-    el.style.overflow  = 'visible';
-    el.style.boxShadow  = showShadow ? `${r*0.05}px ${r*0.06}px ${r*0.12}px rgba(0,0,0,0.6)` : 'none';
-    img.style.boxShadow = 'none';
-    img.style.filter    = t.used ? 'grayscale(1) opacity(0.5)' : '';
-    // Anneau tactile : débordement = 5% du diamètre, arrondi au pair
     const ringInset = Math.round(d * 0.05 / 2) * 2;
+    el.style.cssText = `left:${cell.x - d/2}px;top:${cell.y - d/2}px;width:${d}px;height:${d}px;position:absolute;overflow:visible;box-shadow:${showShadow ? `${r*0.05}px ${r*0.06}px ${r*0.12}px rgba(0,0,0,0.6)` : 'none'};`;
     el.style.setProperty('--ring-inset', `${ringInset}px`);
+    img.style.boxShadow = 'none';
+    img.style.filter    = tok.used ? 'grayscale(1) opacity(0.5)' : '';
   }
   for (const [tid, el] of existing) { if (!seen.has(tid)) el.remove(); }
 }
@@ -1033,15 +908,15 @@ function _syncTokenLayer() {
 function _syncLabelLayer() {
   const layer = document.getElementById('labels-layer');
   if (!layer) return;
-  const { r, cells } = LO;
-  const occ    = new Set(S.tokens.map(t => t.cell));
-  const dcell  = drag?.type === 'brd' ? S.tokens.find(t => t.id === drag.id)?.cell : -1;
-  const fs     = Math.max(7, Math.round(r * 0.36));
-
   if (!showLabels) { layer.innerHTML = ''; return; }
 
+  const { r, cells } = LO;
+  const occ   = new Set(S.tokens.map(t => t.cell));
+  const dcell = drag?.type === 'brd' ? S.tokens.find(t => t.id === drag.id)?.cell : -1;
+  const fs    = Math.max(7, Math.round(r * 0.36));
   const numColors = ['#ff4c4c', '#31cf65', '#50aff8', '#ff83bd', 'rgb(215,160,65)', '#27b4b4', '#ff4c4c'];
-  const existing  = new Map();
+
+  const existing = new Map();
   for (const el of layer.children) existing.set(+el.dataset.cid, el);
 
   const seen = new Set();
@@ -1075,52 +950,38 @@ function _syncLabelLayer() {
   for (const [cid, el] of existing) { if (!seen.has(cid)) el.remove(); }
 }
 
-function _dragMoved() {
-  if (!drag || !dpos) return false;
-  if (drag._pending) return false;  // pending = pas encore un vrai drag
-  return Math.hypot(dpos.x - (drag._startX ?? dpos.x), dpos.y - (drag._startY ?? dpos.y)) >= 6;
-}
-
 function _syncDropTarget() {
   const layer = document.getElementById('droptarget-layer');
   if (!layer) return;
   layer.innerHTML = '';
 
-  // Mode souris : drag en cours
+  const { r } = LO;
+  const mkDiv = (c, extraClass = '') => {
+    const div = document.createElement('div');
+    div.className = 'html-droptarget' + (extraClass ? ' ' + extraClass : '');
+    div.style.cssText = `left:${c.x - r}px;top:${c.y - r}px;width:${r * 2}px;height:${r * 2}px;`;
+    return div;
+  };
+
   if (drag && dpos && _dragMoved()) {
     const dtgt = nearCell(dpos.x, dpos.y);
-    if (dtgt) {
-      const { r } = LO;
-      const div = document.createElement('div');
-      div.className = 'html-droptarget';
-      div.style.cssText = `left:${dtgt.x-r}px;top:${dtgt.y-r}px;width:${r*2}px;height:${r*2}px;`;
-      layer.appendChild(div);
-    }
+    if (dtgt) layer.appendChild(mkDiv(dtgt));
     return;
   }
 
-  // Mode sélection (souris ou tactile) : jeton sélectionné → pulse sur toutes les cases
   if (_selected && (_isTouchDevice() || !drag)) {
-    const { r } = LO;
     if (_selected.type === 'brd' || _selected.type === 'pal') {
-      for (const c of LO.cells) {
-        const div = document.createElement('div');
-        div.className = 'html-droptarget touch-hint';
-        div.style.cssText = `left:${c.x-r}px;top:${c.y-r}px;width:${r*2}px;height:${r*2}px;`;
-        layer.appendChild(div);
-      }
+      for (const c of LO.cells) layer.appendChild(mkDiv(c, 'touch-hint'));
     }
   }
 }
 
 function _syncGhost() {
   let ghost = document.getElementById('drag-ghost');
-  if (!drag || !dpos || !_dragMoved()) {
-    if (ghost) ghost.style.display = 'none';
-    return;
-  }
-  const t = drag.type === 'brd' ? S.tokens.find(t => t.id === drag.id) : { name: drag.name, c: drag.c };
-  if (!t) { if (ghost) ghost.style.display = 'none'; return; }
+  if (!drag || !dpos || !_dragMoved()) { if (ghost) ghost.style.display = 'none'; return; }
+
+  const tok = drag.type === 'brd' ? S.tokens.find(t => t.id === drag.id) : { name: drag.name, c: drag.c };
+  if (!tok) { if (ghost) ghost.style.display = 'none'; return; }
 
   if (!ghost) {
     ghost = document.createElement('div');
@@ -1131,15 +992,13 @@ function _syncGhost() {
     document.getElementById('main').appendChild(ghost);
   }
 
-  const r = drag.type === 'brd' ? LO.r : LO.palItemSz;
-  const color = t.c === 'w' ? 'blanc' : 'noir';
-  const img = ghost.querySelector('img');
-  const src = `jetons_${color}/${t.name}.png`;
+  const r     = drag.type === 'brd' ? LO.r : LO.palItemSz;
+  const color = tok.c === 'w' ? 'blanc' : 'noir';
+  const img   = ghost.querySelector('img');
+  const src   = `jetons_${color}/${tok.name}.png`;
   if (!img.src.endsWith(src)) img.src = src;
   ghost.dataset.imgKey = '';
-
-  const lbl = ghost.querySelector('.board-token-label');
-  if (lbl) lbl.remove();
+  ghost.querySelector('.board-token-label')?.remove();
 
   ghost.style.display   = 'block';
   ghost.style.position  = 'absolute';
@@ -1187,17 +1046,6 @@ function render() {
   if (tokTbId !== null) _placeTokToolbar();
 }
 
-// ── URL STATE ─────────────────────────────────────────────────────────────────
-function loadStateFromURL() {
-  const raw = window.location.hash.slice(1);
-  if (!raw) return;
-  const { tokens, banned } = dec(raw);
-  const used = new Set(tokens.map(t => t.name));
-  const palette = { lancement: [], vermillon: [], leaders: [], other: [] };
-  for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
-  S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, banned: banned || [] };
-}
-
 // ── INIT ──────────────────────────────────────────────────────────────────────
 function init() {
   loadStateFromURL();
@@ -1208,12 +1056,15 @@ function init() {
   main.addEventListener('mouseup',     onUp);
   main.addEventListener('click',       () => { if (justDropped) justDropped = false; });
   main.addEventListener('contextmenu', e => e.preventDefault());
-  // mouseleave : annuler le drag en cours (pas la sélection clic)
   main.addEventListener('mouseleave',  () => { drag = null; dpos = null; render(); });
-  // mouseup global : si le bouton est relâché hors du plateau pendant un drag
-  document.addEventListener('mouseup', e => {
-    if (drag && e.button === 0) { drag = null; dpos = null; render(); }
-  });
+  document.addEventListener('mouseup', e => { if (drag && e.button === 0) { drag = null; dpos = null; render(); } });
+  const _onGlobalDown = e => {
+    if (!_selected) return;
+    if (e.target.closest('#pal-panel .pal-item')) return;
+    if (e.target.closest('#pal-panel, #pal2-panel, #toolbar')) { _cancelTouchSelection(); render(); }
+  };
+  document.addEventListener('mousedown',  _onGlobalDown, true);
+  document.addEventListener('touchstart', e => { if (e.touches.length === 1) _onGlobalDown(e); }, { passive: true, capture: true });
 
   window.addEventListener('keydown', e => {
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
@@ -1226,7 +1077,7 @@ function init() {
       document.getElementById('settings-overlay').classList.add('hidden');
       document.getElementById('help-overlay').classList.add('hidden');
       document.getElementById('lang-submenu').classList.remove('open');
-      if (typeof Palette !== 'undefined' && Palette.hidePalToolbar) Palette.hidePalToolbar();
+      Palette.hidePalToolbar?.();
     }
   });
 
@@ -1235,30 +1086,27 @@ function init() {
   document.getElementById('btn-flip-colors'   ).addEventListener('click', doFlipColors);
   document.getElementById('btn-flip-pos'      ).addEventListener('click', doFlipPositions);
   document.getElementById('btn-flip-pos-v'    ).addEventListener('click', doFlipPositionsV);
-  document.getElementById('btn-toggle-palette').addEventListener('click', () => { Palette.toggleCollapse(); });
+  document.getElementById('btn-toggle-palette').addEventListener('click', () => Palette.toggleCollapse());
+  document.getElementById('btn-toggle-pal2'   ).addEventListener('click', () => Palette2?.toggleCollapse());
 
-  document.getElementById('btn-toggle-pal2').addEventListener('click', () => {
-    if (typeof Palette2 !== 'undefined') Palette2.toggleCollapse();
-  });
-
-  // Settings
+  // ── Settings ──
   const _syncToggle = (id, val) => {
     const el = document.getElementById(id);
     el.classList.toggle('active', val);
     el.setAttribute('aria-checked', val);
   };
+  const settingsOverlay = document.getElementById('settings-overlay');
   const _openSettings = () => {
     _syncToggle('tog-labels', showLabels);
     _syncToggle('tog-shadow', showShadow);
-    document.getElementById('settings-overlay').classList.remove('hidden');
+    settingsOverlay.classList.remove('hidden');
   };
-  const _closeSettings = () => document.getElementById('settings-overlay').classList.add('hidden');
+  const _closeSettings = () => settingsOverlay.classList.add('hidden');
 
-  document.getElementById('btn-settings'    ).addEventListener('click', _openSettings);
-  document.getElementById('settings-close'  ).addEventListener('click', _closeSettings);
-  document.getElementById('settings-overlay').addEventListener('mousedown', e => {
-    if (e.target === document.getElementById('settings-overlay')) _closeSettings();
-  });
+  document.getElementById('btn-settings'  ).addEventListener('click', _openSettings);
+  document.getElementById('settings-close').addEventListener('click', _closeSettings);
+  settingsOverlay.addEventListener('mousedown', e => { if (e.target === settingsOverlay) _closeSettings(); });
+
   document.getElementById('row-labels').addEventListener('click', () => {
     showLabels = !showLabels; localStorage.setItem('leaders-labels', showLabels);
     _syncToggle('tog-labels', showLabels); render();
@@ -1268,20 +1116,16 @@ function init() {
     _syncToggle('tog-shadow', showShadow); render();
   });
 
-  // Help
-  const _openHelp  = () => document.getElementById('help-overlay').classList.remove('hidden');
-  const _closeHelp = () => document.getElementById('help-overlay').classList.add('hidden');
-  document.getElementById('btn-help'    ).addEventListener('click', _openHelp);
-  document.getElementById('help-close'  ).addEventListener('click', _closeHelp);
-  document.getElementById('help-overlay').addEventListener('mousedown', e => {
-    if (e.target === document.getElementById('help-overlay')) _closeHelp();
-  });
+  // ── Help ──
+  const helpOverlay = document.getElementById('help-overlay');
+  document.getElementById('btn-help'  ).addEventListener('click', () => helpOverlay.classList.remove('hidden'));
+  document.getElementById('help-close').addEventListener('click', () => helpOverlay.classList.add('hidden'));
+  helpOverlay.addEventListener('mousedown', e => { if (e.target === helpOverlay) helpOverlay.classList.add('hidden'); });
 
-  // Language submenu
+  // ── Language submenu ──
   const langSubmenu = document.getElementById('lang-submenu');
   const langTrigger = document.getElementById('lang-trigger');
   const langLabel   = document.getElementById('lang-current-label');
-
   const LANG_LABELS = { fr: 'Français', en: 'English' };
 
   const _syncLangUI = () => {
@@ -1290,22 +1134,40 @@ function init() {
       opt.classList.toggle('active', opt.dataset.lang === currentLang)
     );
   };
-
   const _closeLangMenu = () => langSubmenu.classList.remove('open');
   const _openLangMenu  = () => {
     _syncLangUI();
-    const rowRect   = document.getElementById('row-lang').getBoundingClientRect();
-    const popupRect = document.getElementById('settings-popup').getBoundingClientRect();
-    langSubmenu.style.top  = rowRect.top + 'px';
-    langSubmenu.style.left = (popupRect.right + 8) + 'px';
     langSubmenu.classList.add('open');
+    const menuW       = langSubmenu.offsetWidth;
+    const menuH       = langSubmenu.offsetHeight;
+    const GAP         = 8;
+    const vw          = window.innerWidth;
+    const vh          = window.innerHeight;
+
+    // Centre du bouton lang-trigger
+    const triggerRect = document.getElementById('lang-trigger').getBoundingClientRect();
+    const triggerCX = triggerRect.left + triggerRect.width / 2;
+
+    // Horizontal : centré sur le bouton, clampé à l'écran
+    let left = triggerCX - menuW / 2;
+    left = Math.max(GAP, Math.min(left, vw - menuW - GAP));
+
+    // Vertical : juste sous la row-lang
+    const rowRect = document.getElementById('row-lang').getBoundingClientRect();
+    let top = rowRect.bottom + 8;
+    if (top + menuH > vh - GAP) top = rowRect.top - menuH - 8;
+
+    // Pointe : position X relative au menu qui pointe vers le centre du bouton
+    const arrowX = Math.max(14, Math.min(triggerCX - left, menuW - 14));
+    langSubmenu.style.setProperty('--arrow-x', arrowX + 'px');
+    langSubmenu.style.left = left + 'px';
+    langSubmenu.style.top  = top  + 'px';
   };
 
   document.getElementById('row-lang').addEventListener('click', e => {
     e.stopPropagation();
     langSubmenu.classList.contains('open') ? _closeLangMenu() : _openLangMenu();
   });
-
   langSubmenu.querySelectorAll('.lang-option').forEach(opt => {
     opt.addEventListener('mousedown', e => {
       e.stopPropagation();
@@ -1314,15 +1176,15 @@ function init() {
       _syncLangUI(); _closeLangMenu(); _applyLang();
     });
   });
-
   document.addEventListener('mousedown', e => {
     if (!langSubmenu.contains(e.target) && e.target !== langTrigger) _closeLangMenu();
   });
   document.getElementById('settings-close').addEventListener('click', _closeLangMenu);
-  document.getElementById('settings-overlay').addEventListener('mousedown', _closeLangMenu);
+  settingsOverlay.addEventListener('mousedown', _closeLangMenu);
 
   _syncLangUI();
 
+  // ── Init modules ──
   Palette.init();
   Palette.setOnCollapseChange(() => { relayout(); render(); });
   if (typeof Palette2 !== 'undefined') {

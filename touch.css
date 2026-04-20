@@ -53,11 +53,3 @@
 #main, #main * {
   -webkit-tap-highlight-color: transparent;
 }
-
-/* Zone tactile agrandie pour les boutons de la toolbar */
-@media (pointer: coarse) {
-  .tok-tb-btn {
-    min-height: 44px;
-    padding: 8px 14px;
-  }
-}
