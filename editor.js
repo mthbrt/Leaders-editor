@@ -265,6 +265,10 @@ const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return
 let showLabels = _loadSetting('leaders-labels', true);
 let showShadow = _loadSetting('leaders-shadow', true);
 
+// ── VIEW FLIP STATE (cosmétique, non sauvegardé dans l'URL) ──────────────────
+let viewFlipH = false;
+let viewFlipV = false;
+
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
 let LO = {};
 
@@ -297,11 +301,13 @@ function relayout() {
   const btnPal2 = document.getElementById('btn-toggle-pal2');
   if (btnPal2) btnPal2.style.display = palBottomSheet ? 'none' : '';
 
-  const cells = CELLS.map(c => ({
-    ...c,
-    x: cx + sp * 1.5 * c.q,
-    y: cy + sp * (SQ3 / 2 * c.q + SQ3 * c.r),
-  }));
+  const cells = CELLS.map(c => {
+    let x = cx + sp * 1.5 * c.q;
+    let y = cy + sp * (SQ3 / 2 * c.q + SQ3 * c.r);
+    if (viewFlipH) x = 2 * cx - x;
+    if (viewFlipV) y = 2 * cy - y;
+    return { ...c, x, y };
+  });
   const byId = new Map(cells.map(c => [c.id, c]));
   const hs   = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
 
@@ -316,6 +322,7 @@ function relayout() {
     boardLayer.style.top    = (cy - bh / 2) + 'px';
     boardLayer.style.width  = bw + 'px';
     boardLayer.style.height = bh + 'px';
+
     _updateBoardClip(boardLayer, bw, bh, hs);
   }
 }
@@ -804,21 +811,9 @@ function doFlipColors() {
   saveH(); render();
 }
 
-function _flipTokens(transformCoord) {
-  _hideTokToolbar(); _cancelTouchSelection();
-  const coordToId = new Map(CELLS.map(c => [`${c.q},${c.r}`, c.id]));
-  S.tokens = S.tokens.map(t => {
-    const cell = CELLS.find(c => c.id === t.cell);
-    if (!cell) return t;
-    const [nq, nr] = transformCoord(cell.q, cell.r);
-    const newId = coordToId.get(`${nq},${nr}`);
-    return newId !== undefined ? { ...t, cell: newId } : t;
-  });
-  saveH(); render();
-}
 
-function doFlipPositions()  { _flipTokens((q, r) => [q,  -q - r]); }
-function doFlipPositionsV() { _flipTokens((q, r) => [-q,  r + q]); }
+function doFlipPositions()  { _hideTokToolbar(); _cancelTouchSelection(); viewFlipH = !viewFlipH; relayout(); render(); }
+function doFlipPositionsV() { _hideTokToolbar(); _cancelTouchSelection(); viewFlipV = !viewFlipV; relayout(); render(); }
 
 function doReset() {
   _hideTokToolbar(); _cancelTouchSelection();

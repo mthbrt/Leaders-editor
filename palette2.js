@@ -409,6 +409,18 @@ const Palette2 = (() => {
         if (e.target.closest('input')) return;
         e.stopPropagation(); _toggleSection(sec.id);
       });
+      hdr.querySelector('.pal2-sec-name').addEventListener('dblclick', e => {
+        e.stopPropagation();
+        const nameEl = hdr.querySelector('.pal2-sec-name');
+        if (!nameEl || nameEl.querySelector('input')) return;
+        const original = sec.name;
+        nameEl.innerHTML = '';
+        nameEl.appendChild(_mkInlineInput(original, original,
+          val => _renameSection(sec.id, val || original),
+          ()  => _renderList()
+        ));
+        nameEl.classList.add('editing');
+      });
       hdr.querySelector('.pal2-btn-sec-add').addEventListener('mousedown', e => {
         e.preventDefault(); e.stopPropagation();
         _addConfig(sec.id);
@@ -466,6 +478,18 @@ const Palette2 = (() => {
         row.querySelector('.pal2-row-main').addEventListener('click', e => {
           if (e.target.closest('.pal2-row-actions, input')) return;
           _restore(cfg);
+        });
+        row.querySelector('.pal2-row-name').addEventListener('dblclick', e => {
+          e.stopPropagation();
+          const nameEl = row.querySelector('.pal2-row-name');
+          if (!nameEl || nameEl.querySelector('input')) return;
+          const original = cfg.name;
+          nameEl.innerHTML = '';
+          nameEl.appendChild(_mkInlineInput(original, original,
+            val => _renameConfig(sec.id, cfg.id, val || original),
+            ()  => { nameEl.textContent = original; nameEl.classList.remove('editing'); }
+          ));
+          nameEl.classList.add('editing');
         });
         row.querySelector('.pal2-btn-update').addEventListener('mousedown', e => {
           e.preventDefault(); e.stopPropagation(); _updateConfig(sec.id, cfg.id);
