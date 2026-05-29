@@ -132,6 +132,7 @@ const Palette = (() => {
 
   function onMove(x, y) {
     if (palTbName !== null) return;
+    if (typeof showTooltips !== 'undefined' && !showTooltips) { Tooltip.hide(); return; }
     const name = palAt(x, y);
     if (name) {
       const itemEl = panel?.querySelector(`.pal-item[data-name="${name}"]`);
