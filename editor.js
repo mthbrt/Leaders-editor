@@ -14,6 +14,8 @@ const LANGS = {
     descLabels:       'Marque les coordonnées sur chaque case du plateau',
     rowShadow:        'Ombres',
     descShadow:       'Ajoute une ombre sous chaque personnage',
+    rowTooltips:      'Infobulles',
+    descTooltips:     'Affiche les détails des personnages au survol',
     rowLang:          'Langue',
     palTitle:         'PERSONNAGES',
     palReset:         'Réinitialiser',
@@ -58,6 +60,8 @@ const LANGS = {
     descLabels:       'Shows coordinates on each board cell',
     rowShadow:        'Shadows',
     descShadow:       'Adds a shadow under each character',
+    rowTooltips:      'Tooltips',
+    descTooltips:     'Show character details on hover',
     rowLang:          'Language',
     palTitle:         'CHARACTERS',
     palReset:         'Reset',
@@ -118,6 +122,8 @@ function _applyLang() {
   document.querySelector('#row-labels .setting-desc').textContent = t('descLabels');
   document.querySelector('#row-shadow .setting-name').textContent = t('rowShadow');
   document.querySelector('#row-shadow .setting-desc').textContent = t('descShadow');
+  document.querySelector('#row-tooltips .setting-name').textContent = t('rowTooltips');
+  document.querySelector('#row-tooltips .setting-desc').textContent = t('descTooltips');
   document.querySelector('#row-lang   .setting-name').textContent = t('rowLang');
   document.querySelectorAll('#help-popup [data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
 
@@ -264,6 +270,7 @@ const redo = () => hidx < hist.length-1 && restH(hist[++hidx]);
 const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
 let showLabels = _loadSetting('leaders-labels', true);
 let showShadow = _loadSetting('leaders-shadow', true);
+let showTooltips = _loadSetting('leaders-tooltips', true);
 
 // ── VIEW FLIP STATE (cosmétique, non sauvegardé dans l'URL) ──────────────────
 let viewFlipH = false;
@@ -721,7 +728,7 @@ function onMove(e) {
       Palette.onMove(x, y);
     } else {
       const hoveredTok = tokAt(x, y);
-      if (hoveredTok && !drag) {
+      if (hoveredTok && !drag && showTooltips) {
         const cell = LO.byId.get(hoveredTok.cell);
         if (cell) {
           const mainRect = document.getElementById('main').getBoundingClientRect();
@@ -1094,6 +1101,7 @@ function init() {
   const _openSettings = () => {
     _syncToggle('tog-labels', showLabels);
     _syncToggle('tog-shadow', showShadow);
+    _syncToggle('tog-tooltips', showTooltips);
     settingsOverlay.classList.remove('hidden');
   };
   const _closeSettings = () => settingsOverlay.classList.add('hidden');
@@ -1109,6 +1117,12 @@ function init() {
   document.getElementById('row-shadow').addEventListener('click', () => {
     showShadow = !showShadow; localStorage.setItem('leaders-shadow', showShadow);
     _syncToggle('tog-shadow', showShadow); render();
+  });
+
+  document.getElementById('row-tooltips').addEventListener('click', () => {
+    showTooltips = !showTooltips; localStorage.setItem('leaders-tooltips', showTooltips);
+    _syncToggle('tog-tooltips', showTooltips);
+    if (!showTooltips) Tooltip.hide();
   });
 
   // ── Help ──
