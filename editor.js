@@ -791,21 +791,15 @@ function _simulateRightClick(x, y) {
 }
 
 // ── TOUCH EVENTS ──────────────────────────────────────────────────────────────
-// Touch now drives the exact same press/drag/drop state machine as the mouse (onDown/onMove/
-// onUp below) instead of a separate tap-to-select-only model: a touch that doesn't move becomes
-// the existing tap-to-select behavior (onUp's drag._pending branch already implements that for
-// mouse clicks), and a touch that moves past the threshold becomes a real drag with the same
-// ghost/drop-target feedback. Long-press-for-context-menu (mouse's right-click equivalent) is
-// layered on top, independent of that.
+// Tap-to-select (the original model) handles everything by default — it's what the mobile
+// bottom panel's own taps/scroll/swipe rely on working normally, since #main's listeners here
+// see every touch in the document, including ones that land on the panel. Real drag-and-drop is
+// layered on top of that, but only ever armed when a touch starts on an actual board token
+// (checked in onTouchStart below) — so it can't intercept/preventDefault touches anywhere else,
+// panel included.
 function _touchXY(touch) {
   const b = document.getElementById('board-area').getBoundingClientRect();
   return { x: touch.clientX - b.left, y: touch.clientY - b.top };
-}
-
-// Adapts a Touch into the {clientX, clientY, button, target, preventDefault} shape onDown/
-// onMove/onUp expect from a MouseEvent — they never read anything else off it.
-function _touchAsMouseEvent(touch, target) {
-  return { clientX: touch.clientX, clientY: touch.clientY, button: 0, target, preventDefault() {} };
 }
 
 function onTouchStart(e) {
@@ -813,25 +807,34 @@ function onTouchStart(e) {
   if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
 
   const touch = e.touches[0];
+  const { x, y } = _touchXY(touch);
+
+  _closeAllToolbars(e.target);
+  _cancelLongPress();
+
   onTouchStart._startX = touch.clientX;
   onTouchStart._startY = touch.clientY;
 
-  _cancelLongPress();
-  const { x, y } = _touchXY(touch);
   _longPressTimer = setTimeout(() => {
     _longPressTimer   = null;
     _longPressFired   = true;
     _longPressEndTime = Date.now();
     if (navigator.vibrate) navigator.vibrate(40);
-    // A long-press always means "open the context menu," not "drag" — abort whatever onDown
-    // below may have armed (a pending/real drag) so onTouchEnd doesn't also try to drop it.
-    drag = null; dpos = null;
+    drag = null; dpos = null; // a long-press always means "context menu," not "drag"
     _cancelTouchSelection();
     _simulateRightClick(x, y);
     render();
   }, LONG_PRESS_MS);
 
-  onDown(_touchAsMouseEvent(touch, e.target));
+  // Board-only drag arming: a board token under the finger gets a pending drag (becomes real on
+  // movement, exactly like the mouse's onDown) — anything else (palette items, empty cells, and
+  // everywhere off the board) keeps the plain tap behavior in onTouchEnd below, untouched.
+  const tok = !Palette.inPalette(x, y) && tokAt(x, y);
+  if (tok) {
+    drag = { type: 'brd', id: tok.id, _startX: x, _startY: y, _pending: true };
+    dpos = { x, y };
+    render();
+  }
 }
 
 function onTouchMove(e) {
@@ -840,22 +843,97 @@ function onTouchMove(e) {
   const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
   const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
   if (Math.hypot(dx, dy) > 8) _cancelLongPress();
-  onMove(_touchAsMouseEvent(touch, e.target));
+
+  if (!drag) return;
+  const { x, y } = _touchXY(touch);
+  if (drag._pending && Math.hypot(x - drag._startX, y - drag._startY) >= 6) {
+    drag._pending = false;
+    _cancelTouchSelection();
+  }
+  dpos = { x, y };
+  render();
 }
 
 function onTouchEnd(e) {
   _cancelLongPress();
-  if (e.changedTouches.length !== 1) return;
-  if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
-  if (_longPressFired) { _longPressFired = false; e.preventDefault(); return; }
+  if (e.changedTouches.length !== 1) { drag = null; dpos = null; return; }
+  if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); drag = null; dpos = null; return; }
+  if (_longPressFired) { _longPressFired = false; e.preventDefault(); drag = null; dpos = null; return; }
 
-  if (e.target.closest('#tok-tb, #pal-tok-tb, #toolbar, #settings-overlay, #help-overlay')) {
+  const touch = e.changedTouches[0];
+  const { x, y } = _touchXY(touch);
+
+  // A real (moved) board drag → drop it, mirroring the mouse's onUp board-drag branch exactly.
+  if (drag && !drag._pending) {
+    e.preventDefault();
+    const cell = nearCell(x, y);
+    const inP  = Palette.inPalette(x, y);
+    const tok  = S.tokens.find(t => t.id === drag.id);
+    if (tok) {
+      if (inP || !cell) {
+        S.tokens = S.tokens.filter(t => t.id !== drag.id);
+        _palAdd(tok.name);
+      } else {
+        const other = S.tokens.find(t => t.cell === cell.id && t.id !== drag.id);
+        if (other) {
+          const from = tok.cell;
+          S.tokens = S.tokens.map(t =>
+            t.id === drag.id  ? { ...t, cell: cell.id } :
+            t.id === other.id ? { ...t, cell: from }    : t
+          );
+        } else {
+          S.tokens = S.tokens.map(t => t.id === drag.id ? { ...t, cell: cell.id } : t);
+        }
+      }
+      saveH();
+    }
     drag = null; dpos = null; render();
     return;
   }
+  drag = null; dpos = null; // still pending (didn't move) — fall through to the tap logic below
 
-  e.preventDefault();
-  onUp(_touchAsMouseEvent(e.changedTouches[0], e.target));
+  const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
+  const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
+  if (Math.hypot(dx, dy) > 10) { render(); return; }
+
+  if (e.target.closest('#tok-tb, #pal-tok-tb, #toolbar, #settings-overlay, #help-overlay')) { render(); return; }
+
+  const inP = Palette.inPalette(x, y);
+
+  if (_selected?.type === 'brd') {
+    const destCell = nearCell(x, y);
+    if (destCell) {
+      _moveSelectedToCell(destCell.id);
+    } else if (inP) {
+      const palName = Palette.palAt(x, y);
+      if (palName) {
+        const tok = S.tokens.find(t => t.id === _selected.id);
+        if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName } : t); _palRemove(palName); saveH(); }
+      }
+    } else {
+      // Clic hors plateau → déselectionner seulement (pas de suppression)
+    }
+    _cancelTouchSelection(); render(); e.preventDefault(); return;
+  }
+
+  if (inP) {
+    const name = Palette.palAt(x, y);
+    if (name) {
+      e.preventDefault();
+      _palRecruitOne(name);
+    }
+    return;
+  }
+
+  const tokTap = tokAt(x, y);
+  if (tokTap) {
+    e.preventDefault();
+    _selected = { type: 'brd', id: tokTap.id };
+    _syncTouchSelectionHighlight(); render();
+    return;
+  }
+
+  _cancelTouchSelection(); render();
 }
 
 function _initTouchEvents() {
