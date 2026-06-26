@@ -5,19 +5,38 @@
   touch-action: none;
 }
 
-/* Sélection tactile d'un jeton sur le plateau — anneau tournant dégradé */
+/* ── Selection outline (board) ────────────────────────────────────────────
+   The artwork scales down by --ring-inset on every side; the ring sits behind it at the token's
+   own full, original boundary (same border-radius — a circle, matching the board cells) and is
+   simply revealed wherever the now-smaller artwork no longer covers it. No mask needed: the
+   shrunk artwork itself is what exposes exactly the ring band, nothing more. Net effect: total
+   footprint is identical to an unselected token (no layout shift), ring entirely outside the
+   artwork (no overlap, no gap). */
+.html-token {
+  --ring-inset: max(2px, calc(var(--tok-sz, 0px) * 0.05));
+}
+
+/* Transition lives on the base rule (not just .touch-selected) so it plays in both directions —
+   zooming out on select and back in on deselect. */
+.html-token img {
+  transition: top 0.08s ease, left 0.08s ease, width 0.08s ease, height 0.08s ease;
+}
+
 .html-token.touch-selected {
   overflow: visible;
 }
 
-.html-token.touch-selected::before {
+.html-token.touch-selected img {
+  top: var(--ring-inset);
+  left: var(--ring-inset);
+  width: calc(100% - var(--ring-inset) * 2);
+  height: calc(100% - var(--ring-inset) * 2);
+}
+
+.html-token::before {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: calc(100% + var(--ring-inset, 8px) * 2);
-  height: calc(100% + var(--ring-inset, 8px) * 2);
-  translate: -50% -50%;
+  inset: 0; /* the token's original, full-size boundary */
   border-radius: 50%;
   background: conic-gradient(
     from 0deg,
@@ -25,18 +44,16 @@
     #ec7a00,
     #edc360
   );
-  animation: touch-ring-spin 1s linear infinite;
   transform-origin: center;
   z-index: -1;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  pointer-events: none;
 }
 
-.html-token.touch-selected::after {
-  content: '';
-  position: absolute;
-  inset: 0px;
-  border-radius: 50%;
-  background: transparent;
-  z-index: -1;
+.html-token.touch-selected::before {
+  opacity: 1;
+  animation: touch-ring-spin 1s linear infinite;
 }
 
 @keyframes touch-ring-spin {

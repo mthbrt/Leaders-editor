@@ -1,12 +1,12 @@
 // ── PALETTE 2 — panneau gauche (sauvegardes) ─────────────────────────────────
 const Palette2 = (() => {
 
-  const INNER   = 20;
-  const PAL_G   = 8;
+  const LEFT_PANEL_WIDTH = 260; // fixed desktop width — never shrinks (see style.css grid-template-columns)
 
-  let _palW     = 220;
+  let _palW     = LEFT_PANEL_WIDTH;
   let panel     = null;
   let collapsed = false;
+  let _lastCollapsed = false;
 
   // sections = [{ id, name, open, configs: [{ id, name, state, timestamp }] }]
   let sections = [];
@@ -92,7 +92,13 @@ const Palette2 = (() => {
   // ── CRUD Sections ─────────────────────────────────────────────────────────
   function _addSection() {
     const prefix = _t('pal2DefaultSection') + ' ';
-    sections.push({ id: _uid(), name: prefix + _nextNum(sections, prefix), open: true, configs: [] });
+    // A new section starts with one default position (the current board state) instead of
+    // empty — an empty section had no body rendered at all (see _renderList), which made the
+    // open/closed arrow meaningless and forced drop-target logic to special-case it.
+    sections.push({
+      id: _uid(), name: prefix + _nextNum(sections, prefix), open: true,
+      configs: [{ id: _uid(), name: _t('pal2DefaultConfig') + ' 1', state: _snapshot(), timestamp: Date.now() }],
+    });
     _save(); _renderList();
   }
 
@@ -198,52 +204,47 @@ const Palette2 = (() => {
   // Calcule la cible de drop pour les sections ou les configs
   // commit=false → peut utiliser des éléments DOM transients (indicateur)
   // commit=true  → utilise les éléments réels pour le drop final
-  function _getSectionDrop(clientY) {
+  function _getSectionDrop(clientY, draggedEl) {
     const secEls = Array.from(panel.querySelectorAll('#pal2-list .pal2-section'));
     for (const el of secEls) {
-      if (el === _dnd.el) continue;
+      if (el === draggedEl) continue;
       const { top, height } = el.getBoundingClientRect();
       if (clientY < top + height / 2) return { before: el };
     }
     return { before: null };
   }
 
-  function _getConfigDrop(clientY, forCommit = false) {
+  // `sec.open` (the data model) decides closed vs. open — not a DOM class lookup — so this can
+  // never disagree with what _renderList actually drew. `rows` always excludes the dragged
+  // element itself, so the returned insertIdx is already correct for splicing into the (post-
+  // removal) configs array — no separate "am I committing, and did the source index shift"
+  // adjustment needed, unlike the old version of this function.
+  // draggedEl is passed explicitly (not read off the module-level _dnd) so this stays correct
+  // even when called after _dnd has already been cleared.
+  function _getConfigDrop(clientY, draggedEl) {
     const secEls = Array.from(panel.querySelectorAll('#pal2-list .pal2-section'));
     for (const secEl of secEls) {
-      const body     = secEl.querySelector('.pal2-section-body');
-      const bodyOpen = body?.classList.contains('open');
-      const secRect  = secEl.getBoundingClientRect();
+      const sid = secEl.dataset.sid;
+      const sec = sections.find(s => s.id === sid);
+      if (!sec) continue;
 
-      if (!bodyOpen) {
+      if (!sec.open) {
         const hdrRect = secEl.querySelector('.pal2-section-hdr').getBoundingClientRect();
-        if (clientY >= hdrRect.top && clientY <= hdrRect.bottom)
-          return { intoSection: secEl.dataset.sid };
+        if (clientY >= hdrRect.top && clientY <= hdrRect.bottom) return { intoSection: sid };
         continue;
       }
 
-      if (clientY >= secRect.top && clientY <= secRect.bottom) {
-        const dstSid     = secEl.dataset.sid;
-        const configList = secEl.querySelector('.pal2-config-list');
-        const rows       = Array.from(configList.querySelectorAll('.pal2-row'));
-        for (const el of rows) {
-          if (el === _dnd.el || (forCommit && el.dataset.id === _dnd.id)) continue;
-          const { top, height } = el.getBoundingClientRect();
-          if (clientY < top + height / 2) {
-            let insertIdx = rows.indexOf(el);
-            if (forCommit && dstSid === _dnd.srcSid) {
-              const srcSec = sections.find(s => s.id === _dnd.srcSid);
-              const srcIdx = srcSec?.configs.findIndex(c => c.id === _dnd.id) ?? -1;
-              if (srcIdx !== -1 && srcIdx < insertIdx) insertIdx--;
-            }
-            return { dstSid, insertIdx };
-          }
-        }
-        const dstSec = sections.find(s => s.id === dstSid);
-        return { dstSid, insertIdx: dstSec?.configs.length ?? 0 };
+      const secRect = secEl.getBoundingClientRect();
+      if (clientY < secRect.top || clientY > secRect.bottom) continue;
+
+      const rows = Array.from(secEl.querySelectorAll('.pal2-row')).filter(el => el !== draggedEl);
+      for (let i = 0; i < rows.length; i++) {
+        const { top, height } = rows[i].getBoundingClientRect();
+        if (clientY < top + height / 2) return { dstSid: sid, insertIdx: i };
       }
+      return { dstSid: sid, insertIdx: rows.length };
     }
-    // Fallback : append à la dernière section ouverte
+    // Fallback: append to the last open section.
     const openSecs = sections.filter(s => s.open);
     if (openSecs.length) {
       const last = openSecs[openSecs.length - 1];
@@ -252,19 +253,20 @@ const Palette2 = (() => {
     return {};
   }
 
-  function _dndOnMouseMove(e) {
+  // Shared between mouse and touch — only the event wiring differs (see _attachDrag below).
+  function _dndTrackMove(clientX, clientY) {
     if (!_dnd) return;
-    const dx = e.clientX - _dnd.startX, dy = e.clientY - _dnd.startY;
+    const dx = clientX - _dnd.startX, dy = clientY - _dnd.startY;
     if (!_dnd.moved && Math.hypot(dx, dy) < 5) return;
     if (!_dnd.moved) { _dnd.moved = true; _dnd.el.style.opacity = '0.4'; _dnd.el.style.pointerEvents = 'none'; }
 
     const ind = _getOrCreateIndicator();
     if (_dnd.type === 'section') {
-      const { before } = _getSectionDrop(e.clientY);
+      const { before } = _getSectionDrop(clientY, _dnd.el);
       const list = panel.querySelector('#pal2-list');
       before ? list.insertBefore(ind, before) : list.insertBefore(ind, list.querySelector('.pal2-add-section-row'));
     } else {
-      const target = _getConfigDrop(e.clientY, false);
+      const target = _getConfigDrop(clientY, _dnd.el);
       if (target.intoSection) {
         panel.querySelector(`.pal2-section[data-sid="${target.intoSection}"]`)?.after(ind);
       } else if (target.dstSid) {
@@ -276,11 +278,9 @@ const Palette2 = (() => {
     }
   }
 
-  function _dndOnMouseUp(e) {
-    document.removeEventListener('mousemove', _dndOnMouseMove);
-    document.removeEventListener('mouseup',   _dndOnMouseUp);
+  // Commits the reorder at clientY — used by both mouseup and touchend.
+  function _dndCommit(clientY) {
     panel?.querySelector('.pal2-dnd-indicator')?.remove();
-
     if (!_dnd) return;
     const dnd = _dnd; _dnd = null;
     dnd.el.style.opacity = '';
@@ -288,7 +288,7 @@ const Palette2 = (() => {
     if (!dnd.moved) return;
 
     if (dnd.type === 'section') {
-      const { before } = _getSectionDrop(e.clientY);
+      const { before } = _getSectionDrop(clientY, dnd.el);
       const srcIdx = sections.findIndex(s => s.id === dnd.id);
       if (srcIdx === -1) return;
       const [moved] = sections.splice(srcIdx, 1);
@@ -298,14 +298,14 @@ const Palette2 = (() => {
     } else {
       const srcSec = sections.find(s => s.id === dnd.srcSid); if (!srcSec) return;
       const cfgIdx = srcSec.configs.findIndex(c => c.id === dnd.id); if (cfgIdx === -1) return;
-      const target = _getConfigDrop(e.clientY, true);
+      const target = _getConfigDrop(clientY, dnd.el); // computed before the splice below — see _getConfigDrop
       const [movedCfg] = srcSec.configs.splice(cfgIdx, 1);
       if (target.intoSection) {
         const dstSec = sections.find(s => s.id === target.intoSection);
         (dstSec || srcSec).configs.push(movedCfg);
       } else if (target.dstSid !== undefined) {
         const dstSec = sections.find(s => s.id === target.dstSid) || srcSec;
-        dstSec.configs.splice(Math.min(target.insertIdx, dstSec.configs.length), 0, movedCfg);
+        dstSec.configs.splice(target.insertIdx, 0, movedCfg);
       } else {
         srcSec.configs.splice(cfgIdx, 0, movedCfg);
       }
@@ -313,15 +313,85 @@ const Palette2 = (() => {
     _save(); _renderList();
   }
 
+  // Cleans up an in-progress drag without committing a reorder — used when a gesture is
+  // interrupted (touchcancel, window losing focus mid-drag) rather than deliberately released.
+  function _dndAbort() {
+    panel?.querySelector('.pal2-dnd-indicator')?.remove();
+    if (!_dnd) return;
+    _dnd.el.style.opacity = '';
+    _dnd.el.style.pointerEvents = '';
+    _dnd = null;
+  }
+
+  function _dndOnMouseMove(e) { _dndTrackMove(e.clientX, e.clientY); }
+  function _dndOnMouseUp(e) {
+    document.removeEventListener('mousemove', _dndOnMouseMove);
+    document.removeEventListener('mouseup',   _dndOnMouseUp);
+    _dndCommit(e.clientY);
+  }
+  window.addEventListener('blur', _dndAbort); // mouse/pointer released outside the window entirely
+
+  function _dndOnTouchMove(e) {
+    if (!_dnd) return;
+    e.preventDefault(); // committed to a drag — don't let the page also scroll underneath it
+    _dndTrackMove(e.touches[0].clientX, e.touches[0].clientY);
+  }
+  function _dndOnTouchEnd(e) {
+    document.removeEventListener('touchmove',   _dndOnTouchMove);
+    document.removeEventListener('touchend',    _dndOnTouchEnd);
+    document.removeEventListener('touchcancel', _dndOnTouchCancel);
+    _dndCommit(e.changedTouches[0].clientY);
+  }
+  function _dndOnTouchCancel() {
+    document.removeEventListener('touchmove',   _dndOnTouchMove);
+    document.removeEventListener('touchend',    _dndOnTouchEnd);
+    document.removeEventListener('touchcancel', _dndOnTouchCancel);
+    _dndAbort();
+  }
+
   function _attachDrag(el, type, id, srcSid) {
     el.style.cursor = 'grab';
+    const startDrag = (startX, startY) => {
+      _dnd = { type, id, srcSid, el: type === 'section' ? el.closest('.pal2-section') : el, startX, startY, moved: false };
+    };
+
     el.addEventListener('mousedown', e => {
       if (e.target.closest('.pal2-sec-actions, .pal2-row-actions, input')) return;
       e.stopPropagation();
-      _dnd = { type, id, srcSid, el: type === 'section' ? el.closest('.pal2-section') : el, startX: e.clientX, startY: e.clientY, moved: false };
+      startDrag(e.clientX, e.clientY);
       document.addEventListener('mousemove', _dndOnMouseMove);
       document.addEventListener('mouseup',   _dndOnMouseUp);
     });
+
+    // Touch: gated behind a brief hold (LONG_PRESS_MS, same convention as the board's own touch
+    // interactions) so an ordinary swipe over a row still scrolls the list normally — only a
+    // deliberate hold-then-drag starts a reorder.
+    let pressTimer = null, pressX = 0, pressY = 0;
+    const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+
+    el.addEventListener('touchstart', e => {
+      if (e.target.closest('.pal2-sec-actions, .pal2-row-actions, input')) return;
+      if (e.touches.length !== 1) return;
+      pressX = e.touches[0].clientX;
+      pressY = e.touches[0].clientY;
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        if (navigator.vibrate) navigator.vibrate(40);
+        startDrag(pressX, pressY);
+        document.addEventListener('touchmove',   _dndOnTouchMove, { passive: false });
+        document.addEventListener('touchend',    _dndOnTouchEnd);
+        document.addEventListener('touchcancel', _dndOnTouchCancel);
+      }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    el.addEventListener('touchmove', e => {
+      if (!pressTimer) return;
+      const touch = e.touches[0];
+      if (Math.hypot(touch.clientX - pressX, touch.clientY - pressY) > 8) cancelPress();
+    }, { passive: true });
+
+    el.addEventListener('touchend',    cancelPress);
+    el.addEventListener('touchcancel', cancelPress);
   }
 
   // ── Action button tooltips ─────────────────────────────────────────────────
@@ -391,18 +461,20 @@ const Palette2 = (() => {
             <polyline points="2 3 5 7 8 3"/>
           </svg>
           <span class="pal2-sec-name">${_esc(sec.name)}</span>
-          <span class="pal2-sec-count">${sec.configs.length}</span>
         </div>
-        <div class="pal2-sec-actions">
-          <button class="pal2-action-btn pal2-btn-sec-add"    title="${_esc(_t('pal2TitleNewSave'))}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
-          </button>
-          <button class="pal2-action-btn pal2-btn-sec-rename" title="${_esc(_t('pal2TitleRename'))}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          </button>
-          <button class="pal2-action-btn pal2-btn-sec-del"    title="${_esc(_t('pal2TitleDelete'))}">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0-1 14H6L5 6m5 4v6m4-6v6M9 6V4h6v2"/></svg>
-          </button>
+        <div class="pal2-sec-right">
+          <span class="pal2-sec-count">${sec.configs.length}</span>
+          <div class="pal2-sec-actions">
+            <button class="pal2-action-btn pal2-btn-sec-add"    title="${_esc(_t('pal2TitleNewSave'))}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+            </button>
+            <button class="pal2-action-btn pal2-btn-sec-rename" title="${_esc(_t('pal2TitleRename'))}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            </button>
+            <button class="pal2-action-btn pal2-btn-sec-del"    title="${_esc(_t('pal2TitleDelete'))}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0-1 14H6L5 6m5 4v6m4-6v6M9 6V4h6v2"/></svg>
+            </button>
+          </div>
         </div>`;
 
       hdr.querySelector('.pal2-sec-left').addEventListener('click', e => {
@@ -444,8 +516,6 @@ const Palette2 = (() => {
 
       _attachDrag(hdr, 'section', sec.id, null);
       secEl.appendChild(hdr);
-
-      if (sec.configs.length === 0) { list.appendChild(secEl); continue; }
 
       const body       = document.createElement('div');
       body.className   = 'pal2-section-body' + (sec.open ? ' open' : '');
@@ -543,32 +613,31 @@ const Palette2 = (() => {
   }
 
   // ── Layout / collapse ─────────────────────────────────────────────────────
-  let _bottomSheetMode = false;
-
-  function layout(W, H, rEst) {
-    _bottomSheetMode = H > W;
-    const itemSz = Math.round(rEst * 2 * 0.90);
-    _palW = INNER * 2 + 3 * itemSz + PAL_G * 2 + 2;
-    return { palX: 0, palY: 0, palW: _palW, palH: H, _left: true };
+  // Desktop only — mobile sizes/shows this panel entirely via CSS (body.layout-mobile + .tab-active).
+  function layout(W, H) {
+    _palW = LEFT_PANEL_WIDTH;
+    return { palX: 0, palY: 0, palW: _palW, palH: H };
   }
 
   function _syncCollapsed() {
     if (!panel) return;
-    panel.classList.toggle('collapsed', _bottomSheetMode || collapsed);
+    panel.classList.toggle('collapsed', collapsed);
     onCollapseChange?.();
   }
 
-  function toggleCollapse() { if (_bottomSheetMode) return; collapsed = !collapsed; _syncCollapsed(); }
-  function isCollapsed()    { return _bottomSheetMode || collapsed; }
+  // Collapse/expand is a desktop-only concept — on mobile, visibility is tab-driven instead.
+  function toggleCollapse() { if (isMobileLayout()) return; collapsed = !collapsed; _syncCollapsed(); }
+  function isCollapsed()    { return collapsed; }
 
-  function syncDOM() {
+  // syncLayout — geometry only; called by relayout() on actual layout changes
+  // (Palette2 has no per-render content sync — nothing else needs to run on every render())
+  function syncLayout() {
     if (!panel) return;
-    const H = document.getElementById('main').clientHeight || 560;
-    panel.style.top    = '0';
-    panel.style.left   = '0';
-    panel.style.height = H + 'px';
-    panel.style.width  = _palW + 'px';
-    panel.classList.toggle('collapsed', _bottomSheetMode || collapsed);
+    panel.style.top = panel.style.left = panel.style.height = panel.style.width = '';
+    if (collapsed !== _lastCollapsed) {
+      _lastCollapsed = collapsed;
+      panel.classList.toggle('collapsed', collapsed);
+    }
   }
 
   function applyLang() {
@@ -583,6 +652,7 @@ const Palette2 = (() => {
   let onCollapseChange = null;
   function setOnCollapseChange(fn) { onCollapseChange = fn; }
   function init() { _build(); }
+  function getPanelEl() { return panel; }
 
-  return { layout, syncDOM, isCollapsed, toggleCollapse, applyLang, init, setOnCollapseChange };
+  return { layout, syncLayout, isCollapsed, toggleCollapse, applyLang, init, setOnCollapseChange, getPanelEl };
 })();

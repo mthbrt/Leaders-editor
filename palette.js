@@ -1,8 +1,10 @@
 // ── PALETTE (HTML/CSS pure — zéro canvas) ─────────────────────────────────────
 const Palette = (() => {
 
-  const INNER = 20;
-  const PAL_G = 8;
+  const INNER    = 20;
+  const PAL_G    = 8;
+  const MIN_COLS = 3;
+  const MAX_COLS = 5;
 
   const GROUPS = [
     { key: 'lancement', labelKey: null,          names: Array.from({ length: 17 }, (_, i) => String(i + 3)) },
@@ -12,8 +14,7 @@ const Palette = (() => {
 
   let collapsed     = false;
   let panel         = null;
-  let lastPsz       = 0;
-  let isBottomSheet = false;
+  let lastCollapsed = false;
 
   // ── Palette token toolbar (ban / unban) ───────────────────────────────────
   let palTb     = null;
@@ -104,19 +105,39 @@ const Palette = (() => {
   function isPalTbOpen() { return palTbName !== null; }
 
   // ── Layout ─────────────────────────────────────────────────────────────────
+  // Item diameter matches board tokens exactly (LO.r * 2) — no separate scale factor.
+  const _itemSzFromR  = r => Math.round(r * 2);
+  // Width for `cols` items at `itemSz` px, matching .pal-grid's own padding/gap (INNER on each
+  // side, PAL_G between items) — #pal-panel has no border consuming this budget (see style.css,
+  // it uses a non-layout box-shadow instead). +4px is deliberate slack against fractional-pixel
+  // rounding under non-100% OS display scaling, not a correction for wrong math.
+  const _widthForCols = (cols, itemSz) => INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 4;
+
+  // Desktop only — mobile sizes this panel entirely via CSS (see body.layout-mobile rules).
   function layout(W, H, rEst) {
-    if (H > W) {
-      // Portrait → bottom-sheet
-      return { palX: 0, palY: Math.round(H / 2), palW: W, palH: Math.round(H / 2), _bottomSheet: true };
+    const palW = _widthForCols(MIN_COLS, _itemSzFromR(rEst));
+    return { palX: W - palW, palY: 0, palW, palH: H };
+  }
+
+  // Decides the final column count (3..5) once the board's true radius `r` is locked in.
+  // Growing only ever consumes width the board didn't need — it never shrinks the board:
+  // a column is only added if the resulting center gap would stay at least as wide as the
+  // gap at which the board's own size is height-bound (i.e. width isn't yet the constraint).
+  function growColumns(mainW, mainH, pal2W, r) {
+    const itemSz = _itemSzFromR(r);
+    const heightBoundW = BOARD_COLS * (mainH / BOARD_ROWS);
+    let cols = MIN_COLS, palW = _widthForCols(cols, itemSz);
+    for (let next = cols + 1; next <= MAX_COLS; next++) {
+      const candidateW = _widthForCols(next, itemSz);
+      if (mainW - pal2W - candidateW < heightBoundW) break; // would shrink the board — stop
+      cols = next; palW = candidateW;
     }
-    const cols  = 3;
-    const itemSz = Math.round(rEst * 2 * 0.90);
-    const palW  = INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 2;
-    return { palX: W - palW, palY: 0, palW, palH: H, _bottomSheet: false };
+    return { cols, palW };
   }
 
   // ── Hit testing ────────────────────────────────────────────────────────────
-  function _mainRect() { return document.getElementById('main').getBoundingClientRect(); }
+  // x,y arrive relative to #board-area (see editor.js's _mainXY/_touchXY) — match that origin.
+  function _mainRect() { return document.getElementById('board-area').getBoundingClientRect(); }
 
   function inPalette(x, y) {
     const r  = _mainRect();
@@ -159,9 +180,6 @@ const Palette = (() => {
 
     _buildSections();
 
-    panel.querySelector('#pal-header').addEventListener('click', e => {
-      if (isBottomSheet) { e.stopPropagation(); _toggleCollapse(); }
-    });
     panel.querySelector('#pal-reset').addEventListener('click', e => { e.stopPropagation(); doReset(); });
     panel.querySelector('#pal-reset').addEventListener('mousedown', e => e.stopPropagation());
     panel.querySelector('#pal-header').addEventListener('mousedown', e => e.stopPropagation());
@@ -201,7 +219,7 @@ const Palette = (() => {
       grid.className = 'pal-grid open';
 
       if (gi === 0) {
-        grid.style.paddingTop = INNER + 'px';
+        grid.classList.add('pal-grid-first');
       } else {
         const hdr = document.createElement('div');
         hdr.className = 'pal-sec-hdr';
@@ -250,49 +268,31 @@ const Palette = (() => {
     return item;
   }
 
-  function _applyItemSizes() {
-    if (!panel) return;
-    const sz        = isBottomSheet ? Math.round(LO.r * 2) : Math.round((LO.psz || 0) * 0.90);
-    const szPx      = sz + 'px';
-    const outlineW  = Math.max(2, Math.round(sz * 0.05));
-    for (const item of panel.querySelectorAll('.pal-item')) {
-      item.style.width    = szPx;
-      item.style.height   = szPx;
-      item.style.minWidth = szPx;
-      item.style.minHeight = szPx;
-      item.style.setProperty('--pal-outline-w',     outlineW + 'px');
-      item.style.setProperty('--pal-outline-inset', -outlineW + 'px');
-    }
-  }
-
-  function _toggleCollapse()  { collapsed = !collapsed; _syncCollapsed(); }
+  // Collapse/expand is a desktop-only concept — on mobile, visibility is tab-driven instead.
+  function _toggleCollapse()  { if (isMobileLayout()) return; collapsed = !collapsed; _syncCollapsed(); }
 
   function _syncCollapsed() {
     panel.classList.toggle('collapsed', collapsed);
     onCollapseChange?.();
   }
 
-  // ── syncDOM — appelé par render() ────────────────────────────────────────
-  function syncDOM() {
+  // ── syncLayout — geometry only; called by relayout() on actual layout changes.
+  // Mobile sizes/shows this panel entirely via CSS (body.layout-mobile + .tab-active) — only
+  // the desktop grid needs any geometry help here, and only the .collapsed slide needs JS at all.
+  // Item sizing/outline are pure CSS, reactive to --tok-sz (see style.css) — nothing to do here.
+  function syncLayout() {
     if (!panel) return;
-    const { palX, palY, palW, palH, psz, _palBottomSheet } = LO;
-    const newBS = !!_palBottomSheet;
+    panel.style.left = panel.style.top = panel.style.width = panel.style.height = '';
 
-    if (newBS !== isBottomSheet) {
-      isBottomSheet = newBS;
-      panel.classList.toggle('bottom-sheet', isBottomSheet);
-      collapsed = isBottomSheet; // bottom-sheet commence replié
-      lastPsz   = 0;
+    if (collapsed !== lastCollapsed) {
+      lastCollapsed = collapsed;
+      panel.classList.toggle('collapsed', collapsed);
     }
-    panel.classList.toggle('collapsed', collapsed);
-    panel.style.left   = palX + 'px';
-    panel.style.top    = palY + 'px';
-    panel.style.width  = palW + 'px';
-    panel.style.height = palH + 'px';
+  }
 
-    const effectivePsz = isBottomSheet ? (LO.r || 0) : (psz || 0);
-    if (Math.abs(effectivePsz - lastPsz) > 0.5) { lastPsz = effectivePsz; _applyItemSizes(); }
-
+  // ── syncContent — token-state-dependent DOM patches; called by render() on every mutation ──
+  function syncContent() {
+    if (!panel) return;
     _syncItems();
   }
 
@@ -350,13 +350,14 @@ const Palette = (() => {
   function isCollapsed()  { return collapsed; }
   function toggleCollapse() { _toggleCollapse(); }
   function init() { _build(); }
+  function getPanelEl() { return panel; }
 
   let onCollapseChange = null;
   function setOnCollapseChange(fn) { onCollapseChange = fn; }
 
   return {
-    layout, onMove, inPalette, palAt,
-    syncDOM, isCollapsed, toggleCollapse, applyLang, init, setOnCollapseChange,
-    isPalTbOpen, hidePalToolbar: _hidePalToolbar, openPalToolbar: _placePalToolbar,
+    layout, growColumns, onMove, inPalette, palAt,
+    syncLayout, syncContent, isCollapsed, toggleCollapse, applyLang, init, setOnCollapseChange,
+    isPalTbOpen, hidePalToolbar: _hidePalToolbar, openPalToolbar: _placePalToolbar, getPanelEl,
   };
 })();

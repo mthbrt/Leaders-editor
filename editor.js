@@ -129,6 +129,7 @@ function _applyLang() {
 
   Palette.applyLang();
   if (typeof Palette2 !== 'undefined') Palette2.applyLang();
+  _updateMobileTabLabels();
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -136,6 +137,8 @@ const R     = 3;
 const SQ3   = Math.sqrt(3);
 const CR    = 0.79;
 const H_MAX = 60;
+const BOARD_COLS = (2 * R + 1) * 1.5 + 0.5;
+const BOARD_ROWS = (2 * R + 1.5) * SQ3;
 const ALL_NAMES_LIST = Array.from({ length: 26 }, (_, i) => String(i + 1));
 
 // ── PLATEAU ───────────────────────────────────────────────────────────────────
@@ -276,38 +279,257 @@ let showTooltips = _loadSetting('leaders-tooltips', true);
 let viewFlipH = false;
 let viewFlipV = false;
 
+// ── RESPONSIVE BREAKPOINT — single source of truth for desktop vs mobile layout ──
+const MOBILE_BREAKPOINT_PX = 768;
+const _mobileMQ = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`);
+const isMobileLayout = () => _mobileMQ.matches;
+
+// ── PANEL OPEN/CLOSE ANIMATION ────────────────────────────────────────────────
+// A plain CSS transition on grid-template-columns doesn't work here: the board's cell positions
+// are computed in JS from a synchronous boardArea.clientWidth read (see _relayoutDesktop), and
+// that read reports the layout's *current* state at the instant it's called — at t=0 of a CSS
+// transition that's still the pre-change size, not an in-between animated one. The result is the
+// board snapping to a stale layout and sitting there while the container visually resizes
+// underneath it — the centering bug from last time.
+// Instead, _relayoutDesktop can take a forced width per panel (_panelWidthOverride) and skip its
+// own natural-width computation when one is set. Driving that override through a sequence of
+// values via requestAnimationFrame — calling the *real* relayout()/render() on every frame —
+// means every intermediate frame is a fully self-consistent layout, not an interpolation of a
+// stale one, so centering stays correct throughout.
+const PANEL_ANIM_MS = 280; // matches #pal-panel/#pal2-panel's own transition duration
+const _panelWidthOverride = { pal: null, pal2: null };
+const _panelAnimRaf       = { pal: null, pal2: null };
+
+// The panel's own box stays a constant size at all times (so its content never reshuffles) and
+// just translates fully off-screen via CSS transform when collapsed — only the board's reserved
+// space (--pal-col-w/--pal2-col-w above) animates. The right panel's natural width depends on the
+// live column-growth computation, which in turn depends on real board measurements that are only
+// meaningful while the panel is actually open and settled — so its constant width is the last
+// value computed in that state, cached here, rather than recomputed while closed.
+let _palPanelW = null;
+
+// Evaluates the same cubic-bezier(0.4,0,0.2,1) curve used by the panels' own CSS transition, via
+// Newton's method — so the JS-driven board animation and the CSS-driven panel slide move at
+// visually matching speeds throughout, not just at the same overall duration.
+function _cubicBezier(x1, y1, x2, y2) {
+  const coord = (t, a, b) => { const mt = 1 - t; return 3*mt*mt*t*a + 3*mt*t*t*b + t*t*t; };
+  return x => {
+    let t = x;
+    for (let i = 0; i < 8; i++) {
+      const dx  = coord(t, x1, x2) - x;
+      const mt  = 1 - t;
+      const deriv = 3*mt*mt*x1 + 6*mt*t*(x2 - x1) + 3*t*t*(1 - x2);
+      if (Math.abs(deriv) < 1e-6) break;
+      t -= dx / deriv;
+    }
+    return coord(t, y1, y2);
+  };
+}
+const _panelEase = _cubicBezier(0.4, 0, 0.2, 1);
+
+// Animates one panel's grid column from fromW to toW, re-running the real layout on every frame.
+function _animatePanelWidth(which, fromW, toW) {
+  if (_panelAnimRaf[which]) cancelAnimationFrame(_panelAnimRaf[which]);
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / PANEL_ANIM_MS);
+    _panelWidthOverride[which] = fromW + (toW - fromW) * _panelEase(t);
+    relayout(); render();
+    if (t < 1) {
+      _panelAnimRaf[which] = requestAnimationFrame(step);
+    } else {
+      _panelAnimRaf[which] = null;
+      _panelWidthOverride[which] = null; // hand back to natural (re-converging) computation
+      relayout(); render();
+    }
+  }
+  _panelAnimRaf[which] = requestAnimationFrame(step);
+}
+
+// Reads the panel's currently-applied column width, computes its natural target width for the
+// *other* side of the toggle, and kicks off the animation between them. Called from each panel's
+// collapse-change callback (see init()) instead of a plain relayout()+render().
+function _animatePanelToggle(which) {
+  const main = document.getElementById('main');
+  const varName = which === 'pal' ? '--pal-col-w' : '--pal2-col-w';
+  const fromW = parseFloat(getComputedStyle(main).getPropertyValue(varName)) || 0;
+
+  // Compute the natural target by actually relayouting once — this only mutates inline styles
+  // synchronously within this same tick, with no paint in between, so it's invisible: we reset
+  // everything back to fromW before returning, and the browser only ever paints that reset state
+  // until the rAF loop above starts advancing it.
+  _panelWidthOverride[which] = null;
+  relayout();
+  const toW = parseFloat(getComputedStyle(main).getPropertyValue(varName)) || 0;
+
+  _panelWidthOverride[which] = fromW;
+  relayout(); render();
+
+  _animatePanelWidth(which, fromW, toW);
+}
+
+let _layoutMode = null; // null | 'desktop' | 'mobile' — tracks the last applied mode
+function _syncLayoutModeClass() {
+  const mode = isMobileLayout() ? 'mobile' : 'desktop';
+  if (mode === _layoutMode) return;
+  _layoutMode = mode;
+  document.body.classList.toggle('layout-mobile', mode === 'mobile');
+  document.body.classList.toggle('layout-desktop', mode === 'desktop');
+  mode === 'mobile' ? _enterMobileTabs() : _exitMobileTabs();
+}
+
+// ── MOBILE TABS — merges the Saves and Tokens panels into one tabbed bottom section.
+// Reuses Palette/Palette2's existing panel DOM (reparented, never rebuilt) so none of their
+// rendering logic is duplicated — only which container holds them, and which one is visible.
+let _mobileTabsEl       = null;
+let _mobileTabContent   = null;
+let _mobileActiveTab    = 'tokens'; // 'saves' | 'tokens'
+let _mobileTabsCollapsed = false;
+
+function _buildMobileTabs() {
+  if (_mobileTabsEl) return;
+  const el = document.createElement('div');
+  el.id = 'mobile-tabs';
+  el.innerHTML = `
+    <div id="mobile-tab-bar">
+      <button class="mobile-tab-btn" data-tab="saves"></button>
+      <button class="mobile-tab-btn" data-tab="tokens"></button>
+      <button id="mobile-tabs-collapse-btn">
+        <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2 3 5 7 8 3"/>
+        </svg>
+      </button>
+    </div>
+    <div id="mobile-tab-content"></div>`;
+  document.getElementById('main').appendChild(el);
+  el.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => _setMobileTab(btn.dataset.tab));
+  });
+  el.querySelector('#mobile-tabs-collapse-btn').addEventListener('click', _toggleMobileTabsCollapsed);
+  _mobileTabsEl     = el;
+  _mobileTabContent = el.querySelector('#mobile-tab-content');
+  _initMobileTabsSwipe(el.querySelector('#mobile-tab-bar'));
+  _updateMobileTabLabels();
+}
+
+// Swipe-down-to-close / swipe-up-to-open on the tab bar — the only part of the panel that's
+// always visible (the content area has its own scrollable lists, so a swipe gesture there would
+// fight normal scrolling). Attached to the bar itself rather than a separate handle, since a tap
+// that doesn't move past the threshold below still reaches the tab/collapse buttons normally —
+// only an actual vertical drag is treated as a swipe.
+function _initMobileTabsSwipe(bar) {
+  const SWIPE_PX = 24;
+  let startX = 0, startY = 0, tracking = false;
+
+  bar.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }, { passive: true });
+
+  bar.addEventListener('touchend', e => {
+    if (!tracking) return;
+    tracking = false;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.abs(dy) < SWIPE_PX || Math.abs(dy) < Math.abs(dx)) return; // not a deliberate vertical swipe
+
+    if (dy > 0 && !_mobileTabsCollapsed) { e.preventDefault(); _toggleMobileTabsCollapsed(); }
+    else if (dy < 0 && _mobileTabsCollapsed) { e.preventDefault(); _toggleMobileTabsCollapsed(); }
+  });
+
+  bar.addEventListener('touchcancel', () => { tracking = false; });
+}
+
+function _updateMobileTabLabels() {
+  if (!_mobileTabsEl) return;
+  _mobileTabsEl.querySelector('[data-tab="saves"]').textContent  = t('pal2Title');
+  _mobileTabsEl.querySelector('[data-tab="tokens"]').textContent = t('palTitle');
+}
+
+function _setMobileTab(name) {
+  _mobileActiveTab = name;
+  Palette.getPanelEl()?.classList.toggle('tab-active', name === 'tokens');
+  if (typeof Palette2 !== 'undefined') Palette2.getPanelEl()?.classList.toggle('tab-active', name === 'saves');
+  _mobileTabsEl?.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === name);
+  });
+}
+
+// Mirrors the desktop panel animation (see _animatePanelToggle/_animatePanelWidth above) and for
+// the same reason: #board-area's size depends on #mobile-tabs' height (flex:1 takes whatever
+// #mobile-tabs doesn't), and the board's own cell positions are computed from a synchronous
+// clientHeight read in _relayoutMobile — a CSS-only height transition would leave that read
+// seeing a stale size while the bar visually resizes underneath, snapping the board instead of
+// moving it smoothly. So this drives #mobile-tabs' height directly, frame by frame, calling the
+// real relayout()/render() each time so the board recenters/rescales in step with the bar.
+let _mobileTabsAnimRaf = null;
+
+function _toggleMobileTabsCollapsed() {
+  const el = _mobileTabsEl;
+  if (!el) { _mobileTabsCollapsed = !_mobileTabsCollapsed; return; }
+
+  const fromH = el.getBoundingClientRect().height;
+  _mobileTabsCollapsed = !_mobileTabsCollapsed;
+  el.classList.toggle('collapsed', _mobileTabsCollapsed);
+  // Measuring the new class's natural height and then immediately resetting back to fromH all
+  // happens synchronously with no paint in between, so it's invisible — the browser only ever
+  // paints the fromH state until the rAF loop below starts advancing it.
+  el.style.height = '';
+  const toH = el.getBoundingClientRect().height;
+  el.style.height = fromH + 'px';
+  relayout(); render();
+
+  if (_mobileTabsAnimRaf) cancelAnimationFrame(_mobileTabsAnimRaf);
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / PANEL_ANIM_MS);
+    el.style.height = (fromH + (toH - fromH) * _panelEase(t)) + 'px';
+    relayout(); render();
+    if (t < 1) {
+      _mobileTabsAnimRaf = requestAnimationFrame(step);
+    } else {
+      _mobileTabsAnimRaf = null;
+      el.style.height = ''; // hand back to CSS (the .collapsed class already reflects the final state)
+      relayout(); render();
+    }
+  }
+  _mobileTabsAnimRaf = requestAnimationFrame(step);
+}
+
+function _enterMobileTabs() {
+  _buildMobileTabs();
+  const palPanel  = Palette.getPanelEl();
+  const pal2Panel = (typeof Palette2 !== 'undefined') ? Palette2.getPanelEl() : null;
+  if (palPanel)  _mobileTabContent.appendChild(palPanel);
+  if (pal2Panel) _mobileTabContent.appendChild(pal2Panel);
+  _setMobileTab(_mobileActiveTab);
+}
+
+function _exitMobileTabs() {
+  if (!_mobileTabsEl) return;
+  const main = document.getElementById('main');
+  const palPanel  = Palette.getPanelEl();
+  const pal2Panel = (typeof Palette2 !== 'undefined') ? Palette2.getPanelEl() : null;
+  if (pal2Panel) main.appendChild(pal2Panel);
+  if (palPanel)  main.appendChild(palPanel);
+  palPanel?.classList.remove('tab-active');
+  pal2Panel?.classList.remove('tab-active');
+}
+
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
 let LO = {};
 
-function relayout() {
-  _hideTokToolbar();
-  const main = document.getElementById('main');
-  const W = main.clientWidth  || 800;
-  const H = main.clientHeight || 560;
+// Hex-grid spacing/radius that fits BOARD_COLS x BOARD_ROWS hex units inside a W x H box.
+function _boardSpacing(W, H) {
+  const sp = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90;
+  return { sp, r: sp * CR };
+}
 
-  const BOARD_COLS = (2 * R + 1) * 1.5 + 0.5;
-  const BOARD_ROWS = (2 * R + 1.5) * SQ3;
-
-  const rEst       = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90 * CR;
-  const pal2Layout = (typeof Palette2 !== 'undefined') ? Palette2.layout(W, H, rEst) : { palW: 0 };
-  const palLayout  = Palette.layout(W, H, rEst);
-  const { palX, palY, palW, palH } = palLayout;
-  const palBottomSheet = !!palLayout._bottomSheet;
-
-  const HANDLE_H = 48;
-  const availH   = palBottomSheet ? H - HANDLE_H : H;
-  const sp       = Math.min(W / BOARD_COLS, availH / BOARD_ROWS) * 0.90;
-  const r        = sp * CR;
-
-  const pal2Collapsed = (typeof Palette2 !== 'undefined') && Palette2.isCollapsed();
-  const pal2Right = palBottomSheet ? 0 : (pal2Collapsed ? 0 : (pal2Layout.palW || 0));
-  const pal1Left  = palBottomSheet ? W : (Palette.isCollapsed() ? W : palX);
-  const cx = (pal2Right + pal1Left) / 2;
-  const cy = palBottomSheet ? availH / 2 : H / 2;
-
-  const btnPal2 = document.getElementById('btn-toggle-pal2');
-  if (btnPal2) btnPal2.style.display = palBottomSheet ? 'none' : '';
-
+// Hex-cell pixel coordinates around a center (cx,cy) at spacing sp, with view-flip applied.
+function _computeCells(cx, cy, sp) {
   const cells = CELLS.map(c => {
     let x = cx + sp * 1.5 * c.q;
     let y = cy + sp * (SQ3 / 2 * c.q + SQ3 * c.r);
@@ -315,13 +537,12 @@ function relayout() {
     if (viewFlipV) y = 2 * cy - y;
     return { ...c, x, y };
   });
-  const byId = new Map(cells.map(c => [c.id, c]));
-  const hs   = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
+  return { cells, byId: new Map(cells.map(c => [c.id, c])) };
+}
 
-  LO = { W, H, bW: W, r, cx, cy, cells, byId, hs, psz: r * 2,
-         palX, palY, palW, palH, _palBottomSheet: palBottomSheet,
-         palItemSz: palBottomSheet ? r : Math.round(rEst * 2 * 0.90) / 2 };
-
+// Positions the board background layer to fully contain the hex cells; returns the hull radius.
+function _layoutBoardLayer(cx, cy, cells, r) {
+  const hs = Math.max(...cells.map(c => Math.hypot(c.x - cx, c.y - cy))) + r * 1.6;
   const boardLayer = document.getElementById('board-layer');
   if (boardLayer) {
     const bw = hs * Math.sqrt(3), bh = hs * 2;
@@ -329,9 +550,119 @@ function relayout() {
     boardLayer.style.top    = (cy - bh / 2) + 'px';
     boardLayer.style.width  = bw + 'px';
     boardLayer.style.height = bh + 'px';
-
     _updateBoardClip(boardLayer, bw, bh, hs);
   }
+  return hs;
+}
+
+function relayout() {
+  _hideTokToolbar();
+  _syncLayoutModeClass();
+  isMobileLayout() ? _relayoutMobile() : _relayoutDesktop();
+  // Single shared size reference for every token-shaped element (board tokens, the drag ghost,
+  // drop targets, palette items — they're all the same diameter). CSS derives width/height and
+  // the responsive, centered outline/ring from this one variable; JS never sizes them directly.
+  document.body.style.setProperty('--tok-sz', Math.round(LO.r * 2) + 'px');
+}
+
+// Desktop: #main is a CSS grid (fixed-280px saves | board | tokens). The board's size is read
+// from #board-area's real resolved box — the true gap between the two side panels — instead of
+// estimating against #main's full width, so it always reflects what's actually left over.
+function _relayoutDesktop() {
+  const main      = document.getElementById('main');
+  const boardArea = document.getElementById('board-area');
+  const mainW = main.clientWidth  || 800;
+  const mainH = main.clientHeight || 560;
+
+  const pal2Collapsed = (typeof Palette2 !== 'undefined') && Palette2.isCollapsed();
+  const palCollapsed   = Palette.isCollapsed();
+
+  // Pal2 (saves) is a flat constant width regardless of state — its own box can just always be
+  // that width; nothing to cache.
+  const pal2NaturalW = (typeof Palette2 !== 'undefined') ? (Palette2.layout(mainW, mainH).palW || 0) : 0;
+  main.style.setProperty('--pal2-panel-w', pal2NaturalW + 'px');
+
+  // While a panel's open/close animation is running (see _animatePanelToggle), the *board's*
+  // reserved space is driven frame-by-frame from outside instead of computed naturally here —
+  // every frame must still resolve to a fully consistent board layout, just for that frame's
+  // forced width. This is intentionally separate from --pal2-panel-w above: that's the panel's
+  // own constant box size, this is how much of it the board currently treats as reserved.
+  const pal2W = _panelWidthOverride.pal2 != null ? _panelWidthOverride.pal2 : (pal2Collapsed ? 0 : pal2NaturalW);
+  main.style.setProperty('--pal2-col-w', pal2W + 'px');
+
+  const btnPal2 = document.getElementById('btn-toggle-pal2');
+  if (btnPal2) btnPal2.style.display = '';
+
+  let palW, W, H, sp, r;
+  if (_panelWidthOverride.pal != null) {
+    palW = _panelWidthOverride.pal;
+    main.style.setProperty('--pal-col-w', palW + 'px');
+    W = boardArea.clientWidth  || 800;
+    H = boardArea.clientHeight || 560;
+    ({ sp, r } = _boardSpacing(W, H));
+  } else if (palCollapsed) {
+    // Closed and settled: the board gets the full remaining space (0 reserved); the panel's own
+    // box keeps whatever width it last had while open (see _palPanelW below) — recomputing it
+    // against the now-wider board would give a different (likely larger) column count, which is
+    // exactly the "size changes while closed" this is meant to avoid.
+    palW = 0;
+    main.style.setProperty('--pal-col-w', '0px');
+    W = boardArea.clientWidth  || 800;
+    H = boardArea.clientHeight || 560;
+    ({ sp, r } = _boardSpacing(W, H));
+  } else {
+    // Open and settled: reserving width for the right panel changes the board's space, which
+    // changes its radius, which changes how wide the panel needs to be to fit N item-sized
+    // columns — so converge panel width and board radius together instead of trusting a single
+    // estimate-based pass. Each step only narrows the gap (reserving more than needed shrinks the
+    // board, which then asks for less; reserving less grows the board, which then asks for more),
+    // so this settles within a handful of iterations — capped here as a safety net, not because
+    // it needs it. The result becomes both the board's reserved width AND the panel's own
+    // (cached) constant width, since they agree while open.
+    palW = Palette.layout(mainW, mainH, _boardSpacing(mainW, mainH).r).palW;
+    for (let i = 0; i < 8; i++) {
+      main.style.setProperty('--pal-col-w', palW + 'px');
+      W = boardArea.clientWidth  || 800;
+      H = boardArea.clientHeight || 560;
+      ({ sp, r } = _boardSpacing(W, H));
+      const grown = Palette.growColumns(mainW, mainH, pal2W, r);
+      if (grown.palW === palW) break;
+      palW = grown.palW;
+    }
+    _palPanelW = palW;
+  }
+  // Fallback for the very first layout pass, if it happens to start collapsed (so the panel
+  // isn't 0-width the first time it's opened, before any "open and settled" pass has ever run).
+  if (_palPanelW == null) _palPanelW = Palette.layout(mainW, mainH, _boardSpacing(mainW, mainH).r).palW;
+  main.style.setProperty('--pal-panel-w', _palPanelW + 'px');
+
+  const cx = W / 2, cy = H / 2;
+  const { cells, byId } = _computeCells(cx, cy, sp);
+  const hs = _layoutBoardLayer(cx, cy, cells, r);
+
+  LO = { W, H, r, cx, cy, cells, byId, hs };
+
+  Palette.syncLayout();
+  if (typeof Palette2 !== 'undefined') Palette2.syncLayout();
+}
+
+// Mobile: #main is a column flex (board on top, #mobile-tabs fixed-height below — see CSS).
+// The board reads #board-area's real resolved box, same approach as desktop, just simpler:
+// there's no side panel to budget for, and no column-growth pass.
+function _relayoutMobile() {
+  const boardArea = document.getElementById('board-area');
+  const W = boardArea.clientWidth  || 800;
+  const H = boardArea.clientHeight || 560;
+  const { sp, r } = _boardSpacing(W, H);
+  const cx = W / 2, cy = H / 2;
+
+  const { cells, byId } = _computeCells(cx, cy, sp);
+  const hs = _layoutBoardLayer(cx, cy, cells, r);
+
+  LO = { W, H, r, cx, cy, cells, byId, hs };
+
+  Palette.syncLayout();
+  if (typeof Palette2 !== 'undefined') Palette2.syncLayout();
 }
 
 function _updateBoardClip(el, bw, bh, hs) {
@@ -343,8 +674,10 @@ function _updateBoardClip(el, bw, bh, hs) {
 }
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
+// Coordinates are relative to #board-area (where LO's cell positions live), not #main —
+// on desktop the two differ by the left panel's width.
 function _mainXY(e) {
-  const b = document.getElementById('main').getBoundingClientRect();
+  const b = document.getElementById('board-area').getBoundingClientRect();
   return { x: e.clientX - b.left, y: e.clientY - b.top };
 }
 
@@ -468,7 +801,7 @@ function _simulateRightClick(x, y) {
 
 // ── TOUCH EVENTS ──────────────────────────────────────────────────────────────
 function _touchXY(touch) {
-  const b = document.getElementById('main').getBoundingClientRect();
+  const b = document.getElementById('board-area').getBoundingClientRect();
   return { x: touch.clientX - b.left, y: touch.clientY - b.top };
 }
 
@@ -577,7 +910,7 @@ function _mkTokToolbar() {
     <div class="tok-tb-sep"></div>
     <button id="tok-del" class="tok-tb-btn"><span id="tok-del-label"></span></button>`;
 
-  document.getElementById('main').appendChild(el);
+  document.getElementById('board-area').appendChild(el);
   el.addEventListener('mousedown', e => e.stopPropagation());
   el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
   el.addEventListener('touchend',   e => e.stopPropagation(), { passive: true });
@@ -731,8 +1064,8 @@ function onMove(e) {
       if (hoveredTok && !drag && showTooltips) {
         const cell = LO.byId.get(hoveredTok.cell);
         if (cell) {
-          const mainRect = document.getElementById('main').getBoundingClientRect();
-          Tooltip.scheduleBoard(hoveredTok.name, mainRect.left + cell.x, mainRect.top + cell.y, 'board:' + hoveredTok.id, LO.r);
+          const boardRect = document.getElementById('board-area').getBoundingClientRect();
+          Tooltip.scheduleBoard(hoveredTok.name, boardRect.left + cell.x, boardRect.top + cell.y, 'board:' + hoveredTok.id, LO.r);
         }
       } else {
         Tooltip.hide();
@@ -868,7 +1201,6 @@ function _syncTokenLayer() {
   const layer = document.getElementById('tokens-layer');
   if (!layer) return;
   const { r, byId } = LO;
-  const d = r * 2;
 
   const existing = new Map();
   for (const el of layer.children) existing.set(+el.dataset.tid, el);
@@ -895,16 +1227,15 @@ function _syncTokenLayer() {
     const img   = el.querySelector('img');
     const src   = `jetons_${color}/${tok.name}.png`;
     if (!img.src.endsWith(src)) img.src = src;
-    el.dataset.imgKey = '';
-    el.querySelector('.board-token-label')?.remove();
 
-    const ringInset = Math.round(d * 0.05 / 2) * 2;
-    el.style.cssText = `left:${cell.x - d/2}px;top:${cell.y - d/2}px;width:${d}px;height:${d}px;position:absolute;overflow:visible;box-shadow:${showShadow ? `${r*0.05}px ${r*0.06}px ${r*0.12}px rgba(0,0,0,0.6)` : 'none'};`;
-    el.style.setProperty('--ring-inset', `${ringInset}px`);
-    img.style.boxShadow = 'none';
-    img.style.filter    = tok.used ? 'grayscale(1) opacity(0.5)' : '';
+    // Size, shadow and ring are all CSS (driven by --tok-sz, see style.css) — only position
+    // and the per-token "used" state are dynamic enough to need setting from here.
+    el.style.left = (cell.x - r) + 'px';
+    el.style.top  = (cell.y - r) + 'px';
+    img.classList.toggle('used-token', !!tok.used);
   }
   for (const [tid, el] of existing) { if (!seen.has(tid)) el.remove(); }
+  document.body.classList.toggle('no-shadows', !showShadow);
 }
 
 function _syncLabelLayer() {
@@ -952,30 +1283,51 @@ function _syncLabelLayer() {
   for (const [cid, el] of existing) { if (!seen.has(cid)) el.remove(); }
 }
 
+// Tracks which mode/cell is currently rendered so an active drag (which calls this on every
+// mousemove) only ever repositions one persistent div instead of tearing the layer down and
+// rebuilding it every frame — that DOM churn was stealing frame budget from the trash-bin
+// animation on the drag ghost, making it look choppy even though the animation itself is fine.
+let _dropTargetMode = null; // null | 'drag' | 'hint'
+let _dropTargetCellId = null;
+
 function _syncDropTarget() {
   const layer = document.getElementById('droptarget-layer');
   if (!layer) return;
-  layer.innerHTML = '';
-
   const { r } = LO;
-  const mkDiv = (c, extraClass = '') => {
-    const div = document.createElement('div');
-    div.className = 'html-droptarget' + (extraClass ? ' ' + extraClass : '');
-    div.style.cssText = `left:${c.x - r}px;top:${c.y - r}px;width:${r * 2}px;height:${r * 2}px;`;
-    return div;
-  };
 
   if (drag && dpos && _dragMoved()) {
     const dtgt = nearCell(dpos.x, dpos.y);
-    if (dtgt) layer.appendChild(mkDiv(dtgt));
+    if (_dropTargetMode !== 'drag' || !dtgt) {
+      layer.innerHTML = '';
+      _dropTargetMode = 'drag';
+      _dropTargetCellId = null;
+    }
+    if (dtgt && _dropTargetCellId !== dtgt.id) {
+      _dropTargetCellId = dtgt.id;
+      let div = layer.firstElementChild;
+      if (!div) { div = document.createElement('div'); div.className = 'html-droptarget'; layer.appendChild(div); }
+      div.style.left = (dtgt.x - r) + 'px';
+      div.style.top  = (dtgt.y - r) + 'px';
+    }
     return;
   }
 
-  if (_selected && (_isTouchDevice() || !drag)) {
-    if (_selected.type === 'brd' || _selected.type === 'pal') {
-      for (const c of LO.cells) layer.appendChild(mkDiv(c, 'touch-hint'));
+  // Touch-hint mode is event-driven, not per-mousemove like the drag case above, so it's not
+  // the performance concern — always rebuild fresh here, simplest and never stale after a resize.
+  if (_selected && (_isTouchDevice() || !drag) && (_selected.type === 'brd' || _selected.type === 'pal')) {
+    layer.innerHTML = '';
+    for (const c of LO.cells) {
+      const div = document.createElement('div');
+      div.className = 'html-droptarget touch-hint';
+      div.style.left = (c.x - r) + 'px';
+      div.style.top  = (c.y - r) + 'px';
+      layer.appendChild(div);
     }
+    _dropTargetMode = 'hint';
+    return;
   }
+
+  if (_dropTargetMode !== null) { layer.innerHTML = ''; _dropTargetMode = null; _dropTargetCellId = null; }
 }
 
 function _syncGhost() {
@@ -991,26 +1343,24 @@ function _syncGhost() {
     ghost.className = 'html-token';
     const img = document.createElement('img'); img.draggable = false;
     ghost.appendChild(img);
-    document.getElementById('main').appendChild(ghost);
+    document.body.appendChild(ghost);
   }
 
-  const r     = drag.type === 'brd' ? LO.r : LO.palItemSz;
+  const r     = LO.r; // palette items now render at the same size as board tokens
   const color = tok.c === 'w' ? 'blanc' : 'noir';
   const img   = ghost.querySelector('img');
   const src   = `jetons_${color}/${tok.name}.png`;
   if (!img.src.endsWith(src)) img.src = src;
-  ghost.dataset.imgKey = '';
-  ghost.querySelector('.board-token-label')?.remove();
 
+  // Position only — size/shadow/overflow/position-scheme all come from CSS (.html-token,
+  // #drag-ghost in style.css). Viewport coordinates: mounted on <body>, not #board-area, so
+  // it's never clipped by #board-area's overflow:hidden while dragged across a panel boundary.
+  // Moved via transform (not left/top) so repositioning every mousemove never forces layout —
+  // this is also why the trash-bin pulse animation on its child reads smoothly while dragging.
+  const boardRect = document.getElementById('board-area').getBoundingClientRect();
   ghost.style.display   = 'block';
-  ghost.style.position  = 'absolute';
-  ghost.style.overflow  = 'visible';
-  ghost.style.left      = (dpos.x - r) + 'px';
-  ghost.style.top       = (dpos.y - r) + 'px';
-  ghost.style.width     = (r * 2) + 'px';
-  ghost.style.height    = (r * 2) + 'px';
+  ghost.style.transform = `translate(${boardRect.left + dpos.x - r}px, ${boardRect.top + dpos.y - r}px)`;
   ghost.style.opacity   = '1';
-  ghost.style.boxShadow = showShadow ? '2px 3px 8px rgba(0,0,0,0.5)' : 'none';
 
   let trashOverlay = ghost.querySelector('.ghost-trash');
   const willDelete = drag.type === 'brd' && (Palette.inPalette(dpos.x, dpos.y) || !nearCell(dpos.x, dpos.y));
@@ -1030,21 +1380,29 @@ function _syncGhost() {
       trashOverlay.querySelector('svg').style.animation = 'trash-icon-bounce 0.30s cubic-bezier(0.22,1,0.36,1) both, trash-icon-pulse 1.1s 0.30s ease-in-out infinite';
     }
     trashOverlay.style.display = 'flex';
-  } else {
-    if (trashOverlay) trashOverlay.style.display = 'none';
+  } else if (trashOverlay) {
+    trashOverlay.style.display = 'none';
   }
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
+let _lastEncodedState = null;
+
 function render() {
-  history.replaceState(null, '', '#' + enc(S));
+  // S itself doesn't change while a drag is in progress (only the ghost follows the cursor),
+  // so skip the URL/history write — a real browser API call, not free — when it'd be a no-op.
+  // render() runs on every mousemove during a drag, so this matters for staying smooth.
+  const encoded = enc(S);
+  if (encoded !== _lastEncodedState) {
+    _lastEncodedState = encoded;
+    history.replaceState(null, '', '#' + encoded);
+  }
   _syncTokenLayer();
   _syncLabelLayer();
   _syncDropTarget();
   _syncGhost();
   _syncTouchSelectionHighlight();
-  Palette.syncDOM();
-  if (typeof Palette2 !== 'undefined') Palette2.syncDOM();
+  Palette.syncContent();
   if (tokTbId !== null) _placeTokToolbar();
 }
 
@@ -1195,10 +1553,14 @@ function init() {
 
   // ── Init modules ──
   Palette.init();
-  Palette.setOnCollapseChange(() => { relayout(); render(); });
+  Palette.setOnCollapseChange(() => {
+    isMobileLayout() ? (relayout(), render()) : _animatePanelToggle('pal');
+  });
   if (typeof Palette2 !== 'undefined') {
     Palette2.init();
-    Palette2.setOnCollapseChange(() => { relayout(); render(); });
+    Palette2.setOnCollapseChange(() => {
+      isMobileLayout() ? (relayout(), render()) : _animatePanelToggle('pal2');
+    });
   }
   _mkTokToolbar();
   if (typeof initButtonTooltips === 'function') initButtonTooltips();

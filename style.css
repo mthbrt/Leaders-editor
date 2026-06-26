@@ -15,6 +15,9 @@
   --btn-bg-h:  #2a2a50;
   --btn-bd:    #3a3a70;
   --btn-c:     #a0a0e0;
+  /* Shared by .mobile-tab-btn (its height) and #mobile-tabs.collapsed (its collapsed-state
+     target height) — both must agree exactly, or collapsing would leave a gap or clip the bar. */
+  --mobile-tabbar-h: clamp(36px, 11vh, 44px);
 }
 
 body {
@@ -33,13 +36,13 @@ body {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  padding: 0 10px;
-  height: 50px;
+  padding: 0 clamp(6px, 2vw, 10px);
+  height: clamp(42px, 10vw, 50px);
   background: var(--box-bg);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   min-width: 0;
-  gap: 8px;
+  gap: clamp(4px, 1.5vw, 8px);
 }
 
 #toolbar .left-group {
@@ -86,31 +89,13 @@ body {
   margin: 0 1px;
 }
 
-/* ── Input ── */
-#input-state {
-  padding: 0 10px;
-  background: #222244;
-  border: 1px solid var(--border-hl);
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 13px;
-  outline: none;
-  /* Grows to fill available space, but never more than 220px */
-  flex: 1 1 80px;
-  max-width: 220px;
-  min-width: 60px;
-  height: 32px;
-}
-#input-state:focus { border-color: var(--accent); }
-#input-state::placeholder { color: #404070; }
-
 /* ── Buttons ── */
 .btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: clamp(28px, 7vw, 32px);
+  height: clamp(28px, 7vw, 32px);
   padding: 0;
   border-radius: 6px;
   border: none;
@@ -126,12 +111,9 @@ body {
 
 /* ── Responsive toolbar ── */
 
-/* Narrow: hide clear-arrows, tighten padding */
+/* Narrow: tighten separators */
 @media (max-width: 520px) {
-  #toolbar { gap: 4px; }
-  #toolbar .center-group { gap: 4px; }
   .toolbar-sep { margin: 0; }
-  #btn-clear-arrows { display: none; }
 }
 
 /* Very narrow: hide logo text + help button, hide toolbar separator */
@@ -147,6 +129,160 @@ body {
   flex: 1;
   overflow: hidden;
   position: relative;
+}
+
+/* ── Board area — fills #main by default; desktop grid below repositions it as the center column ── */
+#board-area {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ── Desktop 3-panel layout: fixed-width saves panel | board | token panel ──
+   Only #board-area sits in the grid — its middle track is bounded by --pal2-col-w/--pal-col-w,
+   the space currently *reserved* for each panel (animated frame-by-frame while opening/closing,
+   see _animatePanelToggle in editor.js). The panels themselves are positioned absolutely, at a
+   constant width (--pal2-panel-w/--pal-panel-w, which doesn't change during that animation) —
+   so their own content never resizes/reflows; closing one just translates it off-screen via the
+   plain CSS transform below, fully decoupled from how much board space it's currently ceding. */
+body.layout-desktop #main {
+  display: grid;
+  grid-template-columns: var(--pal2-col-w, 280px) minmax(0, 1fr) var(--pal-col-w, 0px);
+  grid-template-rows: 100%;
+}
+body.layout-desktop #board-area { grid-column: 2; grid-row: 1; }
+
+body.layout-desktop #pal2-panel,
+body.layout-desktop #pal-panel {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+body.layout-desktop #pal2-panel { left: 0;  width: var(--pal2-panel-w, 280px); }
+body.layout-desktop #pal-panel  { right: 0; width: var(--pal-panel-w, 0px); }
+
+/* ── Mobile layout: board on top (max available space) + one tabbed panel below ── */
+body.layout-mobile #main {
+  display: flex;
+  flex-direction: column;
+}
+body.layout-mobile #board-area {
+  flex: 1;
+  min-height: 0;
+}
+
+body.layout-mobile #btn-toggle-pal2,
+body.layout-mobile #btn-toggle-palette {
+  display: none;
+}
+
+#mobile-tabs {
+  display: none;
+  flex-direction: column;
+  flex-shrink: 0;
+  /* Scales with viewport height but never shrinks below a usable floor (e.g. short landscape
+     phones) or grows past what the board needs to keep priority over. Collapsing (below) shrinks
+     this down to just --mobile-tabbar-h — #mobile-tab-content (flex:1 below) squeezes to 0 in
+     the same motion automatically, no separate hide/show animation needed.
+     No CSS transition on height: collapsing is animated in JS instead (see
+     _toggleMobileTabsCollapsed in editor.js), which re-runs the real board layout every frame —
+     necessary so the board recenters/rescales in step with the bar instead of snapping once the
+     animation ends (a CSS-only transition leaves _relayoutMobile's synchronous clientHeight read
+     seeing a stale size throughout). A CSS transition here would also double-animate against
+     those already-eased per-frame inline values. */
+  height: clamp(200px, 42vh, 360px);
+  background: var(--box-bg);
+  border-top: 1px solid var(--border);
+}
+body.layout-mobile #mobile-tabs { display: flex; }
+#mobile-tabs.collapsed { height: var(--mobile-tabbar-h); }
+
+#mobile-tab-bar {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: var(--mobile-tabbar-h);
+  border-bottom: 1px solid var(--border);
+}
+.mobile-tab-btn {
+  /* Sized to its label, not stretched across the bar — flex:1 (the old behavior) made each tab
+     as wide as the bar regardless of how short its text was. */
+  flex: 0 0 auto;
+  height: 100%;
+  padding: 0 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--btn-c);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Segoe UI', sans-serif;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+}
+.mobile-tab-btn.active {
+  color: #ffffff;
+  border-bottom-color: var(--accent);
+}
+
+#mobile-tabs-collapse-btn {
+  /* Pushed to the far right of the bar, after the (now label-sized) tab buttons. */
+  margin-left: auto;
+  flex-shrink: 0;
+  width: var(--mobile-tabbar-h);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--btn-c);
+  cursor: pointer;
+}
+#mobile-tabs-collapse-btn:hover { color: #ffffff; }
+#mobile-tabs-collapse-btn svg {
+  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+#mobile-tabs.collapsed #mobile-tabs-collapse-btn svg {
+  transform: rotate(180deg);
+}
+
+#mobile-tab-content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Reparented panels fill the tab slot; visibility is tab-driven here, not collapse-driven */
+body.layout-mobile #pal-panel,
+body.layout-mobile #pal2-panel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: none;
+  opacity: 1;
+  pointer-events: all;
+  display: none;
+  border: none;
+  box-shadow: none;
+}
+body.layout-mobile #pal-panel.tab-active,
+body.layout-mobile #pal2-panel.tab-active {
+  display: flex;
+}
+
+/* The tab bar already labels each section — don't repeat the title inside it too */
+body.layout-mobile #pal-header,
+body.layout-mobile #pal2-header {
+  display: none;
 }
 
 /* ── Board layer ── */
@@ -181,15 +317,28 @@ body {
 }
 
 /* ── Jetons HTML ── */
+/* --tok-sz (set once on <body> by relayout()) is the single size reference shared by every
+   token-shaped element on the page — board tokens, the drag ghost, drop targets, and palette
+   items all derive their width/height/outline from it, so JS never sizes them individually. */
 .html-token {
   position: absolute;
+  width: var(--tok-sz, 0px);
+  height: var(--tok-sz, 0px);
   border-radius: 50%;
   overflow: visible;
   pointer-events: none;
   will-change: transform;
+  /* These coefficients are half of the original r-based formula (0.05/0.06/0.12) — --tok-sz is
+     the full diameter (2r), so multiplying it by the original r-based factors directly would
+     double the shadow's offset and blur, making every token look oversized by its own halo. */
+  box-shadow: calc(var(--tok-sz, 0px) * 0.025) calc(var(--tok-sz, 0px) * 0.03) calc(var(--tok-sz, 0px) * 0.06) rgba(0,0,0,0.6);
 }
+body.no-shadows .html-token { box-shadow: none; }
 
 .html-token img {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -200,10 +349,23 @@ body {
   user-select: none;
   pointer-events: none;
 }
+.html-token img.used-token { filter: grayscale(1) opacity(0.5); }
 
 #drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
   pointer-events: none;
-  z-index: 70;
+  z-index: 500; /* must render above every panel/overlay while dragging (highest in-app z-index is 200) */
+  /* All actual positioning is via transform (set in editor.js), not left/top — transform is
+     compositor-only and doesn't force layout on every mousemove, which is also why animations
+     on its children (the trash-bin icon) stay smooth while it's being dragged. */
+  will-change: transform;
+}
+/* Distinct "lifted" shadow while dragging — fixed, not proportional like .html-token's resting
+   shadow, so it reads the same regardless of the dragged item's size. */
+body:not(.no-shadows) #drag-ghost {
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.5);
 }
 
 /* ── Labels de case ── */
@@ -250,6 +412,8 @@ body {
 
 .html-droptarget {
   position: absolute;
+  width: var(--tok-sz, 0px);
+  height: var(--tok-sz, 0px);
   border-radius: 50%;
   background: rgba(100,100,100,0.25);
   pointer-events: none;
@@ -260,8 +424,11 @@ body {
   position: absolute;
   background: var(--box-bg);
   border: none;
-  border-left: 1px solid var(--border);
   border-radius: 0;
+  /* A box-shadow draws the same divider line as a border without consuming content width —
+     the panel's width is computed to fit an exact number of item columns (see palette.js), so
+     nothing here should eat into that budget. */
+  box-shadow: -1px 0 0 var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -270,53 +437,25 @@ body {
 }
 
 #pal-panel.collapsed {
+  /* The panel's own width is now constant at all times (see body.layout-desktop #pal-panel
+     above) — only the *board's* reserved space animates, separately, in JS — so translateX(100%)
+     here is relative to a fixed box and stays a single, clean outward slide throughout. */
   transform: translateX(100%);
   opacity: 0;
   pointer-events: none;
 }
 
-/* ── Bottom-sheet mode (narrow screens) ── */
-#pal-panel.bottom-sheet {
-  border-radius: 0px;
-  border-bottom: none;
-}
-
-/* Bottom-sheet collapsed: slide down leaving only the handle visible */
-#pal-panel.bottom-sheet.collapsed {
-  transform: translateY(calc(100% - 48px));
-  opacity: 1 !important;
-  pointer-events: all !important;
-}
-
-/* Drag handle pill */
-#pal-panel.bottom-sheet #pal-header {
-  cursor: pointer;
-  height: 48px;
-  position: relative;
-  padding: 0 16px;
-}
-#pal-panel.bottom-sheet #pal-header::before {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(120,120,200,0.4);
-}
-
-#pal-header {
+#pal-header, #pal2-header {
   padding: 0 20px;
   height: 50px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgba(70,70,160,0.2);
   flex-shrink: 0;
 }
+#pal-header  { border-bottom: 1px solid rgba(70,70,160,0.2); }
+#pal2-header { border-bottom: 1px solid var(--border); }
 
-#pal-title {
+#pal-title, #pal2-title {
   color: rgb(132,132,186);
   font-size: 16px;
   letter-spacing: 0.05em;
@@ -364,40 +503,31 @@ body {
   padding: 6px 20px 20px;
 }
 .pal-grid.open { display: flex; }
+.pal-grid-first { padding-top: 20px; } /* extra breathing room below the panel header */
 
-/* Bottom-sheet grid: compact horizontal padding */
-#pal-panel.bottom-sheet .pal-grid {
-  gap: 6px;
-  padding: 6px 12px 8px;
-}
-#pal-panel.bottom-sheet #pal-body {
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-#pal-panel.bottom-sheet .pal-sec-hdr {
-  height: 32px;
-  padding: 0 12px;
-}
-#pal-panel.bottom-sheet .pal-sec-label {
-  font-size: 13px;
-}
-#pal-panel.bottom-sheet #pal-header {
-  border-bottom: 1px solid rgba(70,70,160,0.2);
-}
-#pal-panel.bottom-sheet #pal-footer {
-  padding: 10px;
-}
+/* Mobile: more condensed sections — less wasted padding around a list that's already shorter */
+body.layout-mobile .pal-sec-hdr { padding: 0 14px; height: 34px; }
+body.layout-mobile .pal-sec-label { font-size: 14px; }
+body.layout-mobile .pal-grid { gap: 6px; padding: 6px 14px 14px; }
+body.layout-mobile .pal-grid-first { padding-top: 10px; }
 
 .pal-item {
   position: relative;
   cursor: default;
   border-radius: 50%;
   flex-shrink: 0;
+  width: var(--tok-sz, 0px);
+  height: var(--tok-sz, 0px);
+  min-width: var(--tok-sz, 0px);
+  min-height: var(--tok-sz, 0px);
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
 }
 
 .pal-item img {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
   width: 100%;
   height: 100%;
@@ -405,22 +535,37 @@ body {
   object-fit: cover;
   -webkit-user-drag: none;
   pointer-events: none;
+  /* Matches the board's zoom-out transition (touch.css) so on-board/off-board toggling animates
+     the same way in both places. */
+  transition: top 0.08s ease, left 0.08s ease, width 0.08s ease, height 0.08s ease;
 }
 
 .pal-item-banned > img {
   filter: grayscale(60%);
-  opacity: 0.6;
+}
+.pal-item-banned .pal-item-ban-overlay {
+  /* Same color as the panel background, at 40% — tints the token without dimming it (no
+     opacity reduction), so the artwork stays fully clear while still reading as banned. */
+  background: color-mix(in srgb, var(--box-bg) 40%, transparent);
 }
 
 .pal-item-ban-overlay {
   position: absolute;
-  inset: 0;
+  /* Explicit top/left/width/height (not `inset: 0`) — matches .pal-item img's model exactly.
+     `inset` also sets right/bottom, which then sit alongside the on-board override's
+     top/left/width/height as stale, unanimated values; keeping the same four properties on both
+     rules avoids any ambiguity about which one the box's position is resolved from. */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  z-index: 1; 
+  z-index: 1;
+  transition: top 0.08s ease, left 0.08s ease, width 0.08s ease, height 0.08s ease;
 }
 .pal-item-ban-overlay img {
   width: 100%;
@@ -431,16 +576,30 @@ body {
 
 .pal-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  /* Size/font scale with the token (clamped to the original fixed values as a ceiling) — a fixed
+     20px/14px badge looks fine at the usual token size but reads as oversized once --tok-sz
+     shrinks under a denser column layout.
+     Position: for a circle of radius r centered in a box of size --tok-sz, the point on that
+     circle at the top-right (45°) sits --tok-sz/2 - r*cos45° from the box's top/right edges
+     (NOT r*(1 - cos45°) — that's only equal to the correct value when r happens to equal
+     --tok-sz/2; using it unconditionally was the bug that left the badge sitting on the token's
+     full outer edge instead of moving inward with a smaller --target-r). Placing the badge's
+     top/right edges at (that inset − half the badge's own size) puts the badge's *center*
+     exactly on the circle of radius --target-r, which defaults to the token's own outer edge;
+     .pal-item-on-board overrides just --target-r below to center on the ring's midpoint instead. */
+  --badge-sz: clamp(14px, calc(var(--tok-sz, 0px) * 0.32), 20px);
+  --target-r: calc(var(--tok-sz, 0px) / 2);
+  --circle-corner-inset: calc(var(--tok-sz, 0px) / 2 - var(--target-r) * 0.7071067812);
+  top: calc(var(--circle-corner-inset) - var(--badge-sz) / 2);
+  right: calc(var(--circle-corner-inset) - var(--badge-sz) / 2);
   background: #d7ca8a;
   color: var(--box-bg);
-  font-size: 14px;
+  font-size: clamp(9px, calc(var(--tok-sz, 0px) * 0.22), 14px);
   font-weight: bold;
   font-family: 'Segoe UI', sans-serif;
   border-radius: 50%;
-  width: 20px;
-  height: 20px;
+  width: var(--badge-sz);
+  height: var(--badge-sz);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -448,13 +607,31 @@ body {
   z-index: 3;
 }
 
+/* ── On-board outline ──────────────────────────────────────────────────────
+   Same mechanism as the board's own selection ring (see touch.css): the artwork (and ban
+   overlay) scale down by --outline-w on every side; the ring sits behind them at the item's
+   original, full-size boundary and is simply revealed wherever the now-smaller artwork no
+   longer covers it. Total footprint stays identical to a plain item (no layout shift), and the
+   ring is entirely outside the artwork (no overlap, no gap). */
+.pal-item-on-board {
+  --outline-w: max(2px, calc(var(--tok-sz, 0px) * 0.04));
+}
+
+.pal-item-on-board img,
+.pal-item-on-board .pal-item-ban-overlay {
+  top: var(--outline-w);
+  left: var(--outline-w);
+  width: calc(100% - var(--outline-w) * 2);
+  height: calc(100% - var(--outline-w) * 2);
+}
+
 .pal-item-on-board::before {
   content: '';
   position: absolute;
-  inset: -2px;
+  inset: 0; /* the item's original, full-size boundary */
   border-radius: 50%;
-  border: 3px solid #d7ca8a;
-  z-index: 2;
+  background: #d7ca8a;
+  z-index: -1;
   pointer-events: none;
 }
 
@@ -463,15 +640,31 @@ body {
   overflow: hidden;
 }
 
-#pal-footer {
+/* On-board, selecting/placing the token downscales the artwork by --outline-w on every side,
+   which is what creates the visible ring — the ring's thickness equals exactly that downscale
+   offset. Overriding just --target-r (to the average of the token's downscaled radius and the
+   outline's full, original radius) is enough — .pal-badge's own --circle-corner-inset/top/right
+   above pick it up automatically, since custom properties resolve per-element at used-value
+   time regardless of which rule declared the property that references them. */
+.pal-item-on-board .pal-badge {
+  --token-r:   calc(var(--tok-sz, 0px) / 2 - var(--outline-w)); /* downscaled artwork's radius */
+  --outline-r: calc(var(--tok-sz, 0px) / 2);                    /* full, original radius */
+  --target-r:  calc((var(--token-r) + var(--outline-r)) / 2);
+}
+
+#pal-footer, #pal2-footer {
   padding: 10px;
-  border-top: 1px solid rgba(70,70,160,0.2);
   flex-shrink: 0;
   display: flex;
   justify-content: center;
 }
+#pal-footer  { border-top: 1px solid rgba(70,70,160,0.2); }
+#pal2-footer { border-top: 1px solid var(--border); }
+body.layout-mobile #pal-footer,
+body.layout-mobile #pal2-footer { padding: 6px; }
 
-#pal-reset {
+/* Shared pill-button style for the two side panels' footer actions */
+#pal-reset, #pal2-btn-add-section {
   background: var(--btn-bg);
   border: 1px solid var(--btn-bd);
   border-radius: 20px;
@@ -484,7 +677,8 @@ body {
   width: 50%;
   max-width: 160px;
 }
-#pal-reset:hover { background: var(--btn-bg-h); }
+#pal2-btn-add-section { text-align: center; }
+#pal-reset:hover, #pal2-btn-add-section:hover { background: var(--btn-bg-h); }
 
 
 /* ── Token toolbar — même style que les tooltips, à droite du jeton ── */
@@ -713,6 +907,9 @@ body {
 .setting-row-lang { cursor: pointer; padding-top: 9px; padding-bottom: 9px; }
 .setting-row-lang:hover { background: #252548; }
 
+body.layout-mobile #settings-body { padding: 8px; gap: 6px; }
+body.layout-mobile .setting-row   { padding: 10px; }
+
 .setting-info { flex: 1; min-width: 0; }
 
 .setting-name {
@@ -932,10 +1129,14 @@ body {
   border-radius: 8px;
   padding: 6px 10px;
 }
+body.layout-mobile #help-body { padding: 8px; }
+body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
 
 .help-key, kbd {
   flex-shrink: 0;
-  width: 120px;
+  /* Shrinks on narrow viewports so .help-desc keeps room to breathe inside the popup's
+     max-width:92vw cap; unchanged (120px) on anything wider than ~430px. */
+  width: clamp(90px, 28vw, 120px);
   font-size: 11px;
   font-weight: 600;
   font-family: 'Segoe UI', sans-serif;
@@ -973,26 +1174,14 @@ body {
   transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
 }
 #pal2-panel.collapsed {
+  /* Same reasoning as #pal-panel.collapsed — constant width now, so this stays a clean slide. */
   transform: translateX(-100%);
   opacity: 0;
   pointer-events: none;
 }
 
 
-/* ── Header — identique à #pal-header / #pal-title ── */
-#pal2-header {
-  padding: 0 20px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-#pal2-title {
-  color: rgb(132,132,186);
-  font-size: 16px;
-  letter-spacing: 0.05em;
-}
+/* ── Header / title — see #pal-header, #pal2-header above ── */
 
 /* ── Body ── */
 #pal2-body {
@@ -1010,13 +1199,16 @@ body {
 }
 
 /* ── Section — même séparation que .pal-section ── */
-.pal2-section { position: relative; }
+/* Single source of truth for the panel's left/right inset — used identically by the section
+   header, the divider between sections, the config list, and each row, so sections and
+   positions always line up on both edges instead of drifting apart with their own paddings. */
+.pal2-section { position: relative; --pal2-pad-x: 16px; }
 .pal2-section:not(:last-of-type)::after {
   content: '';
   display: block;
   height: 1px;
   background: var(--border);
-  margin: 0 20px;
+  margin: 0 var(--pal2-pad-x);
 }
 
 /* ── Section header ── */
@@ -1024,7 +1216,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px 0 20px;
+  padding: 0 var(--pal2-pad-x);
   height: 40px;
   user-select: none;
 }
@@ -1061,8 +1253,23 @@ body {
   min-width: 0;
 }
 
+/* Right side of the header: the position count and the action buttons occupy the same spot —
+   the count shows at rest, and crossfades into the buttons on hover (see .pal2-sec-actions
+   below). Sizing this container off the actions' own footprint (not the badge's) means the
+   header's width never shifts when the two swap. */
+.pal2-sec-right {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 /* Badge compteur */
 .pal2-sec-count {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 600;
@@ -1071,9 +1278,15 @@ body {
   border-radius: 10px;
   padding: 2px 6px;
   font-family: 'Segoe UI', sans-serif;
+  opacity: 1;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+.pal2-section-hdr:hover .pal2-sec-count {
+  opacity: 0;
 }
 
-/* Boutons section — visibles au hover */
+/* Boutons section — visibles au hover (swap with the count above) */
 .pal2-sec-actions {
   display: flex;
   align-items: center;
@@ -1110,10 +1323,14 @@ body {
 }
 
 /* ── Config list ── */
+/* The list's own left/right inset reuses --pal2-pad-x — the same gap as the section divider —
+   so each row's hover background sits exactly that far from the panel edge, matching the
+   divider's margin instead of an unrelated value. .pal2-row-main's own padding (below) adds
+   text/icon breathing room inside that. */
 .pal2-config-list {
   display: flex;
   flex-direction: column;
-  padding: 0 8px 8px 20px;
+  padding: 0 var(--pal2-pad-x) 8px;
 }
 
 /* ── Config rows ── */
@@ -1128,8 +1345,10 @@ body {
 .pal2-row-main {
   display: flex;
   align-items: center;
-  height: 34px;
-  padding: 0 2px 0 6px;
+  /* Height comes from the 28px action buttons plus this padding (28 + 2*3 = 34px, matching the
+     old fixed height). Left is slightly larger than the other three sides — the icon reads better
+     with a bit more breathing room from the edge than the right side needs for the buttons. */
+  padding: 3px 3px 3px 12px;
   cursor: pointer;
   border-radius: 6px;
   gap: 8px;
@@ -1252,31 +1471,15 @@ body {
   background: var(--btn-bg);
 }
 
-/* ── Footer — identique à #pal-footer / #pal-reset ── */
-#pal2-footer {
-  padding: 10px;
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-}
-#pal2-btn-add-section {
-  background: var(--btn-bg);
-  border: 1px solid var(--btn-bd);
-  border-radius: 20px;
-  color: var(--btn-c);
-  font-size: 13px;
-  font-family: 'Segoe UI', sans-serif;
-  padding: 8px 0;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-  width: 50%;
-  max-width: 160px;
-  text-align: center;
-}
-#pal2-btn-add-section:hover {
-  background: var(--btn-bg-h);
-}
+/* ── Footer / reset button — see #pal-footer, #pal2-footer above ── */
+
+/* Mobile: more condensed list rows — less wasted padding around a list that's already shorter.
+   Overrides --pal2-pad-x so the header/divider/list/rows all shrink their inset together. */
+body.layout-mobile .pal2-section { --pal2-pad-x: 14px; }
+body.layout-mobile .pal2-section-hdr { height: 34px; }
+body.layout-mobile .pal2-sec-name    { font-size: 14px; }
+body.layout-mobile .pal2-config-list { padding: 0 var(--pal2-pad-x) 6px; }
+body.layout-mobile .pal2-row-main    { padding: 1px 1px 1px 10px; }
 
 /* ── Tooltips Discord-style ── */
 .dc-tooltip-el {
