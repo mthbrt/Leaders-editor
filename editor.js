@@ -512,8 +512,11 @@ function _exitMobileTabs() {
 let LO = {};
 
 // Hex-grid spacing/radius that fits BOARD_COLS x BOARD_ROWS hex units inside a W x H box.
-function _boardSpacing(W, H) {
-  const sp = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * 0.90;
+// `slack` is the fraction of the fitted size actually used (the rest is the margin around the
+// board) — defaults to the desktop value; _relayoutMobile passes a larger one for tighter
+// margins on mobile, where screen space is scarcer.
+function _boardSpacing(W, H, slack = 0.90) {
+  const sp = Math.min(W / BOARD_COLS, H / BOARD_ROWS) * slack;
   return { sp, r: sp * CR };
 }
 
@@ -644,7 +647,7 @@ function _relayoutMobile() {
   const boardArea = document.getElementById('board-area');
   const W = boardArea.clientWidth  || 800;
   const H = boardArea.clientHeight || 560;
-  const { sp, r } = _boardSpacing(W, H);
+  const { sp, r } = _boardSpacing(W, H, 0.95); // tighter margins than desktop's default 0.90
   const cx = W / 2, cy = H / 2;
 
   const { cells, byId } = _computeCells(cx, cy, sp);
