@@ -192,7 +192,7 @@ body.layout-mobile #btn-toggle-palette {
   flex-shrink: 0;
   /* Scales with viewport height but never shrinks below a usable floor (e.g. short landscape
      phones) or grows past what the board needs to keep priority over. */
-  height: clamp(160px, 32vh, 360px);
+  height: clamp(160px, 30vh, 360px);
   background: var(--box-bg);
   border-top: 1px solid var(--border);
   transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
