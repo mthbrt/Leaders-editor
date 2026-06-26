@@ -458,45 +458,34 @@ function _setMobileTab(name) {
   });
 }
 
-// Mirrors the desktop panel animation (see _animatePanelToggle/_animatePanelWidth above) and for
-// the same reason: #board-area's size depends on #mobile-tabs' height (flex:1 takes whatever
-// #mobile-tabs doesn't), and the board's own cell positions are computed from a synchronous
-// clientHeight read in _relayoutMobile — a CSS-only height transition would leave that read
-// seeing a stale size while the bar visually resizes underneath, snapping the board instead of
-// moving it smoothly. So this drives #mobile-tabs' height directly, frame by frame, calling the
-// real relayout()/render() each time so the board recenters/rescales in step with the bar.
-let _mobileTabsAnimRaf = null;
+// #board-area is a normal flex child on mobile (see style.css) — #mobile-tabs growing/shrinking
+// genuinely resizes it, which is exactly what should happen so the board stays fully visible
+// above the panel (see _relayoutMobile). But #board-area's clientHeight is read synchronously in
+// _relayoutMobile, and #mobile-tabs' height changes via a plain CSS transition — so a single
+// relayout() right after toggling the class would only ever see that transition's *start* value
+// (t=0, before any time has actually passed), leaving the board snapped to the old size for the
+// whole animation. Polling relayout()/render() on every subsequent frame instead samples the
+// panel's real, already-progressed (CSS-animated) height each time, so the board resizes/
+// recenters smoothly in step with it. No separate JS-side easing needed: the height transition
+// itself is still plain CSS — this just re-renders against it as it plays, not driving it.
+let _mobileTabsResizeRaf = null;
 
 function _toggleMobileTabsCollapsed() {
-  const el = _mobileTabsEl;
-  if (!el) { _mobileTabsCollapsed = !_mobileTabsCollapsed; return; }
-
-  const fromH = el.getBoundingClientRect().height;
   _mobileTabsCollapsed = !_mobileTabsCollapsed;
-  el.classList.toggle('collapsed', _mobileTabsCollapsed);
-  // Measuring the new class's natural height and then immediately resetting back to fromH all
-  // happens synchronously with no paint in between, so it's invisible — the browser only ever
-  // paints the fromH state until the rAF loop below starts advancing it.
-  el.style.height = '';
-  const toH = el.getBoundingClientRect().height;
-  el.style.height = fromH + 'px';
-  relayout(); render();
+  _mobileTabsEl?.classList.toggle('collapsed', _mobileTabsCollapsed);
 
-  if (_mobileTabsAnimRaf) cancelAnimationFrame(_mobileTabsAnimRaf);
+  if (_mobileTabsResizeRaf) cancelAnimationFrame(_mobileTabsResizeRaf);
   const start = performance.now();
   function step(now) {
-    const t = Math.min(1, (now - start) / PANEL_ANIM_MS);
-    el.style.height = (fromH + (toH - fromH) * _panelEase(t)) + 'px';
     relayout(); render();
-    if (t < 1) {
-      _mobileTabsAnimRaf = requestAnimationFrame(step);
+    if (now - start < PANEL_ANIM_MS) {
+      _mobileTabsResizeRaf = requestAnimationFrame(step);
     } else {
-      _mobileTabsAnimRaf = null;
-      el.style.height = ''; // hand back to CSS (the .collapsed class already reflects the final state)
-      relayout(); render();
+      _mobileTabsResizeRaf = null;
+      relayout(); render(); // settle on the final, fully-transitioned state
     }
   }
-  _mobileTabsAnimRaf = requestAnimationFrame(step);
+  _mobileTabsResizeRaf = requestAnimationFrame(step);
 }
 
 function _enterMobileTabs() {
@@ -646,9 +635,11 @@ function _relayoutDesktop() {
   if (typeof Palette2 !== 'undefined') Palette2.syncLayout();
 }
 
-// Mobile: #main is a column flex (board on top, #mobile-tabs fixed-height below — see CSS).
-// The board reads #board-area's real resolved box, same approach as desktop, just simpler:
-// there's no side panel to budget for, and no column-growth pass.
+// Mobile: #board-area is a normal flex child that takes whatever height #mobile-tabs doesn't
+// (see style.css) — so its own clientWidth/clientHeight already *is* "however much space is
+// currently available above the panel," and centering within it is just W/2,H/2. No separate
+// shift/overlap math needed: as #mobile-tabs grows, #board-area's box genuinely shrinks (a real
+// resize), and the board recenters in whatever's left, same as it always has.
 function _relayoutMobile() {
   const boardArea = document.getElementById('board-area');
   const W = boardArea.clientWidth  || 800;
@@ -800,9 +791,21 @@ function _simulateRightClick(x, y) {
 }
 
 // ── TOUCH EVENTS ──────────────────────────────────────────────────────────────
+// Touch now drives the exact same press/drag/drop state machine as the mouse (onDown/onMove/
+// onUp below) instead of a separate tap-to-select-only model: a touch that doesn't move becomes
+// the existing tap-to-select behavior (onUp's drag._pending branch already implements that for
+// mouse clicks), and a touch that moves past the threshold becomes a real drag with the same
+// ghost/drop-target feedback. Long-press-for-context-menu (mouse's right-click equivalent) is
+// layered on top, independent of that.
 function _touchXY(touch) {
   const b = document.getElementById('board-area').getBoundingClientRect();
   return { x: touch.clientX - b.left, y: touch.clientY - b.top };
+}
+
+// Adapts a Touch into the {clientX, clientY, button, target, preventDefault} shape onDown/
+// onMove/onUp expect from a MouseEvent — they never read anything else off it.
+function _touchAsMouseEvent(touch, target) {
+  return { clientX: touch.clientX, clientY: touch.clientY, button: 0, target, preventDefault() {} };
 }
 
 function onTouchStart(e) {
@@ -810,22 +813,25 @@ function onTouchStart(e) {
   if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
 
   const touch = e.touches[0];
-  const { x, y } = _touchXY(touch);
-
-  _closeAllToolbars(e.target);
-  _cancelLongPress();
-
   onTouchStart._startX = touch.clientX;
   onTouchStart._startY = touch.clientY;
 
+  _cancelLongPress();
+  const { x, y } = _touchXY(touch);
   _longPressTimer = setTimeout(() => {
     _longPressTimer   = null;
     _longPressFired   = true;
     _longPressEndTime = Date.now();
     if (navigator.vibrate) navigator.vibrate(40);
+    // A long-press always means "open the context menu," not "drag" — abort whatever onDown
+    // below may have armed (a pending/real drag) so onTouchEnd doesn't also try to drop it.
+    drag = null; dpos = null;
     _cancelTouchSelection();
     _simulateRightClick(x, y);
+    render();
   }, LONG_PRESS_MS);
+
+  onDown(_touchAsMouseEvent(touch, e.target));
 }
 
 function onTouchMove(e) {
@@ -834,6 +840,7 @@ function onTouchMove(e) {
   const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
   const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
   if (Math.hypot(dx, dy) > 8) _cancelLongPress();
+  onMove(_touchAsMouseEvent(touch, e.target));
 }
 
 function onTouchEnd(e) {
@@ -842,51 +849,13 @@ function onTouchEnd(e) {
   if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
   if (_longPressFired) { _longPressFired = false; e.preventDefault(); return; }
 
-  const touch = e.changedTouches[0];
-  const { x, y } = _touchXY(touch);
-
-  const dx = touch.clientX - (onTouchStart._startX || touch.clientX);
-  const dy = touch.clientY - (onTouchStart._startY || touch.clientY);
-  if (Math.hypot(dx, dy) > 10) return;
-
-  if (e.target.closest('#tok-tb, #pal-tok-tb, #toolbar, #settings-overlay, #help-overlay')) return;
-
-  const inP = Palette.inPalette(x, y);
-
-  if (_selected?.type === 'brd') {
-    const destCell = nearCell(x, y);
-    if (destCell) {
-      _moveSelectedToCell(destCell.id);
-    } else if (inP) {
-      const palName = Palette.palAt(x, y);
-      if (palName) {
-        const tok = S.tokens.find(t => t.id === _selected.id);
-        if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName } : t); _palRemove(palName); saveH(); }
-      }
-    } else {
-      // Clic hors plateau → déselectionner seulement (pas de suppression)
-    }
-    _cancelTouchSelection(); render(); e.preventDefault(); return;
-  }
-
-  if (inP) {
-    const name = Palette.palAt(x, y);
-    if (name) {
-      e.preventDefault();
-      _palRecruitOne(name);
-    }
+  if (e.target.closest('#tok-tb, #pal-tok-tb, #toolbar, #settings-overlay, #help-overlay')) {
+    drag = null; dpos = null; render();
     return;
   }
 
-  const tok = tokAt(x, y);
-  if (tok) {
-    e.preventDefault();
-    _selected = { type: 'brd', id: tok.id };
-    _syncTouchSelectionHighlight(); render();
-    return;
-  }
-
-  _cancelTouchSelection(); render();
+  e.preventDefault();
+  onUp(_touchAsMouseEvent(e.changedTouches[0], e.target));
 }
 
 function _initTouchEvents() {
@@ -894,7 +863,7 @@ function _initTouchEvents() {
   main.addEventListener('touchstart',  onTouchStart,  { passive: false });
   main.addEventListener('touchmove',   onTouchMove,   { passive: true });
   main.addEventListener('touchend',    onTouchEnd,    { passive: false });
-  main.addEventListener('touchcancel', () => { _cancelLongPress(); _cancelTouchSelection(); render(); });
+  main.addEventListener('touchcancel', () => { _cancelLongPress(); drag = null; dpos = null; _cancelTouchSelection(); render(); });
 }
 
 // ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────

@@ -166,7 +166,12 @@ body.layout-desktop #pal-panel {
 body.layout-desktop #pal2-panel { left: 0;  width: var(--pal2-panel-w, 280px); }
 body.layout-desktop #pal-panel  { right: 0; width: var(--pal-panel-w, 0px); }
 
-/* ── Mobile layout: board on top (max available space) + one tabbed panel below ── */
+/* ── Mobile layout: board on top, taking whatever space #mobile-tabs doesn't, + one tabbed
+   panel below. #board-area is a normal flex child (not an overlay) — expanding/collapsing the
+   panel actually resizes it, so the board always stays fully visible above the panel instead of
+   being covered by it. See _relayoutMobile in editor.js for the resize/recenter logic, and
+   _toggleMobileTabsCollapsed for why that has to run on every frame of the transition below,
+   not just once at the end. */
 body.layout-mobile #main {
   display: flex;
   flex-direction: column;
@@ -186,18 +191,11 @@ body.layout-mobile #btn-toggle-palette {
   flex-direction: column;
   flex-shrink: 0;
   /* Scales with viewport height but never shrinks below a usable floor (e.g. short landscape
-     phones) or grows past what the board needs to keep priority over. Collapsing (below) shrinks
-     this down to just --mobile-tabbar-h — #mobile-tab-content (flex:1 below) squeezes to 0 in
-     the same motion automatically, no separate hide/show animation needed.
-     No CSS transition on height: collapsing is animated in JS instead (see
-     _toggleMobileTabsCollapsed in editor.js), which re-runs the real board layout every frame —
-     necessary so the board recenters/rescales in step with the bar instead of snapping once the
-     animation ends (a CSS-only transition leaves _relayoutMobile's synchronous clientHeight read
-     seeing a stale size throughout). A CSS transition here would also double-animate against
-     those already-eased per-frame inline values. */
-  height: clamp(200px, 42vh, 360px);
+     phones) or grows past what the board needs to keep priority over. */
+  height: clamp(160px, 32vh, 360px);
   background: var(--box-bg);
   border-top: 1px solid var(--border);
+  transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 body.layout-mobile #mobile-tabs { display: flex; }
 #mobile-tabs.collapsed { height: var(--mobile-tabbar-h); }
