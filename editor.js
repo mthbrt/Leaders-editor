@@ -23,7 +23,6 @@ const LANGS = {
     secArchetypes:    'Archétypes',
     secLeaders:       'Leaders',
     pal2Title:          'SAUVEGARDES',
-    pal2BtnClear:       'Tout effacer',
     pal2AddSection:     'Ajouter une section',
     pal2DefaultSection: 'Section',
     pal2DefaultConfig:  'Position',
@@ -70,7 +69,6 @@ const LANGS = {
     secArchetypes:    'Archetypes',
     secLeaders:       'Leaders',
     pal2Title:          'SAVES',
-    pal2BtnClear:       'Clear all',
     pal2AddSection:     'Add section',
     pal2DefaultSection: 'Section',
     pal2DefaultConfig:  'Position',
@@ -142,7 +140,7 @@ const CR    = 0.79;
 const H_MAX = 60;
 const BOARD_COLS = (2 * R + 1) * 1.5 + 0.5;
 const BOARD_ROWS = (2 * R + 1.5) * SQ3;
-const ALL_NAMES_LIST = Array.from({ length: 26 }, (_, i) => String(i + 1));
+const ALL_NAMES = Array.from({ length: 26 }, (_, i) => String(i + 1));
 
 // ── PLATEAU ───────────────────────────────────────────────────────────────────
 const CELLS = (() => {
@@ -228,8 +226,6 @@ const mkState = () => ({
 let S = mkState();
 
 // ── PALETTE HELPERS ───────────────────────────────────────────────────────────
-const ALL_NAMES = ALL_NAMES_LIST;
-
 function _palGroupOf(name) {
   const n = +name;
   if (n === 1 || n === 2 || n === 25) return 'leaders';
@@ -386,7 +382,6 @@ function _syncLayoutModeClass() {
 // rendering logic is duplicated — only which container holds them, and which one is visible.
 let _mobileTabsEl       = null;
 let _mobileTabContent   = null;
-let _mobileActiveTab    = 'tokens'; // 'saves' | 'tokens'
 let _mobileTabsCollapsed = false;
 
 function _buildMobileTabs() {
@@ -395,8 +390,7 @@ function _buildMobileTabs() {
   el.id = 'mobile-tabs';
   el.innerHTML = `
     <div id="mobile-tab-bar">
-      <button class="mobile-tab-btn" data-tab="saves"></button>
-      <button class="mobile-tab-btn" data-tab="tokens"></button>
+      <button class="mobile-tab-btn active" data-tab="tokens"></button>
       <button id="mobile-tabs-collapse-btn">
         <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="2 3 5 7 8 3"/>
@@ -405,9 +399,6 @@ function _buildMobileTabs() {
     </div>
     <div id="mobile-tab-content"></div>`;
   document.getElementById('main').appendChild(el);
-  el.querySelectorAll('.mobile-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => _setMobileTab(btn.dataset.tab));
-  });
   el.querySelector('#mobile-tabs-collapse-btn').addEventListener('click', _toggleMobileTabsCollapsed);
   _mobileTabsEl     = el;
   _mobileTabContent = el.querySelector('#mobile-tab-content');
@@ -448,17 +439,7 @@ function _initMobileTabsSwipe(bar) {
 
 function _updateMobileTabLabels() {
   if (!_mobileTabsEl) return;
-  _mobileTabsEl.querySelector('[data-tab="saves"]').textContent  = t('pal2Title');
   _mobileTabsEl.querySelector('[data-tab="tokens"]').textContent = t('palTitle');
-}
-
-function _setMobileTab(name) {
-  _mobileActiveTab = name;
-  Palette.getPanelEl()?.classList.toggle('tab-active', name === 'tokens');
-  if (typeof Palette2 !== 'undefined') Palette2.getPanelEl()?.classList.toggle('tab-active', name === 'saves');
-  _mobileTabsEl?.querySelectorAll('.mobile-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === name);
-  });
 }
 
 // #board-area is a normal flex child on mobile (see style.css) — #mobile-tabs growing/shrinking
@@ -491,24 +472,20 @@ function _toggleMobileTabsCollapsed() {
   _mobileTabsResizeRaf = requestAnimationFrame(step);
 }
 
+// Saves (Palette2) is desktop-only now — its panel is never reparented here, so it just stays
+// wherever _build() created it, hidden by the same body.layout-mobile rule that hides any panel
+// without .tab-active.
 function _enterMobileTabs() {
   _buildMobileTabs();
-  const palPanel  = Palette.getPanelEl();
-  const pal2Panel = (typeof Palette2 !== 'undefined') ? Palette2.getPanelEl() : null;
-  if (palPanel)  _mobileTabContent.appendChild(palPanel);
-  if (pal2Panel) _mobileTabContent.appendChild(pal2Panel);
-  _setMobileTab(_mobileActiveTab);
+  const palPanel = Palette.getPanelEl();
+  if (palPanel) { _mobileTabContent.appendChild(palPanel); palPanel.classList.add('tab-active'); }
 }
 
 function _exitMobileTabs() {
   if (!_mobileTabsEl) return;
-  const main = document.getElementById('main');
-  const palPanel  = Palette.getPanelEl();
-  const pal2Panel = (typeof Palette2 !== 'undefined') ? Palette2.getPanelEl() : null;
-  if (pal2Panel) main.appendChild(pal2Panel);
-  if (palPanel)  main.appendChild(palPanel);
+  const palPanel = Palette.getPanelEl();
+  if (palPanel) document.getElementById('main').appendChild(palPanel);
   palPanel?.classList.remove('tab-active');
-  pal2Panel?.classList.remove('tab-active');
 }
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
@@ -1203,7 +1180,6 @@ function doFlipColors() {
   S.tokens = S.tokens.map(t => ({ ...t, c: t.c === 'w' ? 'b' : 'w' }));
   saveH(); render();
 }
-
 
 function doFlipPositions()  { _hideTokToolbar(); _cancelTouchSelection(); viewFlipH = !viewFlipH; relayout(); render(); }
 function doFlipPositionsV() { _hideTokToolbar(); _cancelTouchSelection(); viewFlipV = !viewFlipV; relayout(); render(); }

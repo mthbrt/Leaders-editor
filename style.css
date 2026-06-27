@@ -7,14 +7,25 @@
 :root {
   --box-bg:    #1b1b32;
   --border:    #2a2a50;
+  /* Lighter edge color, reserved for floating/elevated surfaces (popups, dropdown menus,
+     tooltips) — gives them a crisper boundary than the flatter --border dividers used for
+     in-panel separators, a deliberate cue that they're "lifted" above the page. */
   --border-hl: #3a3a70;
   --accent:    #5050c0;
   --text:      #d0d0ff;
   --text-desc: #7878b0;
   --btn-bg:    #1e1e3a;
   --btn-bg-h:  #2a2a50;
-  --btn-bd:    #3a3a70;
   --btn-c:     #a0a0e0;
+
+  /* Shared corner-radius scale — most rounded UI chrome in the app uses one of these three. */
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  /* The one floating-panel shadow (popups, dropdown menus, tooltips) — previously copy-pasted
+     identically into five separate rules. */
+  --shadow-float: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+
   /* Shared by .mobile-tab-btn (its height) and #mobile-tabs.collapsed (its collapsed-state
      target height) — both must agree exactly, or collapsing would leave a gap or clip the bar. */
   --mobile-tabbar-h: clamp(36px, 11vh, 44px);
@@ -38,7 +49,9 @@ body {
   align-items: center;
   padding: 0 clamp(6px, 2vw, 10px);
   height: clamp(42px, 10vw, 50px);
-  background: var(--box-bg);
+  /* A faint top-to-bottom gradient instead of a flat fill — same base color, just enough
+     graduated depth to read as a distinct "chrome" surface rather than a flat painted bar. */
+  background: linear-gradient(to bottom, #1f1f3a, var(--box-bg));
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   min-width: 0;
@@ -104,10 +117,13 @@ body {
   font-size: 16px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s;
+  transition: background 0.12s, scale 0.08s;
   flex-shrink: 0;
 }
 .btn:hover { background: #141424; color: #ffffff; }
+/* A brief press-down on click — toolbar buttons had hover feedback but nothing for the actual
+   click, which on a precise input device like a mouse reads as unresponsive/unfinished. */
+.btn:active { scale: 0.90; }
 
 /* ── Responsive toolbar ── */
 
@@ -206,6 +222,8 @@ body.layout-mobile #mobile-tabs { display: flex; }
   flex-shrink: 0;
   height: var(--mobile-tabbar-h);
   border-bottom: 1px solid var(--border);
+  /* Same chrome-strip treatment as #toolbar/#pal-header/#pal2-header. */
+  background: linear-gradient(to bottom, #1f1f3a, var(--box-bg));
 }
 .mobile-tab-btn {
   /* Sized to its label, not stretched across the bar — flex:1 (the old behavior) made each tab
@@ -449,6 +467,9 @@ body:not(.no-shadows) #drag-ghost {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  /* Same faint gradient treatment as #toolbar, so all three "chrome" strips read as one
+     consistent surface language instead of #toolbar being the only one with depth. */
+  background: linear-gradient(to bottom, #1f1f3a, var(--box-bg));
 }
 #pal-header  { border-bottom: 1px solid rgba(70,70,160,0.2); }
 #pal2-header { border-bottom: 1px solid var(--border); }
@@ -485,10 +506,6 @@ body:not(.no-shadows) #drag-ghost {
   user-select: none;
 }
 
-.pal-sec-hdr-creation {
-  padding-right: 12px; /* tighter right pad to give edit btn room */
-}
-
 .pal-sec-label {
   font-size: 16px;
   color: rgba(150,150,210,0.85);
@@ -520,7 +537,14 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   min-height: var(--tok-sz, 0px);
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
+  /* Previously had no hover/press feedback at all — a clickable, draggable token with zero
+     response to the cursor read as unfinished. transform/scale don't affect layout (the grid's
+     gap and neighboring items never move), so this is purely a visual "lift," like a game's
+     inventory-slot hover. */
+  transition: transform 0.1s ease;
 }
+.pal-item:hover { transform: scale(1.08); z-index: 1; }
+.pal-item:active { transform: scale(0.96); }
 
 .pal-item img {
   position: absolute;
@@ -657,13 +681,13 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   flex-direction: column;
   align-items: stretch;
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-md);
   padding: 4px;
   z-index: 61;
   isolation: isolate;
   pointer-events: all;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-float);
   min-width: 152px;
   opacity: 0;
   scale: 0.92;
@@ -686,13 +710,13 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   flex-direction: column;
   align-items: stretch;
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-md);
   padding: 4px;
   z-index: 200;
   isolation: isolate;
   pointer-events: all;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-float);
   min-width: 120px;
   opacity: 0;
   scale: 0.92;
@@ -716,8 +740,8 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   width: 10px;
   height: 10px;
   background: var(--box-bg);
-  border-right: 1px solid var(--border);
-  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border-hl);
+  border-top: 1px solid var(--border-hl);
   border-radius: 0 3px 0 0;
   z-index: -1;
 }
@@ -732,8 +756,8 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   width: 10px;
   height: 10px;
   background: var(--box-bg);
-  border-left: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border-hl);
+  border-bottom: 1px solid var(--border-hl);
   border-radius: 0 0 0 3px;
   z-index: -1;
 }
@@ -748,8 +772,8 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   width: 10px;
   height: 10px;
   background: var(--box-bg);
-  border-left: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border-hl);
+  border-bottom: 1px solid var(--border-hl);
   border-radius: 0 0 0 3px;
   z-index: -1;
 }
@@ -760,8 +784,8 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   right: -5px;
   border-left: none;
   border-bottom: none;
-  border-right: 1px solid var(--border);
-  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border-hl);
+  border-top: 1px solid var(--border-hl);
   border-radius: 0 3px 0 0;
   z-index: -1;
 }
@@ -787,6 +811,9 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   text-align: left;
 }
 .tok-tb-btn:hover { background: var(--btn-bg-h); color: #ffffff; }
+/* A full-width menu row scaling down on press would look like it's shrinking away from one
+   edge — a background bump reads as "pressed" without that asymmetry. */
+.tok-tb-btn:active { background: var(--border-hl); }
 
 .tok-tb-sep {
   height: 1px;
@@ -815,8 +842,8 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
 
 #settings-popup {
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-lg);
   width: 340px;
   max-width: 92vw;
   box-shadow: 0 0 20px rgba(0,0,0,0.8);
@@ -916,13 +943,13 @@ body.layout-mobile .setting-row   { padding: 10px; }
   flex-direction: column;
   align-items: stretch;
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-md);
   padding: 4px;
   z-index: 90;
   isolation: isolate;
   pointer-events: all;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-float);
   min-width: 140px;
   opacity: 0;
   scale: 0.92;
@@ -939,8 +966,8 @@ body.layout-mobile .setting-row   { padding: 10px; }
   width: 10px;
   height: 10px;
   background: var(--box-bg);
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border-hl);
+  border-top: 1px solid var(--border-hl);
   border-radius: 3px 0 0 0;
   z-index: -1;
 }
@@ -1017,8 +1044,8 @@ body.layout-mobile .setting-row   { padding: 10px; }
 
 #help-popup {
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-lg);
   width: 420px;
   max-width: 92vw;
   max-height: 80vh;
@@ -1040,7 +1067,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
 #help-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--test);
+  color: var(--text);
   letter-spacing: 0.03em;
   text-align: center;
   grid-column: 2;
@@ -1060,7 +1087,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
   transition: color 0.12s;
   grid-column: 3;
 }
-#help-close:hover { color: var(--test); }
+#help-close:hover { color: var(--text); }
 
 #help-body {
   overflow-y: auto;
@@ -1083,7 +1110,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--test);
+  color: var(--text);
   padding: 10px 2px 5px;
 }
 
@@ -1188,8 +1215,9 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--pal2-pad-x);
-  height: 40px;
+  height: 44px;
   user-select: none;
+  transition: background 0.12s;
 }
 
 .pal2-sec-left {
@@ -1200,6 +1228,14 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   overflow: hidden;
   cursor: pointer;
   flex: 1;
+  border-radius: 5px;
+}
+/* Keyboard-only ring (mouse/touch activation never matches :focus-visible) — this is a <div
+   role="button">, so without this it's focusable (tabindex=0) but gives no visual feedback at
+   all when reached via keyboard. */
+.pal2-sec-left:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Flèche de pliage */
@@ -1224,37 +1260,11 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   min-width: 0;
 }
 
-/* Right side of the header: the position count and the action buttons occupy the same spot —
-   the count shows at rest, and crossfades into the buttons on hover (see .pal2-sec-actions
-   below). Sizing this container off the actions' own footprint (not the badge's) means the
-   header's width never shifts when the two swap. */
 .pal2-sec-right {
   position: relative;
   display: flex;
   align-items: center;
   flex-shrink: 0;
-}
-
-/* Badge compteur */
-.pal2-sec-count {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 600;
-  color: rgb(110,110,170);
-  background: #2a2a50;
-  border-radius: 10px;
-  padding: 2px 6px;
-  font-family: 'Segoe UI', sans-serif;
-  opacity: 1;
-  transition: opacity 0.15s;
-  pointer-events: none;
-}
-.pal2-section-hdr:hover .pal2-sec-count {
-  opacity: 0;
 }
 
 /* Boutons section — visibles au hover (swap with the count above) */
@@ -1265,7 +1275,8 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   opacity: 0;
   transition: opacity 0.15s;
 }
-.pal2-section-hdr:hover .pal2-sec-actions {
+.pal2-section-hdr:hover .pal2-sec-actions,
+.pal2-section-hdr:focus-within .pal2-sec-actions {
   opacity: 1;
 }
 
@@ -1308,6 +1319,7 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
 .pal2-row {
   border-radius: 6px;
   flex-shrink: 0;
+  transition: background 0.12s;
 }
 .pal2-row:hover {
   background: var(--btn-bg-h);
@@ -1323,6 +1335,12 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   cursor: pointer;
   border-radius: 6px;
   gap: 8px;
+}
+/* Keyboard-only ring, same convention as .pal2-sec-left above — .pal2-row-main is a
+   role="button" div, so it needs its own explicit focus style. */
+.pal2-row-main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* Icône point */
@@ -1341,16 +1359,16 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   opacity: 0;
   transition: opacity 0.12s;
 }
-.pal2-row:hover .pal2-row-actions {
+.pal2-row:hover .pal2-row-actions,
+.pal2-row:focus-within .pal2-row-actions {
   opacity: 1;
 }
 
-/* Touch devices have no hover state at all, so the count/action-button swap and the row actions
-   above would otherwise never appear without an explicit tap-and-hold — force them permanently
-   visible there instead. Scoped to (hover: none) so mouse/desktop behavior is untouched (a
-   touchscreen laptop with a mouse still gets normal hover, since it reports hover:hover there). */
+/* Touch devices have no hover state at all, so the action buttons above would otherwise never
+   appear without an explicit tap-and-hold — force them permanently visible there instead. Scoped
+   to (hover: none) so mouse/desktop behavior is untouched (a touchscreen laptop with a mouse
+   still gets normal hover, since it reports hover:hover there). */
 @media (hover: none) {
-  .pal2-sec-count    { opacity: 0; }
   .pal2-sec-actions  { opacity: 1; }
   .pal2-row-actions  { opacity: 1; }
 }
@@ -1403,11 +1421,16 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   color: var(--btn-c);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.1s, color 0.1s;
+  transition: background 0.1s, color 0.1s, scale 0.08s;
 }
 .pal2-action-btn:hover {
   background: var(--btn-bg);
   color: rgb(208,208,255);
+}
+.pal2-action-btn:active { scale: 0.88; }
+.pal2-action-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* ── Inline rename input ── */
@@ -1435,30 +1458,36 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   border-bottom-color: #8080e0;
 }
 
-/* ── + Nouvelle section — même style que .pal-sec-hdr ── */
-.pal2-add-section-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 40px;
-  cursor: pointer;
-  color: rgb(100,100,160);
-  font-size: 13px;
-  font-family: 'Segoe UI', sans-serif;
-}
-.pal2-add-section-row:hover {
-  color: rgb(180,180,240);
-  background: var(--btn-bg);
-}
+/* Mobile: bigger touch targets and more breathing room throughout, not less — this is a
+   touch-only context (no hover affordance at all; see the (hover: none) block above forcing
+   actions permanently visible), so rows and buttons need to read clearly and be comfortably
+   tappable (>=44px, the standard minimum touch-target size) rather than optimized for density
+   the way the mouse-driven desktop sizing is. Overrides --pal2-pad-x so the header/divider/
+   list/rows all grow their inset together. */
+body.layout-mobile .pal2-section { --pal2-pad-x: 18px; }
+body.layout-mobile .pal2-section-hdr { height: 52px; }
+body.layout-mobile .pal2-sec-name    { font-size: 16px; }
+body.layout-mobile .pal2-sec-arrow   { width: 12px; height: 12px; }
 
-/* Mobile: more condensed list rows — less wasted padding around a list that's already shorter.
-   Overrides --pal2-pad-x so the header/divider/list/rows all shrink their inset together. */
-body.layout-mobile .pal2-section { --pal2-pad-x: 14px; }
-body.layout-mobile .pal2-section-hdr { height: 34px; }
-body.layout-mobile .pal2-sec-name    { font-size: 14px; }
-body.layout-mobile .pal2-config-list { padding: 0 var(--pal2-pad-x) 6px; }
-body.layout-mobile .pal2-row-main    { padding: 1px 1px 1px 10px; }
+/* Shared by both the section header's (+/⋮) buttons and each row's (update/rename/delete)
+   buttons — 40x40 comfortably clears the 44px touch-target guideline once the row/header's own
+   padding is added on top, vs. the 28px desktop size sized for mouse precision. A small gap
+   between adjacent buttons (absent on desktop, where mouse precision makes it unnecessary)
+   avoids them butting directly against each other now that they're this much bigger. */
+body.layout-mobile .pal2-action-btn     { width: 40px; height: 40px; border-radius: 8px; }
+body.layout-mobile .pal2-action-btn svg { width: 20px; height: 20px; }
+body.layout-mobile .pal2-sec-actions,
+body.layout-mobile .pal2-row-actions    { gap: 2px; }
+
+body.layout-mobile .pal2-config-list { padding: 0 var(--pal2-pad-x) 10px; gap: 6px; }
+body.layout-mobile .pal2-row-main {
+  /* 40px buttons + 8px top/bottom padding = 56px row height. */
+  padding: 8px 8px 8px 14px;
+  gap: 12px;
+  border-radius: 10px;
+}
+body.layout-mobile .pal2-row-name   { font-size: 15px; }
+body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
 
 /* ── Tooltips Discord-style ── */
 .dc-tooltip-el {
@@ -1488,16 +1517,16 @@ body.layout-mobile .pal2-row-main    { padding: 1px 1px 1px 10px; }
 /* Pointe vers le bas (tooltip au-dessus) */
 .dc-tooltip-el.tt-above::after {
   bottom: -5px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border-hl);
+  border-bottom: 1px solid var(--border-hl);
   border-radius: 0 0 3px 0;
   background: var(--box-bg);
 }
 /* Pointe vers le haut (tooltip en-dessous) */
 .dc-tooltip-el.tt-below::after {
   top: -5px;
-  border-left: 1px solid var(--border);
-  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border-hl);
+  border-top: 1px solid var(--border-hl);
   border-radius: 3px 0 0 0;
   background: var(--box-bg);
 }
@@ -1509,10 +1538,10 @@ body.layout-mobile .pal2-row-main    { padding: 1px 1px 1px 10px; }
 /* Tooltip simple — label bouton toolbar */
 .dc-tooltip-el.tt-simple {
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-md);
   padding: 6px 11px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-float);
 }
 .dc-tt-label {
   font-size: 13px;
@@ -1525,10 +1554,10 @@ body.layout-mobile .pal2-row-main    { padding: 1px 1px 1px 10px; }
 /* Tooltip riche — jeton (nom + icône type + description) */
 .dc-tooltip-el.tt-rich {
   background: var(--box-bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-md);
   padding: 10px 12px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: var(--shadow-float);
   max-width: 230px;
 }
 .dc-tt-header {

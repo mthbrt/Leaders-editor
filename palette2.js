@@ -107,7 +107,6 @@ const Palette2 = (() => {
     _save(); _renderList();
   }
 
-
   function _renameSection(id, raw) {
     const s = sections.find(s => s.id === id);
     if (s && raw.trim()) s.name = raw.trim();
@@ -148,11 +147,6 @@ const Palette2 = (() => {
     _save(); _renderList();
   }
 
-  function _clearAll() {
-    sections = [];
-    _save(); _renderList();
-  }
-
   // ── Section toggle (sans re-render complet) ───────────────────────────────
   function _renderSectionToggle(id) {
     if (!panel) return;
@@ -160,6 +154,7 @@ const Palette2 = (() => {
     const secEl = panel.querySelector(`.pal2-section[data-sid="${id}"]`); if (!secEl) return;
     secEl.querySelector('.pal2-section-body')?.classList.toggle('open', sec.open);
     secEl.querySelector('.pal2-sec-arrow')?.classList.toggle('open', sec.open);
+    secEl.querySelector('.pal2-sec-left')?.setAttribute('aria-expanded', sec.open);
   }
 
   // ── Inline rename input ───────────────────────────────────────────────────
@@ -265,7 +260,7 @@ const Palette2 = (() => {
     if (_dnd.type === 'section') {
       const { before } = _getSectionDrop(clientY, _dnd.el);
       const list = panel.querySelector('#pal2-list');
-      before ? list.insertBefore(ind, before) : list.insertBefore(ind, list.querySelector('.pal2-add-section-row'));
+      before ? list.insertBefore(ind, before) : list.appendChild(ind);
     } else {
       const target = _getConfigDrop(clientY, _dnd.el);
       if (target.intoSection) {
@@ -534,19 +529,18 @@ const Palette2 = (() => {
       const hdr = document.createElement('div');
       hdr.className = 'pal2-section-hdr';
       hdr.innerHTML = `
-        <div class="pal2-sec-left">
+        <div class="pal2-sec-left" tabindex="0" role="button" aria-expanded="${sec.open}">
           <svg class="pal2-sec-arrow ${sec.open ? 'open' : ''}" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="2 3 5 7 8 3"/>
           </svg>
           <span class="pal2-sec-name">${_esc(sec.name)}</span>
         </div>
         <div class="pal2-sec-right">
-          <span class="pal2-sec-count">${sec.configs.length}</span>
           <div class="pal2-sec-actions">
-            <button class="pal2-action-btn pal2-btn-sec-add"  title="${_esc(_t('pal2TitleNewSave'))}">
+            <button class="pal2-action-btn pal2-btn-sec-add"  title="${_esc(_t('pal2TitleNewSave'))}" aria-label="${_esc(_t('pal2TitleNewSave'))}">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
             </button>
-            <button class="pal2-action-btn pal2-btn-sec-menu" title="${_esc(_t('pal2TitleMore'))}">
+            <button class="pal2-action-btn pal2-btn-sec-menu" title="${_esc(_t('pal2TitleMore'))}" aria-label="${_esc(_t('pal2TitleMore'))}">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
             </button>
           </div>
@@ -567,6 +561,12 @@ const Palette2 = (() => {
       hdr.querySelector('.pal2-sec-left').addEventListener('click', e => {
         if (e.target.closest('input')) return;
         e.stopPropagation(); _toggleSection(sec.id);
+      });
+      // role="button" on a div carries no native Enter/Space activation — wire it explicitly so
+      // the section is actually keyboard-operable, not just visually focusable.
+      hdr.querySelector('.pal2-sec-left').addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault(); e.stopPropagation(); _toggleSection(sec.id);
       });
       hdr.querySelector('.pal2-sec-name').addEventListener('dblclick', e => {
         e.stopPropagation(); startRename();
@@ -594,19 +594,19 @@ const Palette2 = (() => {
         row.className  = 'pal2-row';
         row.dataset.id = cfg.id;
         row.innerHTML  = `
-          <div class="pal2-row-main">
+          <div class="pal2-row-main" tabindex="0" role="button">
             <div class="pal2-row-icon">
               <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><circle cx="4.5" cy="4.5" r="2.5"/></svg>
             </div>
             <span class="pal2-row-name">${_esc(cfg.name)}</span>
             <div class="pal2-row-actions">
-              <button class="pal2-action-btn pal2-btn-update" title="${_esc(_t('pal2TitleUpdate'))}">
+              <button class="pal2-action-btn pal2-btn-update" title="${_esc(_t('pal2TitleUpdate'))}" aria-label="${_esc(_t('pal2TitleUpdate'))}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg>
               </button>
-              <button class="pal2-action-btn pal2-btn-rename" title="${_esc(_t('pal2TitleRename'))}">
+              <button class="pal2-action-btn pal2-btn-rename" title="${_esc(_t('pal2TitleRename'))}" aria-label="${_esc(_t('pal2TitleRename'))}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
               </button>
-              <button class="pal2-action-btn pal2-btn-del" title="${_esc(_t('pal2TitleDelete'))}">
+              <button class="pal2-action-btn pal2-btn-del" title="${_esc(_t('pal2TitleDelete'))}" aria-label="${_esc(_t('pal2TitleDelete'))}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M5 6l1 14h12l1-14M9 6V4h6v2m-5 4v6m4-6v6"/></svg>
               </button>
             </div>
@@ -615,6 +615,11 @@ const Palette2 = (() => {
         row.querySelector('.pal2-row-main').addEventListener('click', e => {
           if (e.target.closest('.pal2-row-actions, input')) return;
           _restore(cfg);
+        });
+        row.querySelector('.pal2-row-main').addEventListener('keydown', e => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          if (e.target.closest('.pal2-row-actions, input')) return;
+          e.preventDefault(); _restore(cfg);
         });
         row.querySelector('.pal2-row-name').addEventListener('dblclick', e => {
           e.stopPropagation();
