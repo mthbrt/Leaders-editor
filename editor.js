@@ -24,7 +24,7 @@ const LANGS = {
     secLeaders:       'Leaders',
     pal2Title:          'SAUVEGARDES',
     pal2BtnClear:       'Tout effacer',
-    pal2AddSection:     'Nouvelle section',
+    pal2AddSection:     'Ajouter une section',
     pal2DefaultSection: 'Section',
     pal2DefaultConfig:  'Position',
     pal2LegacySection:  'Général',
@@ -33,6 +33,7 @@ const LANGS = {
     pal2TitleDelete:    'Supprimer',
     pal2TitleOverwrite: 'Écraser',
     pal2TitleUpdate:    'Mettre à jour la sauvegarde',
+    pal2TitleMore:      'Plus d\'options',
     btnHelp:            'Aide',
     helpTitle:          'Commandes',
     helpSecTokens:      'Personnages',
@@ -70,7 +71,7 @@ const LANGS = {
     secLeaders:       'Leaders',
     pal2Title:          'SAVES',
     pal2BtnClear:       'Clear all',
-    pal2AddSection:     'New section',
+    pal2AddSection:     'Add section',
     pal2DefaultSection: 'Section',
     pal2DefaultConfig:  'Position',
     pal2LegacySection:  'General',
@@ -79,6 +80,7 @@ const LANGS = {
     pal2TitleDelete:    'Delete',
     pal2TitleOverwrite: 'Overwrite',
     pal2TitleUpdate:    'Update save',
+    pal2TitleMore:      'More options',
     btnHelp:            'Help',
     helpTitle:          'Controls',
     helpSecTokens:      'Characters',
@@ -100,6 +102,7 @@ const t = key => (LANGS[currentLang] || LANGS.fr)[key] || key;
 
 function _applyLang() {
   const TOOLTIP_IDS = [
+    ['btn-reset-board',    'palReset'],
     ['btn-undo',           'btnUndo'],
     ['btn-redo',           'btnRedo'],
     ['btn-flip-colors',    'btnFlipColors'],
@@ -1491,6 +1494,7 @@ function init() {
     }
   });
 
+  document.getElementById('btn-reset-board'   ).addEventListener('click', doReset);
   document.getElementById('btn-undo'          ).addEventListener('click', undo);
   document.getElementById('btn-redo'          ).addEventListener('click', redo);
   document.getElementById('btn-flip-colors'   ).addEventListener('click', doFlipColors);

@@ -174,14 +174,11 @@ const Palette = (() => {
     panel.id = 'pal-panel';
     panel.innerHTML = `
       <div id="pal-header"><span id="pal-title"></span></div>
-      <div id="pal-body"><div id="pal-sections"></div></div>
-      <div id="pal-footer"><button id="pal-reset"></button></div>`;
+      <div id="pal-body"><div id="pal-sections"></div></div>`;
     main.appendChild(panel);
 
     _buildSections();
 
-    panel.querySelector('#pal-reset').addEventListener('click', e => { e.stopPropagation(); doReset(); });
-    panel.querySelector('#pal-reset').addEventListener('mousedown', e => e.stopPropagation());
     panel.querySelector('#pal-header').addEventListener('mousedown', e => e.stopPropagation());
     panel.addEventListener('mousedown', e => { if (e.target.closest('.pal-sec-hdr')) e.stopPropagation(); });
 
@@ -333,8 +330,6 @@ const Palette = (() => {
     if (!panel) return;
     const titleEl = panel.querySelector('#pal-title');
     if (titleEl) titleEl.textContent = t('palTitle');
-    const resetEl = panel.querySelector('#pal-reset');
-    if (resetEl) resetEl.textContent = t('palReset');
 
     // Les headers sont présents pour les groupes 1+ (gi > 0)
     panel.querySelectorAll('.pal-sec-hdr[data-group-index]').forEach(hdr => {

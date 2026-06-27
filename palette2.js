@@ -107,6 +107,7 @@ const Palette2 = (() => {
     _save(); _renderList();
   }
 
+
   function _renameSection(id, raw) {
     const s = sections.find(s => s.id === id);
     if (s && raw.trim()) s.name = raw.trim();
@@ -394,6 +395,83 @@ const Palette2 = (() => {
     el.addEventListener('touchcancel', cancelPress);
   }
 
+  // ── Section ⋮ menu — same visual design as the board's token toolbar (#tok-tb / #pal-tok-tb
+  // in editor.js/palette.js: a small floating box of .tok-tb-btn rows with a .tok-tb-sep
+  // divider), reused here via the same CSS classes rather than a parallel set of styles. ──
+  let _secMenuEl = null, _secMenuCloseFn = null;
+
+  function _closeSectionMenu() {
+    if (_secMenuCloseFn) { _secMenuCloseFn(); _secMenuCloseFn = null; }
+  }
+
+  function _openSectionMenu(sec, anchorBtn, startRename) {
+    _closeSectionMenu();
+
+    const el = _secMenuEl || (_secMenuEl = document.createElement('div'));
+    el.id = 'pal2-sec-menu';
+    el.className = '';
+    el.innerHTML = `
+      <button class="tok-tb-btn" data-action="rename">${_esc(_t('pal2TitleRename'))}</button>
+      <button class="tok-tb-btn" data-action="add-section">${_esc(_t('pal2AddSection'))}</button>
+      <div class="tok-tb-sep"></div>
+      <button class="tok-tb-btn tok-tb-btn-danger" data-action="delete">${_esc(_t('pal2TitleDelete'))}</button>`;
+    document.body.appendChild(el);
+    el.style.display    = 'flex';
+    el.style.visibility = 'hidden';
+    el.style.transition = 'none';
+    void el.offsetWidth;
+
+    // Same placement rule as _placePalToolbar (palette.js): open to the right of the icon by
+    // default (arrow on the menu's left edge, pointing back at it), falling back to the left
+    // only if there's no room on the right — same GAP, same clamping, same arrow-y formula.
+    const br  = anchorBtn.getBoundingClientRect();
+    const ew  = el.offsetWidth, eh = el.offsetHeight;
+    const GAP = 10;
+    const btnCY = br.top + br.height / 2;
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    let x = br.right + GAP;
+    let arrowSide = 'left';
+    if (x + ew > vw - 8) { x = br.left - ew - GAP; arrowSide = 'right'; }
+
+    let y = btnCY - eh / 2;
+    y = Math.max(8, Math.min(y, vh - eh - 8));
+
+    const arrowY = Math.max(14, Math.min(btnCY - y, eh - 14));
+    el.style.setProperty('--arrow-y', arrowY + 'px');
+    el.classList.add(arrowSide === 'right' ? 'pal-tb-arrow-right' : 'pal-tb-arrow-left');
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+
+    requestAnimationFrame(() => {
+      el.style.transition = '';
+      el.style.visibility = '';
+      el.classList.add('open');
+    });
+
+    const onAction = e => {
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      if (!action) return;
+      e.preventDefault(); e.stopPropagation();
+      _closeSectionMenu();
+      if (action === 'rename')           startRename();
+      else if (action === 'add-section') _addSection();
+      else if (action === 'delete')      _deleteSection(sec.id);
+    };
+    el.addEventListener('mousedown', onAction);
+
+    const onOutside = e => { if (!el.contains(e.target)) _closeSectionMenu(); };
+    document.addEventListener('mousedown', onOutside, true);
+
+    _secMenuCloseFn = () => {
+      el.classList.remove('open');
+      el.removeEventListener('mousedown', onAction);
+      document.removeEventListener('mousedown', onOutside, true);
+      el.remove();
+      if (_secMenuEl === el) _secMenuEl = null;
+    };
+  }
+
   // ── Action button tooltips ─────────────────────────────────────────────────
   function _initActionTooltips() {
     if (!panel) return;
@@ -465,53 +543,42 @@ const Palette2 = (() => {
         <div class="pal2-sec-right">
           <span class="pal2-sec-count">${sec.configs.length}</span>
           <div class="pal2-sec-actions">
-            <button class="pal2-action-btn pal2-btn-sec-add"    title="${_esc(_t('pal2TitleNewSave'))}">
+            <button class="pal2-action-btn pal2-btn-sec-add"  title="${_esc(_t('pal2TitleNewSave'))}">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
             </button>
-            <button class="pal2-action-btn pal2-btn-sec-rename" title="${_esc(_t('pal2TitleRename'))}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-            </button>
-            <button class="pal2-action-btn pal2-btn-sec-del"    title="${_esc(_t('pal2TitleDelete'))}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0-1 14H6L5 6m5 4v6m4-6v6M9 6V4h6v2"/></svg>
+            <button class="pal2-action-btn pal2-btn-sec-menu" title="${_esc(_t('pal2TitleMore'))}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
             </button>
           </div>
         </div>`;
+
+      const startRename = () => {
+        const nameEl = hdr.querySelector('.pal2-sec-name');
+        if (!nameEl || nameEl.querySelector('input')) return;
+        const original = sec.name;
+        nameEl.innerHTML = '';
+        nameEl.appendChild(_mkInlineInput(original, original,
+          val => _renameSection(sec.id, val || original),
+          ()  => _renderList()
+        ));
+        nameEl.classList.add('editing');
+      };
 
       hdr.querySelector('.pal2-sec-left').addEventListener('click', e => {
         if (e.target.closest('input')) return;
         e.stopPropagation(); _toggleSection(sec.id);
       });
       hdr.querySelector('.pal2-sec-name').addEventListener('dblclick', e => {
-        e.stopPropagation();
-        const nameEl = hdr.querySelector('.pal2-sec-name');
-        if (!nameEl || nameEl.querySelector('input')) return;
-        const original = sec.name;
-        nameEl.innerHTML = '';
-        nameEl.appendChild(_mkInlineInput(original, original,
-          val => _renameSection(sec.id, val || original),
-          ()  => _renderList()
-        ));
-        nameEl.classList.add('editing');
+        e.stopPropagation(); startRename();
       });
       hdr.querySelector('.pal2-btn-sec-add').addEventListener('mousedown', e => {
         e.preventDefault(); e.stopPropagation();
         _addConfig(sec.id);
         if (!sec.open) { sec.open = true; _save(); _renderSectionToggle(sec.id); }
       });
-      hdr.querySelector('.pal2-btn-sec-rename').addEventListener('mousedown', e => {
+      hdr.querySelector('.pal2-btn-sec-menu').addEventListener('mousedown', e => {
         e.preventDefault(); e.stopPropagation();
-        const nameEl = hdr.querySelector('.pal2-sec-name');
-        if (!nameEl || nameEl.querySelector('input')) return;
-        const original = sec.name;
-        nameEl.innerHTML = '';
-        nameEl.appendChild(_mkInlineInput(original, original,
-          val => _renameSection(sec.id, val || original),
-          ()  => _renderList()
-        ));
-        nameEl.classList.add('editing');
-      });
-      hdr.querySelector('.pal2-btn-sec-del').addEventListener('mousedown', e => {
-        e.preventDefault(); e.stopPropagation(); _deleteSection(sec.id);
+        _openSectionMenu(sec, hdr.querySelector('.pal2-btn-sec-menu'), startRename);
       });
 
       _attachDrag(hdr, 'section', sec.id, null);
@@ -534,7 +601,7 @@ const Palette2 = (() => {
             <span class="pal2-row-name">${_esc(cfg.name)}</span>
             <div class="pal2-row-actions">
               <button class="pal2-action-btn pal2-btn-update" title="${_esc(_t('pal2TitleUpdate'))}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg>
               </button>
               <button class="pal2-action-btn pal2-btn-rename" title="${_esc(_t('pal2TitleRename'))}">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
@@ -599,15 +666,11 @@ const Palette2 = (() => {
     panel.id = 'pal2-panel';
     panel.innerHTML = `
       <div id="pal2-header"><span id="pal2-title">${_t('pal2Title')}</span></div>
-      <div id="pal2-body"><div id="pal2-list"></div></div>
-      <div id="pal2-footer"><button id="pal2-btn-add-section">${_t('pal2AddSection')}</button></div>`;
+      <div id="pal2-body"><div id="pal2-list"></div></div>`;
     main.appendChild(panel);
 
     panel.addEventListener('mousedown',   e => e.stopPropagation());
     panel.addEventListener('contextmenu', e => e.preventDefault());
-    panel.querySelector('#pal2-btn-add-section').addEventListener('mousedown', e => {
-      e.preventDefault(); e.stopPropagation(); _addSection();
-    });
 
     _load(); _renderList(); _syncCollapsed();
   }
@@ -644,8 +707,6 @@ const Palette2 = (() => {
     if (!panel) return;
     const titleEl = panel.querySelector('#pal2-title');
     if (titleEl) titleEl.textContent = _t('pal2Title');
-    const addBtn  = panel.querySelector('#pal2-btn-add-section');
-    if (addBtn) addBtn.textContent = _t('pal2AddSection');
     _renderList();
   }
 
