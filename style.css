@@ -650,35 +650,6 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   --target-r:  calc((var(--token-r) + var(--outline-r)) / 2);
 }
 
-#pal-footer, #pal2-footer {
-  padding: 10px;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-}
-#pal-footer  { border-top: 1px solid rgba(70,70,160,0.2); }
-#pal2-footer { border-top: 1px solid var(--border); }
-body.layout-mobile #pal-footer,
-body.layout-mobile #pal2-footer { padding: 6px; }
-
-/* Shared pill-button style for the two side panels' footer actions */
-#pal-reset, #pal2-btn-add-section {
-  background: var(--btn-bg);
-  border: 1px solid var(--btn-bd);
-  border-radius: 20px;
-  color: var(--btn-c);
-  font-size: 13px;
-  font-family: 'Segoe UI', sans-serif;
-  padding: 8px 0;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
-  width: 50%;
-  max-width: 160px;
-}
-#pal2-btn-add-section { text-align: center; }
-#pal-reset:hover, #pal2-btn-add-section:hover { background: var(--btn-bg-h); }
-
-
 /* ── Token toolbar — même style que les tooltips, à droite du jeton ── */
 #tok-tb {
   position: absolute;
@@ -706,8 +677,10 @@ body.layout-mobile #pal2-footer { padding: 6px; }
   scale: 1;
 }
 
-/* ── Palette token toolbar — même design, attaché au body (position:fixed) ── */
-#pal-tok-tb {
+/* ── Palette token toolbar — même design, attaché au body (position:fixed) ──
+   Shared verbatim with #pal2-sec-menu (the saves-section ⋮ menu): same box, same arrow, same
+   open/close animation — not a parallel set of near-duplicate rules. */
+#pal-tok-tb, #pal2-sec-menu {
   position: fixed;
   display: none;
   flex-direction: column;
@@ -725,16 +698,16 @@ body.layout-mobile #pal2-footer { padding: 6px; }
   scale: 0.92;
   transition: opacity 0.15s ease, scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-#pal-tok-tb.pal-tb-arrow-right { transform-origin: right center; }
-#pal-tok-tb.pal-tb-arrow-left  { transform-origin: left center; }
-#pal-tok-tb.open {
+#pal-tok-tb.pal-tb-arrow-right, #pal2-sec-menu.pal-tb-arrow-right { transform-origin: right center; }
+#pal-tok-tb.pal-tb-arrow-left,  #pal2-sec-menu.pal-tb-arrow-left  { transform-origin: left center; }
+#pal-tok-tb.open, #pal2-sec-menu.open {
   display: flex;
   opacity: 1;
   scale: 1;
 }
 
 /* Flèche pointant vers la droite (menu à gauche du jeton, flèche sur bord droit) */
-#pal-tok-tb.pal-tb-arrow-right::before {
+#pal-tok-tb.pal-tb-arrow-right::before, #pal2-sec-menu.pal-tb-arrow-right::before {
   content: '';
   position: absolute;
   right: -5px;
@@ -750,7 +723,7 @@ body.layout-mobile #pal2-footer { padding: 6px; }
 }
 
 /* Flèche pointant vers la gauche (menu à droite du jeton, flèche sur bord gauche) */
-#pal-tok-tb.pal-tb-arrow-left::before {
+#pal-tok-tb.pal-tb-arrow-left::before, #pal2-sec-menu.pal-tb-arrow-left::before {
   content: '';
   position: absolute;
   left: -5px;
@@ -822,8 +795,8 @@ body.layout-mobile #pal2-footer { padding: 6px; }
 }
 
 
-#tok-del { color: #e05555; }
-#tok-del:hover {
+#tok-del, .tok-tb-btn-danger { color: #e05555; }
+#tok-del:hover, .tok-tb-btn-danger:hover {
   background: rgba(224,85,85,0.12) !important;
   color: #f47474 !important;
 }
@@ -1372,6 +1345,16 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   opacity: 1;
 }
 
+/* Touch devices have no hover state at all, so the count/action-button swap and the row actions
+   above would otherwise never appear without an explicit tap-and-hold — force them permanently
+   visible there instead. Scoped to (hover: none) so mouse/desktop behavior is untouched (a
+   touchscreen laptop with a mouse still gets normal hover, since it reports hover:hover there). */
+@media (hover: none) {
+  .pal2-sec-count    { opacity: 0; }
+  .pal2-sec-actions  { opacity: 1; }
+  .pal2-row-actions  { opacity: 1; }
+}
+
 /* Active config row */
 .pal2-row-active {
   background: rgba(80, 60, 180, 0.18);
@@ -1468,8 +1451,6 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   color: rgb(180,180,240);
   background: var(--btn-bg);
 }
-
-/* ── Footer / reset button — see #pal-footer, #pal2-footer above ── */
 
 /* Mobile: more condensed list rows — less wasted padding around a list that's already shorter.
    Overrides --pal2-pad-x so the header/divider/list/rows all shrink their inset together. */
