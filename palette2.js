@@ -76,6 +76,9 @@ const Palette2 = (() => {
     S.banned    = JSON.parse(JSON.stringify(snap.banned  || []));
     S.nid       = S.tokens.length ? Math.max(...S.tokens.map(t => t.id)) + 1 : 0;
     const used  = new Set(S.tokens.map(t => t.name));
+    // See editor.js's _loadState: a Frog riding another token is that token's own `frog` flag,
+    // never a token named '22' — without this it would look available in the palette again.
+    if (S.tokens.some(t => t.frog)) used.add('22');
     S.palette   = { lancement: [], vermillon: [], archetypes: [], leaders: [], other: [] };
     for (const n of (typeof ALL_NAMES !== 'undefined' ? ALL_NAMES : [])) {
       if (!used.has(n)) {
@@ -428,6 +431,10 @@ const Palette2 = (() => {
   // items: [{ label, danger?, onClick }] — a { sep: true } entry renders a divider instead.
   function _openContextMenu(x, y, items) {
     _closeContextMenu();
+    // Synchronous, not deferred to the rAF below (that's only for the visual reveal) — see
+    // editor.js's _openCtxMenu comment: a stale deferred _menuOpened() landing after a rapid
+    // reopen's own _menuClosed() would permanently inflate the shared counter.
+    _menuOpened();
 
     const el = _ctxMenuEl || (_ctxMenuEl = document.createElement('div'));
     el.id = 'pal2-ctx-menu';
@@ -459,7 +466,6 @@ const Palette2 = (() => {
       el.style.transition = '';
       el.style.visibility = '';
       el.classList.add('open');
-      _menuOpened();
     });
 
     const onAction = e => {

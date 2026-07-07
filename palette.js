@@ -214,6 +214,10 @@ const Palette = (() => {
     el.id = 'pal-filter-menu';
     document.body.appendChild(el);
     _filterMenuEl = el;
+    // Synchronous, not deferred to the rAF below (that's only for the visual reveal) — see
+    // editor.js's _openCtxMenu comment: a stale deferred _menuOpened() landing after a rapid
+    // reopen's own _menuClosed() would permanently inflate the shared counter.
+    _menuOpened();
     _renderFilterMenuBody();
 
     el.style.display    = 'flex';
@@ -236,7 +240,6 @@ const Palette = (() => {
       el.style.transition = '';
       el.style.visibility = '';
       el.classList.add('open');
-      _menuOpened();
     });
 
     const onAction = e => {

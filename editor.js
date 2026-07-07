@@ -331,6 +331,14 @@ function _palRemove(name) {
   S.palette = { ...S.palette, [key]: (S.palette[key] || []).filter(n => n !== name) };
 }
 
+// Returns a token being removed from the board (deleted, or having its identity replaced) back to
+// the palette — including the Frog (id 22) if it was riding this token, which would otherwise be
+// lost from the game entirely (neither on the board nor available in the palette).
+function _palReturnToken(tok) {
+  _palAdd(tok.name);
+  if (tok.frog) _palAdd('22');
+}
+
 // ── BAN HELPERS ───────────────────────────────────────────────────────────────
 function isBanned(name)  { return (S.banned || []).includes(name); }
 function doBan(name)     { if (isBanned(name)) return; S.banned = [...(S.banned || []), name]; saveH(); render(); }
@@ -927,7 +935,7 @@ function onTouchEnd(e) {
     if (tok) {
       if (inP || !cell) {
         S.tokens = S.tokens.filter(t => t.id !== drag.id);
-        _palAdd(tok.name);
+        _palReturnToken(tok);
       } else {
         const other = S.tokens.find(t => t.cell === cell.id && t.id !== drag.id);
         if (other) {
@@ -963,7 +971,7 @@ function onTouchEnd(e) {
       const palName = Palette.palAt(x, y);
       if (palName) {
         const tok = S.tokens.find(t => t.id === _selected.id);
-        if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName, frog: false } : t); _palRemove(palName); saveH(); }
+        if (tok) { _palReturnToken(tok); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName, frog: false } : t); _palRemove(palName); saveH(); }
       }
     } // else: tap outside the board just deselects, no deletion
     _cancelTouchSelection(); render(); e.preventDefault(); return;
@@ -1037,6 +1045,11 @@ function _closeCtxMenu(elId) {
 // items: [{ label, danger?, onClick }] — a { sep: true } entry renders a divider instead.
 function _openCtxMenu(elId, x, y, items) {
   _closeCtxMenu(elId);
+  // Paired with _closeCtxMenu synchronously (not deferred to the rAF below, which is only there
+  // for the visual reveal) — otherwise a rapid reopen of the same elId before that rAF fires would
+  // let the stale _menuOpened() land after its own _menuClosed(), permanently inflating the count
+  // and leaving body.menu-open (pointer-events:none) stuck forever.
+  _menuOpened();
 
   let el = document.getElementById(elId);
   if (!el) { el = document.createElement('div'); el.id = elId; document.body.appendChild(el); }
@@ -1067,7 +1080,6 @@ function _openCtxMenu(elId, x, y, items) {
     el.style.transition = '';
     el.style.visibility = '';
     el.classList.add('open');
-    _menuOpened();
   });
 
   const onAction = e => {
@@ -1113,10 +1125,13 @@ function _placeTokToolbar(x, y) {
 
   const fr = currentLang === 'fr';
   const id = tokTbId;
-  // Leaders (type 'd') and the Frog itself (id 22) can never become a Frog — only offer the
-  // toggle when transforming is actually possible, or the token is already transformed (so it
-  // can still be detransformed).
-  const canFrog = tok.name !== '22' && _getTokenData(tok.name)?.type !== 'd';
+  // Leaders (type 'd') and the Frog itself (id 22) can never become a Frog. There's only ever one
+  // Frog character (like any other), so also require it to actually be sitting in the palette —
+  // the same scarcity the drag-and-drop transform already enforces (dragging it from the palette
+  // is only possible while it's there). Checking the palette itself (rather than "is some other
+  // token's frog flag set") also correctly excludes it while it's a standalone board token.
+  const frogAvailable = S.palette.vermillon.includes('22');
+  const canFrog = tok.name !== '22' && _getTokenData(tok.name)?.type !== 'd' && frogAvailable;
   const items = [
     {
       label: fr ? 'Changer de couleur' : 'Toggle color',
@@ -1130,7 +1145,9 @@ function _placeTokToolbar(x, y) {
         ? (fr ? 'Détransformer' : 'Remove Transformation')
         : (fr ? 'Transformer en grenouille' : 'Transform into Frog'),
       onClick: () => {
-        S.tokens = S.tokens.map(t => t.id === id ? { ...t, frog: !t.frog } : t);
+        const turningOn = !tok.frog;
+        S.tokens = S.tokens.map(t => t.id === id ? { ...t, frog: turningOn } : t);
+        turningOn ? _palRemove('22') : _palAdd('22');
         tokTbId = null; saveH(); render();
       },
     }] : []),
@@ -1140,7 +1157,7 @@ function _placeTokToolbar(x, y) {
       danger: true,
       onClick: () => {
         const tk = S.tokens.find(t => t.id === id);
-        if (tk) _palAdd(tk.name);
+        if (tk) _palReturnToken(tk);
         S.tokens = S.tokens.filter(t => t.id !== id);
         tokTbId = null; saveH(); render();
       },
@@ -1179,7 +1196,7 @@ function onDown(e) {
     const n = Palette.palAt(x, y);
     if (n && _selected?.type === 'brd') {
       const tok = S.tokens.find(t => t.id === _selected.id);
-      if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: n, frog: false } : t); _palRemove(n); saveH(); }
+      if (tok) { _palReturnToken(tok); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: n, frog: false } : t); _palRemove(n); saveH(); }
       _cancelTouchSelection(); render(); return;
     }
     if (n) { drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y }; dpos = { x, y }; render(); }
@@ -1264,7 +1281,7 @@ function onUp(e) {
       } else {
         if (inP || !cell) {
           S.tokens = S.tokens.filter(t => t.id !== drag.id);
-          _palAdd(tok.name);
+          _palReturnToken(tok);
         } else {
           const other = S.tokens.find(t => t.cell === cell.id && t.id !== drag.id);
           if (other) {
@@ -1294,10 +1311,10 @@ function onUp(e) {
         // of replacing its character (board-to-board Frog drags keep the normal swap behavior).
         S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, frog: true } : t);
       } else if (other) {
-        // Plain swap (also covers Frog-onto-Frog and Frog-onto-Leader) — the old character goes
-        // back to the palette and the target cell's frog flag is cleared, exactly like a normal
-        // character exchange.
-        _palAdd(other.name);
+        // Plain swap (also covers Frog-onto-Frog and Frog-onto-Leader) — the old character (and
+        // its Frog, if it had one) goes back to the palette; the target cell's own frog flag is
+        // cleared, exactly like a normal character exchange.
+        _palReturnToken(other);
         S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, name: drag.name, c: drag.c, frog: false } : t);
       } else {
         S.tokens = [...S.tokens, { id: S.nid++, cell: cell.id, name: drag.name, c: drag.c }];
@@ -1333,6 +1350,10 @@ function doReset() {
 
 function _loadState({ tokens, banned }) {
   const used = new Set(tokens.map(t => t.name));
+  // A Frog riding another token is stored as that token's own `frog` flag, never as a token named
+  // '22' — without this, loading a state with a transformed token would leave the Frog looking
+  // available again in the palette even though it's actively in use.
+  if (tokens.some(t => t.frog)) used.add('22');
   const palette = { lancement: [], vermillon: [], leaders: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
   S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, banned: banned || [] };
@@ -1625,7 +1646,7 @@ function init() {
       const hoverTok = tokAt(mousePos.x, mousePos.y);
       if (hoverTok && (e.key === 'c' || e.key === 'C')) toggleC(hoverTok.id);
       if (hoverTok && (e.key === 'Delete' || e.key === 'Backspace')) {
-        _palAdd(hoverTok.name);
+        _palReturnToken(hoverTok);
         S.tokens = S.tokens.filter(t => t.id !== hoverTok.id);
         saveH(); render();
       }
