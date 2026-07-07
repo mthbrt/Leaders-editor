@@ -397,6 +397,11 @@ const Palette2 = (() => {
         pressTimer = null;
         if (navigator.vibrate) navigator.vibrate(40);
         startDrag(pressX, pressY);
+        // Same physical gesture that also fires the browser's own native long-press-to-contextmenu
+        // (on release) — mark it so the hdr/row 'contextmenu' listeners below know to ignore that
+        // trailing event instead of popping their rename/delete menu mid-drag (see editor.js's
+        // GHOST_TAP_MS for the same pattern applied to board tokens).
+        _longPressEndTime = Date.now();
         document.addEventListener('touchmove',   _dndOnTouchMove, { passive: false });
         document.addEventListener('touchend',    _dndOnTouchEnd);
         document.addEventListener('touchcancel', _dndOnTouchCancel);
@@ -469,8 +474,13 @@ const Palette2 = (() => {
 
     const onOutside = e => { if (!el.contains(e.target)) _closeContextMenu(); };
     document.addEventListener('mousedown', onOutside, true);
-    // Dismisses on a right-click with no menu of its own (e.g. the panel background).
-    const onContext = e => { if (!el.contains(e.target)) _closeContextMenu(); };
+    // Same reasoning as editor.js's _openCtxMenu: always preventDefault, but ignore it as a
+    // dismiss signal within GHOST_TAP_MS (a touch long-press's own trailing native event).
+    const onContext = e => {
+      e.preventDefault();
+      if (Date.now() - _longPressEndTime < GHOST_TAP_MS) return;
+      if (!el.contains(e.target)) _closeContextMenu();
+    };
     document.addEventListener('contextmenu', onContext, true);
 
     _ctxMenuCloseFn = () => {
@@ -605,6 +615,7 @@ const Palette2 = (() => {
       });
       hdr.addEventListener('contextmenu', e => {
         e.preventDefault(); e.stopPropagation();
+        if (Date.now() - _longPressEndTime < GHOST_TAP_MS) return; // see _attachDrag's touchstart
         _openContextMenu(e.clientX, e.clientY, [
           { label: _t('pal2TitleRename'),                onClick: startRename },
           { label: _t('pal2AddSection'),                  onClick: _addSection },
@@ -678,6 +689,7 @@ const Palette2 = (() => {
         });
         row.addEventListener('contextmenu', e => {
           e.preventDefault(); e.stopPropagation();
+          if (Date.now() - _longPressEndTime < GHOST_TAP_MS) return; // see _attachDrag's touchstart
           _openContextMenu(e.clientX, e.clientY, [
             { label: _t('pal2TitleRename'),                 onClick: startRenameConfig },
             { label: _t('pal2TitleUpdate'),                 onClick: () => _updateConfig(sec.id, cfg.id) },

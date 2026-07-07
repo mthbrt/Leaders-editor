@@ -6,6 +6,10 @@
 
 button, input, select, textarea {
   font-family: inherit;
+  /* #main has touch-action:none (touch.css), but #toolbar and the Settings/Help/language popups
+     are siblings of #main, not descendants — without this, their buttons keep the browser's
+     default double-tap-zoom disambiguation delay, which can swallow fast repeated taps. */
+  touch-action: manipulation;
 }
 
 :root {
@@ -912,6 +916,8 @@ body.menu-open #lang-submenu { pointer-events: auto; }
   padding: 14px;
   cursor: pointer;
   transition: background 0.12s;
+  touch-action: manipulation; /* a <div>, not a <button>, in #settings-overlay — a sibling of
+                                  #main, so it needs its own override (see the button rule above) */
 }
 .setting-row:hover { background: var(--bg-2); }
 .setting-row-lang { cursor: pointer; padding-top: 9px; padding-bottom: 9px; }
@@ -995,6 +1001,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
   font-size: 13px;
   color: var(--text-2);
   cursor: pointer;
+  touch-action: manipulation; /* a <div>, not a <button> — same reasoning as the rule above */
 }
 .lang-option:hover { background: var(--bg-2); color: var(--text-1); border-radius: 5px; }
 .lang-option.active { background: var(--bg-2); color: var(--text-1); border-radius: 5px; }

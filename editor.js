@@ -800,6 +800,10 @@ function _cancelTouchSelection() {
 }
 
 // ── LONG-PRESS STATE ──────────────────────────────────────────────────────────
+// GHOST_TAP_MS is the window after a long-press-opened menu during which trailing events from
+// that same physical gesture are still arriving and must be ignored rather than treated as a new,
+// separate one — used in onTouchStart/onTouchEnd below, and in each context menu's own
+// document-level 'contextmenu' listener (_openCtxMenu here, plus palette.js/palette2.js).
 let _longPressTimer = null;
 let _longPressFired = false;
 let _longPressEndTime = 0;
@@ -826,14 +830,19 @@ function _closeAllToolbars(target) {
 
 // ── RIGHT-CLICK / LONG-PRESS → context menu ───────────────────────────────────
 // x,y are board-local (hit-testing); clientX,clientY are viewport coords (where the menu opens).
+// Returns whether a menu actually opened, so callers can tell a real long-press from one that
+// landed on empty space and did nothing.
 function _simulateRightClick(x, y, clientX, clientY) {
   if (Palette.inPalette(x, y)) {
     const name = Palette.palAt(x, y);
-    if (name) { Tooltip.hide(); Palette.openPalToolbar(name, clientX, clientY); }
-    return;
+    if (!name) return false;
+    Tooltip.hide(); Palette.openPalToolbar(name, clientX, clientY);
+    return true;
   }
   const tok = tokAt(x, y);
-  if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(clientX, clientY); }
+  if (!tok) return false;
+  tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(clientX, clientY);
+  return true;
 }
 
 // ── TOUCH EVENTS ──────────────────────────────────────────────────────────────
@@ -859,13 +868,16 @@ function onTouchStart(e) {
   onTouchStart._startY = touch.clientY;
 
   _longPressTimer = setTimeout(() => {
-    _longPressTimer   = null;
-    _longPressFired   = true;
-    _longPressEndTime = Date.now();
-    if (navigator.vibrate) navigator.vibrate(40);
+    _longPressTimer = null;
     drag = null; dpos = null; // a long-press always means "context menu," not "drag"
     _cancelTouchSelection();
-    _simulateRightClick(x, y, onTouchStart._startX, onTouchStart._startY);
+    // Only arm the ghost-tap suppression window (below, and in onTouchEnd) when a menu actually
+    // opened — a long-press on empty space does nothing, and shouldn't then eat the next touch.
+    if (_simulateRightClick(x, y, onTouchStart._startX, onTouchStart._startY)) {
+      _longPressFired   = true;
+      _longPressEndTime = Date.now();
+      if (navigator.vibrate) navigator.vibrate(40);
+    }
     render();
   }, LONG_PRESS_MS);
 
@@ -951,7 +963,7 @@ function onTouchEnd(e) {
       const palName = Palette.palAt(x, y);
       if (palName) {
         const tok = S.tokens.find(t => t.id === _selected.id);
-        if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName } : t); _palRemove(palName); saveH(); }
+        if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName, frog: false } : t); _palRemove(palName); saveH(); }
       }
     } // else: tap outside the board just deselects, no deletion
     _cancelTouchSelection(); render(); e.preventDefault(); return;
@@ -1005,11 +1017,15 @@ function _menuClosed() {
     tokTbId = null;
     Palette?.hidePalToolbar?.();
     Tooltip.hide();
-    setTimeout(() => {
-      document.getElementById('main')?.dispatchEvent(new MouseEvent('mousemove', {
-        bubbles: true, cancelable: true, clientX: _lastClientX, clientY: _lastClientY,
-      }));
-    }, 0);
+    // Touch has no hover to restore (onMove skips tooltips there entirely — see below), and
+    // _lastClientX/Y never reflect a meaningful position on touch anyway.
+    if (!_isTouchDevice()) {
+      setTimeout(() => {
+        document.getElementById('main')?.dispatchEvent(new MouseEvent('mousemove', {
+          bubbles: true, cancelable: true, clientX: _lastClientX, clientY: _lastClientY,
+        }));
+      }, 0);
+    }
   }
 }
 
@@ -1066,7 +1082,15 @@ function _openCtxMenu(elId, x, y, items) {
 
   const onOutside = e => { if (!el.contains(e.target)) _closeCtxMenu(elId); };
   document.addEventListener('mousedown', onOutside, true);
-  const onContext = e => { if (!el.contains(e.target)) _closeCtxMenu(elId); };
+  // Always preventDefault (a touch long-press's own native contextmenu, possibly hit-testing to
+  // <html> past body.menu-open's pointer-events:none, must never show the browser's menu too) —
+  // but not treated as a dismiss signal within GHOST_TAP_MS, since that's this same long-press's
+  // own trailing native event (see GHOST_TAP_MS above), not a genuine click/tap elsewhere.
+  const onContext = e => {
+    e.preventDefault();
+    if (Date.now() - _longPressEndTime < GHOST_TAP_MS) return;
+    if (!el.contains(e.target)) _closeCtxMenu(elId);
+  };
   document.addEventListener('contextmenu', onContext, true);
 
   _ctxMenus.set(elId, () => {
@@ -1155,7 +1179,7 @@ function onDown(e) {
     const n = Palette.palAt(x, y);
     if (n && _selected?.type === 'brd') {
       const tok = S.tokens.find(t => t.id === _selected.id);
-      if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: n } : t); _palRemove(n); saveH(); }
+      if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: n, frog: false } : t); _palRemove(n); saveH(); }
       _cancelTouchSelection(); render(); return;
     }
     if (n) { drag = { type: 'pal', name: n, c: 'b', _startX: x, _startY: y }; dpos = { x, y }; render(); }
@@ -1194,7 +1218,9 @@ function onMove(e) {
   const inPal = Palette.inPalette(x, y);
   const hoveredBoardTok = (!inPal && !drag) ? tokAt(x, y) : null;
 
-  if (tokTbId === null && !Palette.isPalTbOpen?.()) {
+  // Touch has no hover concept — only tap and long-press — so tooltips never trigger there,
+  // regardless of what fires this handler (real mousemove, or a synthetic one following a tap).
+  if (tokTbId === null && !Palette.isPalTbOpen?.() && !_isTouchDevice()) {
     if (inPal) {
       Palette.onMove(x, y);
     } else {

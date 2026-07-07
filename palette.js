@@ -146,7 +146,8 @@ const Palette = (() => {
       if (name) isBanned(name) ? doUnban(name) : doBan(name);
     });
 
-    // Clic droit → toolbar ban
+    // Clic droit → toolbar ban. GHOST_TAP_MS guard: see editor.js's GHOST_TAP_MS comment — skips
+    // this same long-press's own trailing native contextmenu.
     panel.addEventListener('contextmenu', e => {
       e.preventDefault(); e.stopPropagation();
       if (Date.now() - _longPressEndTime < GHOST_TAP_MS) return;
@@ -248,7 +249,13 @@ const Palette = (() => {
 
     const onOutside = e => { if (!el.contains(e.target) && !anchorBtn.contains(e.target)) _closeFilterMenu(); };
     document.addEventListener('mousedown', onOutside, true);
-    const onContext = e => { if (!el.contains(e.target)) _closeFilterMenu(); };
+    // Same reasoning as editor.js's _openCtxMenu: always preventDefault, but ignore it as a
+    // dismiss signal within GHOST_TAP_MS (a touch long-press's own trailing native event).
+    const onContext = e => {
+      e.preventDefault();
+      if (Date.now() - _longPressEndTime < GHOST_TAP_MS) return;
+      if (!el.contains(e.target)) _closeFilterMenu();
+    };
     document.addEventListener('contextmenu', onContext, true);
 
     _filterMenuClose = () => {
