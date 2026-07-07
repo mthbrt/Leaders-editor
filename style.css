@@ -4,37 +4,43 @@
   padding: 0;
 }
 
+button, input, select, textarea {
+  font-family: inherit;
+}
+
 :root {
-  --box-bg:    #1b1b32;
+  --bg-0: #141424;
+  --bg-1: #1b1b32;
+  --bg-3: #1e1e3a;
+  --bg-2: #252548;
+
   --border:    #2a2a50;
-  /* Lighter edge color, reserved for floating/elevated surfaces (popups, dropdown menus,
-     tooltips) — gives them a crisper boundary than the flatter --border dividers used for
-     in-panel separators, a deliberate cue that they're "lifted" above the page. */
-  --border-hl: #3a3a70;
+  --border-hl: #363668;
+
   --accent:    #5050c0;
-  --text:      #d0d0ff;
-  --text-desc: #7878b0;
-  --btn-bg:    #1e1e3a;
-  --btn-bg-h:  #2a2a50;
-  --btn-c:     #a0a0e0;
+
+  --text-1: #dfdfff;
+  --text-2: #9090c4;
+
+  --danger:       #e05555;
+  --danger-hover: #f47474;
+  --gold:         #d7ca8a;
 
   /* Shared corner-radius scale — most rounded UI chrome in the app uses one of these three. */
   --radius-sm: 5px;
   --radius-md: 8px;
   --radius-lg: 14px;
-  /* The one floating-panel shadow (popups, dropdown menus, tooltips) — previously copy-pasted
-     identically into five separate rules. */
+  /* Shared floating-panel shadow: popups, dropdown menus, tooltips. */
   --shadow-float: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
 
-  /* Shared by .mobile-tab-btn (its height) and #mobile-tabs.collapsed (its collapsed-state
-     target height) — both must agree exactly, or collapsing would leave a gap or clip the bar. */
+  /* Must match #mobile-tabs.collapsed's target height exactly, or collapsing leaves a gap/clips it. */
   --mobile-tabbar-h: clamp(36px, 11vh, 44px);
 }
 
 body {
   font-family: 'Segoe UI', sans-serif;
-  background: #141424;
-  color: var(--text);
+  background: var(--bg-0);
+  color: var(--text-1);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -48,10 +54,8 @@ body {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   padding: 0 clamp(6px, 2vw, 10px);
-  height: clamp(42px, 10vw, 50px);
-  /* A faint top-to-bottom gradient instead of a flat fill — same base color, just enough
-     graduated depth to read as a distinct "chrome" surface rather than a flat painted bar. */
-  background: linear-gradient(to bottom, #1f1f3a, var(--box-bg));
+  height: 48px;
+  background: var(--bg-1);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   min-width: 0;
@@ -61,12 +65,12 @@ body {
 #toolbar .left-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 #toolbar .logo {
-  color: var(--btn-c);
+  color: var(--text-2);
   font-weight: 600;
   font-size: 18px;
   white-space: nowrap;
@@ -75,12 +79,12 @@ body {
   cursor: pointer;
   flex-shrink: 0;
 }
-#toolbar .logo:hover { color: #ffffff; }
+#toolbar .logo:hover { color: var(--text-1); }
 
 #toolbar .center-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   justify-content: center;
   min-width: 0;
   overflow: hidden;
@@ -89,7 +93,7 @@ body {
 #toolbar .right-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   justify-content: flex-end;
   flex-shrink: 0;
 }
@@ -107,25 +111,30 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(28px, 7vw, 32px);
-  height: clamp(28px, 7vw, 32px);
+  width: 32px;
+  height: 32px;
   padding: 0;
   border-radius: 6px;
   border: none;
   background: none;
-  color: var(--btn-c);
-  font-size: 16px;
+  color: var(--text-2);
+  font-size: 20px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s, scale 0.08s;
+  transition: background 0.12s;
   flex-shrink: 0;
 }
-.btn:hover { background: #141424; color: #ffffff; }
-/* A brief press-down on click — toolbar buttons had hover feedback but nothing for the actual
-   click, which on a precise input device like a mouse reads as unresponsive/unfinished. */
-.btn:active { scale: 0.90; }
+.btn svg { width: 20px; height: 20px; }
+.btn:hover { background: var(--bg-0); color: var(--text-1); }
 
 /* ── Responsive toolbar ── */
+
+body.layout-mobile #toolbar { height: 56px; }
+body.layout-mobile #toolbar .left-group,
+body.layout-mobile #toolbar .center-group,
+body.layout-mobile #toolbar .right-group { gap: 8px; }
+body.layout-mobile .btn { width: 48px; height: 48px; }
+body.layout-mobile .btn svg { width: 24px; height: 24px; }
 
 /* Narrow: tighten separators */
 @media (max-width: 520px) {
@@ -159,11 +168,9 @@ body {
 
 /* ── Desktop 3-panel layout: fixed-width saves panel | board | token panel ──
    Only #board-area sits in the grid — its middle track is bounded by --pal2-col-w/--pal-col-w,
-   the space currently *reserved* for each panel (animated frame-by-frame while opening/closing,
-   see _animatePanelToggle in editor.js). The panels themselves are positioned absolutely, at a
-   constant width (--pal2-panel-w/--pal-panel-w, which doesn't change during that animation) —
-   so their own content never resizes/reflows; closing one just translates it off-screen via the
-   plain CSS transform below, fully decoupled from how much board space it's currently ceding. */
+   the space currently reserved for each panel (animated by _animatePanelToggle in editor.js).
+   The panels themselves are positioned absolutely at a constant width (--pal2-panel-w/
+   --pal-panel-w), so closing one just translates it off-screen, decoupled from board space ceded. */
 body.layout-desktop #main {
   display: grid;
   grid-template-columns: var(--pal2-col-w, 280px) minmax(0, 1fr) var(--pal-col-w, 0px);
@@ -182,12 +189,9 @@ body.layout-desktop #pal-panel {
 body.layout-desktop #pal2-panel { left: 0;  width: var(--pal2-panel-w, 280px); }
 body.layout-desktop #pal-panel  { right: 0; width: var(--pal-panel-w, 0px); }
 
-/* ── Mobile layout: board on top, taking whatever space #mobile-tabs doesn't, + one tabbed
-   panel below. #board-area is a normal flex child (not an overlay) — expanding/collapsing the
-   panel actually resizes it, so the board always stays fully visible above the panel instead of
-   being covered by it. See _relayoutMobile in editor.js for the resize/recenter logic, and
-   _toggleMobileTabsCollapsed for why that has to run on every frame of the transition below,
-   not just once at the end. */
+/* ── Mobile layout: board on top + one tabbed panel below. #board-area is a normal flex child
+   (not an overlay), so expanding/collapsing the panel actually resizes it — see _relayoutMobile
+   and _toggleMobileTabsCollapsed in editor.js. */
 body.layout-mobile #main {
   display: flex;
   flex-direction: column;
@@ -209,7 +213,7 @@ body.layout-mobile #btn-toggle-palette {
   /* Scales with viewport height but never shrinks below a usable floor (e.g. short landscape
      phones) or grows past what the board needs to keep priority over. */
   height: clamp(160px, 30vh, 360px);
-  background: var(--box-bg);
+  background: var(--bg-1);
   border-top: 1px solid var(--border);
   transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
 }
@@ -222,8 +226,7 @@ body.layout-mobile #mobile-tabs { display: flex; }
   flex-shrink: 0;
   height: var(--mobile-tabbar-h);
   border-bottom: 1px solid var(--border);
-  /* Same chrome-strip treatment as #toolbar/#pal-header/#pal2-header. */
-  background: linear-gradient(to bottom, #1f1f3a, var(--box-bg));
+  background: var(--bg-1);
 }
 .mobile-tab-btn {
   /* Sized to its label, not stretched across the bar — flex:1 (the old behavior) made each tab
@@ -234,16 +237,15 @@ body.layout-mobile #mobile-tabs { display: flex; }
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--btn-c);
+  color: var(--text-2);
   font-size: 13px;
   font-weight: 600;
-  font-family: 'Segoe UI', sans-serif;
   letter-spacing: 0.03em;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s;
 }
 .mobile-tab-btn.active {
-  color: #ffffff;
+  color: var(--text-1);
   border-bottom-color: var(--accent);
 }
 
@@ -258,10 +260,10 @@ body.layout-mobile #mobile-tabs { display: flex; }
   justify-content: center;
   background: none;
   border: none;
-  color: var(--btn-c);
+  color: var(--text-2);
   cursor: pointer;
 }
-#mobile-tabs-collapse-btn:hover { color: #ffffff; }
+#mobile-tabs-collapse-btn:hover { color: var(--text-1); }
 #mobile-tabs-collapse-btn svg {
   transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
 }
@@ -310,7 +312,6 @@ body.layout-mobile #pal2-header {
   pointer-events: none;
   z-index: 1;
 }
-
 #droptarget-layer {
   position: absolute;
   inset: 0;
@@ -332,10 +333,61 @@ body.layout-mobile #pal2-header {
   z-index: 4;
 }
 
+#arrows-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  z-index: 5;
+}
+
+/* ── Board status icons — capture/encirclement/barrage warnings + white/black team variants,
+   checked in editor.js's _updateBoardStatusIcons. Shrink-to-fit flex row, right-anchored against
+   #board-area, so visible icons stay flush right without gaps from hidden ones. Positioned so the
+   rightmost icon's center is 25px from the corner — aligned with #pal-title/#pal2-title. */
+#board-status-icons {
+  position: absolute;
+  top: 25px;
+  right: 11px; /* 25px minus half an icon's 28px width, so the last icon's *center* sits at 25px */
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  z-index: 10;
+}
+.board-status-icon {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.board-status-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.board-status-icon.visible {
+  display: flex;
+}
+/* Team-specific icon badges: pinkish-red circle for both teams, SVG colored white or black. */
+.swatch-circle {
+  background: #d54747;
+  border-radius: 50%;
+}
+.swatch-circle svg {
+  width: 70%;
+  height: 70%;
+}
+.swatch-white-circle { color: #ffffff; }
+.swatch-black-circle { color: #000000; }
+
 /* ── Jetons HTML ── */
-/* --tok-sz (set once on <body> by relayout()) is the single size reference shared by every
-   token-shaped element on the page — board tokens, the drag ghost, drop targets, and palette
-   items all derive their width/height/outline from it, so JS never sizes them individually. */
+/* --tok-sz (set on <body> by relayout()) is the shared size reference for every token-shaped
+   element — board tokens, drag ghost, drop targets, palette items — so JS never sizes them directly. */
 .html-token {
   position: absolute;
   width: var(--tok-sz, 0px);
@@ -344,9 +396,7 @@ body.layout-mobile #pal2-header {
   overflow: visible;
   pointer-events: none;
   will-change: transform;
-  /* These coefficients are half of the original r-based formula (0.05/0.06/0.12) — --tok-sz is
-     the full diameter (2r), so multiplying it by the original r-based factors directly would
-     double the shadow's offset and blur, making every token look oversized by its own halo. */
+  /* Coefficients are half the original r-based formula — --tok-sz is the full diameter (2r). */
   box-shadow: calc(var(--tok-sz, 0px) * 0.025) calc(var(--tok-sz, 0px) * 0.03) calc(var(--tok-sz, 0px) * 0.06) rgba(0,0,0,0.6);
 }
 body.no-shadows .html-token { box-shadow: none; }
@@ -367,6 +417,24 @@ body.no-shadows .html-token { box-shadow: none; }
 }
 .html-token img.used-token { filter: grayscale(1) opacity(0.5); }
 
+/* Corner badge showing the original character under a Frog transformation — driven by the
+   --frog-badge-src custom property (_applyFrogBadge in editor.js). top:0/right:0 with no
+   transform puts the badge's own top-right corner exactly on the token's. */
+.html-token.frog-badge-on::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--frog-badge-sz, 0px);
+  height: var(--frog-badge-sz, 0px);
+  border-radius: 50%;
+  background-image: var(--frog-badge-src);
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--bg-0);
+  z-index: 3;
+}
+
 #drag-ghost {
   position: fixed;
   left: 0;
@@ -384,7 +452,6 @@ body:not(.no-shadows) #drag-ghost {
   box-shadow: 2px 3px 8px rgba(0,0,0,0.5);
 }
 
-/* ── Labels de case ── */
 .html-label {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -392,7 +459,6 @@ body:not(.no-shadows) #drag-ghost {
   pointer-events: none;
   line-height: 1;
   font-weight: bold;
-  font-family: 'Segoe UI', sans-serif;
   transition: opacity 0.12s;
 }
 
@@ -422,7 +488,6 @@ body:not(.no-shadows) #drag-ghost {
 .ghost-trash svg {
   width: 45%;
   height: 45%;
-  color: #fff;
   stroke: #fff;
 }
 
@@ -438,12 +503,11 @@ body:not(.no-shadows) #drag-ghost {
 /* ── Palette HTML ── */
 #pal-panel {
   position: absolute;
-  background: var(--box-bg);
+  background: var(--bg-1);
   border: none;
   border-radius: 0;
-  /* A box-shadow draws the same divider line as a border without consuming content width —
-     the panel's width is computed to fit an exact number of item columns (see palette.js), so
-     nothing here should eat into that budget. */
+  /* box-shadow draws the divider without consuming content width — the panel's width is computed
+     to fit an exact number of item columns (palette.js). */
   box-shadow: -1px 0 0 var(--border);
   display: flex;
   flex-direction: column;
@@ -453,9 +517,8 @@ body:not(.no-shadows) #drag-ghost {
 }
 
 #pal-panel.collapsed {
-  /* The panel's own width is now constant at all times (see body.layout-desktop #pal-panel
-     above) — only the *board's* reserved space animates, separately, in JS — so translateX(100%)
-     here is relative to a fixed box and stays a single, clean outward slide throughout. */
+  /* Panel's own width is constant at all times — only the board's reserved space animates in JS —
+     so translateX(100%) is relative to a fixed box, a single clean outward slide. */
   transform: translateX(100%);
   opacity: 0;
   pointer-events: none;
@@ -466,19 +529,48 @@ body:not(.no-shadows) #drag-ghost {
   height: 50px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
-  /* Same faint gradient treatment as #toolbar, so all three "chrome" strips read as one
-     consistent surface language instead of #toolbar being the only one with depth. */
-  background: linear-gradient(to bottom, #1f1f3a, var(--box-bg));
+  background: var(--bg-1);
 }
 #pal-header  { border-bottom: 1px solid rgba(70,70,160,0.2); }
 #pal2-header { border-bottom: 1px solid var(--border); }
+/* Matches #toolbar's own right padding so #pal-filter-btn lands at the same x as the
+   toolbar's right-group buttons above it — left padding (title) is untouched. */
+#pal-header { padding-right: clamp(6px, 2vw, 10px); }
 
 #pal-title, #pal2-title {
-  color: rgb(132,132,186);
-  font-size: 16px;
+  color: var(--text-2);
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: 0.05em;
 }
+
+/* ── Header filter icon — opens a dropdown (_openFilterMenu, palette.js) listing the
+   hide-on-board toggle and a/b/c type toggles. Two swapped svgs (outline=off, filled=on) show
+   whether any filter is active. */
+.pal-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pal-filter-btn svg { width: 20px; height: 20px; }
+/* The filled "on" icon has no stroke, so it reads smaller than the outlined "off" one at the
+   same size — scaled up to compensate. */
+.pal-filter-btn .pal-filter-icon-on { transform: scale(1.12); }
+.pal-filter-btn .pal-filter-icon-on  { display: none; }
+.pal-filter-btn.active .pal-filter-icon-off { display: none; }
+.pal-filter-btn.active .pal-filter-icon-on  { display: block; }
+.pal-filter-btn:hover { background: var(--bg-0); }
 
 #pal-body {
   flex: 1;
@@ -489,8 +581,13 @@ body:not(.no-shadows) #drag-ghost {
 }
 #pal-body::-webkit-scrollbar { display: none; }
 
+.pal-item.pal-item-filtered-out { display: none; }
+.pal-section.pal-section-empty { display: none; }
+
 .pal-section { position: relative; }
-.pal-section:not(:last-child)::after {
+/* Not :last-child — palette.js tracks the last *visible* section, so the divider doesn't trail a
+   run of hidden ones at the end. */
+.pal-section:not(.pal-section-last-visible)::after {
   content: '';
   display: block;
   height: 1px;
@@ -508,7 +605,7 @@ body:not(.no-shadows) #drag-ghost {
 
 .pal-sec-label {
   font-size: 16px;
-  color: rgba(150,150,210,0.85);
+  color: var(--text-2);
 }
 
 .pal-grid {
@@ -528,7 +625,7 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
 
 .pal-item {
   position: relative;
-  cursor: default;
+  cursor: pointer;
   border-radius: 50%;
   flex-shrink: 0;
   width: var(--tok-sz, 0px);
@@ -537,14 +634,12 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   min-height: var(--tok-sz, 0px);
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
-  /* Previously had no hover/press feedback at all — a clickable, draggable token with zero
-     response to the cursor read as unfinished. transform/scale don't affect layout (the grid's
-     gap and neighboring items never move), so this is purely a visual "lift," like a game's
-     inventory-slot hover. */
-  transition: transform 0.1s ease;
+  transition: transform 0.12s ease;
 }
-.pal-item:hover { transform: scale(1.08); z-index: 1; }
-.pal-item:active { transform: scale(0.96); }
+.pal-item:hover {
+  transform: translateY(-4px);
+  z-index: 1;
+}
 
 .pal-item img {
   position: absolute;
@@ -566,17 +661,14 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   filter: grayscale(60%);
 }
 .pal-item-banned .pal-item-ban-overlay {
-  /* Same color as the panel background, at 40% — tints the token without dimming it (no
-     opacity reduction), so the artwork stays fully clear while still reading as banned. */
-  background: color-mix(in srgb, var(--box-bg) 40%, transparent);
+  /* Tints (not dims) the token — panel background color at 40%, no opacity reduction. */
+  background: color-mix(in srgb, var(--bg-1) 40%, transparent);
 }
 
 .pal-item-ban-overlay {
   position: absolute;
-  /* Explicit top/left/width/height (not `inset: 0`) — matches .pal-item img's model exactly.
-     `inset` also sets right/bottom, which then sit alongside the on-board override's
-     top/left/width/height as stale, unanimated values; keeping the same four properties on both
-     rules avoids any ambiguity about which one the box's position is resolved from. */
+  /* Explicit top/left/width/height (not `inset: 0`) matches .pal-item img's model exactly, so the
+     on-board override below resolves the box's position unambiguously. */
   top: 0;
   left: 0;
   width: 100%;
@@ -598,27 +690,15 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
 
 .pal-badge {
   position: absolute;
-  /* Size/font scale with the token (clamped to the original fixed values as a ceiling) — a fixed
-     20px/14px badge looks fine at the usual token size but reads as oversized once --tok-sz
-     shrinks under a denser column layout.
-     Position: for a circle of radius r centered in a box of size --tok-sz, the point on that
-     circle at the top-right (45°) sits --tok-sz/2 - r*cos45° from the box's top/right edges
-     (NOT r*(1 - cos45°) — that's only equal to the correct value when r happens to equal
-     --tok-sz/2; using it unconditionally was the bug that left the badge sitting on the token's
-     full outer edge instead of moving inward with a smaller --target-r). Placing the badge's
-     top/right edges at (that inset − half the badge's own size) puts the badge's *center*
-     exactly on the circle of radius --target-r, which defaults to the token's own outer edge;
-     .pal-item-on-board overrides just --target-r below to center on the ring's midpoint instead. */
   --badge-sz: clamp(14px, calc(var(--tok-sz, 0px) * 0.32), 20px);
   --target-r: calc(var(--tok-sz, 0px) / 2);
-  --circle-corner-inset: calc(var(--tok-sz, 0px) / 2 - var(--target-r) * 0.7071067812);
+  --circle-corner-inset: calc(var(--tok-sz, 0px) / 2 - var(--target-r) * 0.7);
   top: calc(var(--circle-corner-inset) - var(--badge-sz) / 2);
   right: calc(var(--circle-corner-inset) - var(--badge-sz) / 2);
-  background: #d7ca8a;
-  color: var(--box-bg);
+  background: var(--gold);
+  color: var(--bg-1);
   font-size: clamp(9px, calc(var(--tok-sz, 0px) * 0.22), 14px);
   font-weight: bold;
-  font-family: 'Segoe UI', sans-serif;
   border-radius: 50%;
   width: var(--badge-sz);
   height: var(--badge-sz);
@@ -629,12 +709,6 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   z-index: 3;
 }
 
-/* ── On-board outline ──────────────────────────────────────────────────────
-   Same mechanism as the board's own selection ring (see touch.css): the artwork (and ban
-   overlay) scale down by --outline-w on every side; the ring sits behind them at the item's
-   original, full-size boundary and is simply revealed wherever the now-smaller artwork no
-   longer covers it. Total footprint stays identical to a plain item (no layout shift), and the
-   ring is entirely outside the artwork (no overlap, no gap). */
 .pal-item-on-board {
   --outline-w: max(2px, calc(var(--tok-sz, 0px) * 0.04));
 }
@@ -652,7 +726,7 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   position: absolute;
   inset: 0; /* the item's original, full-size boundary */
   border-radius: 50%;
-  background: #d7ca8a;
+  background: var(--gold);
   z-index: -1;
   pointer-events: none;
 }
@@ -662,55 +736,34 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   overflow: hidden;
 }
 
-/* On-board, selecting/placing the token downscales the artwork by --outline-w on every side,
-   which is what creates the visible ring — the ring's thickness equals exactly that downscale
-   offset. Overriding just --target-r (to the average of the token's downscaled radius and the
-   outline's full, original radius) is enough — .pal-badge's own --circle-corner-inset/top/right
-   above pick it up automatically, since custom properties resolve per-element at used-value
-   time regardless of which rule declared the property that references them. */
+/* On-board, the artwork is downscaled by --outline-w on every side (creating the ring). Overriding
+   just --target-r is enough — .pal-badge's own --circle-corner-inset/top/right pick it up
+   automatically, since custom properties resolve per-element at used-value time. */
 .pal-item-on-board .pal-badge {
   --token-r:   calc(var(--tok-sz, 0px) / 2 - var(--outline-w)); /* downscaled artwork's radius */
   --outline-r: calc(var(--tok-sz, 0px) / 2);                    /* full, original radius */
   --target-r:  calc((var(--token-r) + var(--outline-r)) / 2);
 }
 
-/* ── Token toolbar — même style que les tooltips, à droite du jeton ── */
-#tok-tb {
-  position: absolute;
-  display: none;
-  flex-direction: column;
-  align-items: stretch;
-  background: var(--box-bg);
-  border: 1px solid var(--border-hl);
-  border-radius: var(--radius-md);
-  padding: 4px;
-  z-index: 61;
-  isolation: isolate;
-  pointer-events: all;
-  box-shadow: var(--shadow-float);
-  min-width: 152px;
-  opacity: 0;
-  scale: 0.92;
-  transform-origin: left center;
-  transition: opacity 0.15s ease, scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-#tok-tb.arrow-right { transform-origin: right center; }
-#tok-tb.open {
-  display: flex;
-  opacity: 1;
-  scale: 1;
-}
+/* While any context menu is open, block pointer events everywhere so hover effects on the
+   underlying UI don't fire — re-enabled only on the open menu itself (and its children). */
+body.menu-open { pointer-events: none; }
+body.menu-open #tok-tb,
+body.menu-open #pal-tok-tb,
+body.menu-open #pal2-ctx-menu,
+body.menu-open #pal-filter-menu,
+body.menu-open #lang-submenu { pointer-events: auto; }
 
-/* ── Palette token toolbar — même design, attaché au body (position:fixed) ──
-   Shared verbatim with #pal2-sec-menu (the saves-section ⋮ menu): same box, same arrow, same
-   open/close animation — not a parallel set of near-duplicate rules. */
-#pal-tok-tb, #pal2-sec-menu {
+/* ── Token context menus — board (#tok-tb), palette ban toolbar (#pal-tok-tb), and the Saves
+   panel's (#pal2-ctx-menu) share one design (_openCtxMenu/_closeCtxMenu in editor.js): a plain
+   box with no arrow, opened at the cursor's position rather than anchored to the item. */
+#tok-tb, #pal-tok-tb, #pal2-ctx-menu, #pal-filter-menu {
   position: fixed;
   display: none;
   flex-direction: column;
   align-items: stretch;
-  background: var(--box-bg);
-  border: 1px solid var(--border-hl);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 4px;
   z-index: 200;
@@ -722,73 +775,20 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   scale: 0.92;
   transition: opacity 0.15s ease, scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-#pal-tok-tb.pal-tb-arrow-right, #pal2-sec-menu.pal-tb-arrow-right { transform-origin: right center; }
-#pal-tok-tb.pal-tb-arrow-left,  #pal2-sec-menu.pal-tb-arrow-left  { transform-origin: left center; }
-#pal-tok-tb.open, #pal2-sec-menu.open {
+/* Grows in from the corner nearest the cursor — set in JS (_openCtxMenu) depending on which way
+   the menu had to flip to stay on-screen. */
+#tok-tb, #pal-tok-tb, #pal2-ctx-menu, #pal-filter-menu { transform-origin: top left; }
+#tok-tb.ctx-flip-x, #pal-tok-tb.ctx-flip-x, #pal2-ctx-menu.ctx-flip-x, #pal-filter-menu.ctx-flip-x { transform-origin: top right; }
+#tok-tb.ctx-flip-y, #pal-tok-tb.ctx-flip-y, #pal2-ctx-menu.ctx-flip-y, #pal-filter-menu.ctx-flip-y { transform-origin: bottom left; }
+#tok-tb.ctx-flip-x.ctx-flip-y, #pal-tok-tb.ctx-flip-x.ctx-flip-y, #pal2-ctx-menu.ctx-flip-x.ctx-flip-y, #pal-filter-menu.ctx-flip-x.ctx-flip-y { transform-origin: bottom right; }
+#tok-tb.open, #pal-tok-tb.open, #pal2-ctx-menu.open, #pal-filter-menu.open {
   display: flex;
   opacity: 1;
   scale: 1;
 }
-
-/* Flèche pointant vers la droite (menu à gauche du jeton, flèche sur bord droit) */
-#pal-tok-tb.pal-tb-arrow-right::before, #pal2-sec-menu.pal-tb-arrow-right::before {
-  content: '';
-  position: absolute;
-  right: -5px;
-  top: var(--arrow-y, 50%);
-  transform: translateY(-50%) rotate(45deg);
-  width: 10px;
-  height: 10px;
-  background: var(--box-bg);
-  border-right: 1px solid var(--border-hl);
-  border-top: 1px solid var(--border-hl);
-  border-radius: 0 3px 0 0;
-  z-index: -1;
-}
-
-/* Flèche pointant vers la gauche (menu à droite du jeton, flèche sur bord gauche) */
-#pal-tok-tb.pal-tb-arrow-left::before, #pal2-sec-menu.pal-tb-arrow-left::before {
-  content: '';
-  position: absolute;
-  left: -5px;
-  top: var(--arrow-y, 50%);
-  transform: translateY(-50%) rotate(45deg);
-  width: 10px;
-  height: 10px;
-  background: var(--box-bg);
-  border-left: 1px solid var(--border-hl);
-  border-bottom: 1px solid var(--border-hl);
-  border-radius: 0 0 0 3px;
-  z-index: -1;
-}
-
-/* Flèche pointant vers la gauche (toolbar à droite du jeton) */
-#tok-tb::before {
-  content: '';
-  position: absolute;
-  left: -5px;
-  top: var(--arrow-y, 50%);
-  transform: translateY(-50%) rotate(45deg);
-  width: 10px;
-  height: 10px;
-  background: var(--box-bg);
-  border-left: 1px solid var(--border-hl);
-  border-bottom: 1px solid var(--border-hl);
-  border-radius: 0 0 0 3px;
-  z-index: -1;
-}
-
-/* Flèche pointant vers la droite (toolbar à gauche du jeton) */
-#tok-tb.arrow-right::before {
-  left: auto;
-  right: -5px;
-  border-left: none;
-  border-bottom: none;
-  border-right: 1px solid var(--border-hl);
-  border-top: 1px solid var(--border-hl);
-  border-radius: 0 3px 0 0;
-  z-index: -1;
-}
+/* #pal-filter-menu never uses the ctx-flip-* classes above (its own JS anchors it by top-right
+   corner directly) — override the shared default so it still grows from that same corner. */
+#pal-filter-menu { transform-origin: top right; }
 
 .tok-tb-btn {
   display: flex;
@@ -798,22 +798,25 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   height: 32px;
   background: transparent;
   border: none;
-  color: var(--text);
+  color: var(--text-1);
   cursor: pointer;
   font-size: 13px;
-  font-weight: 400;
-  font-family: 'Segoe UI', sans-serif;
   border-radius: 5px;
-  transition: background 0.08s, color 0.08s;
   white-space: nowrap;
   flex-shrink: 0;
   width: 100%;
   text-align: left;
 }
-.tok-tb-btn:hover { background: var(--btn-bg-h); color: #ffffff; }
+.tok-tb-btn:hover { background: var(--bg-2); }
+.tok-tb-btn svg { flex-shrink: 0; width: 18px; height: 18px; }
+.tok-tb-btn .pal-filter-check { width: 14px; height: 14px; color: var(--text-1); }
+/* Fixed-size placeholder, present whether or not the checkmark itself is — keeps every row (and
+   so the menu, which auto-sizes to its widest row) the same width regardless of toggle state. */
+.pal-filter-check-slot { display: flex; flex-shrink: 0; width: 14px; height: 14px; }
+#pal-filter-menu { min-width: 200px; }
 /* A full-width menu row scaling down on press would look like it's shrinking away from one
    edge — a background bump reads as "pressed" without that asymmetry. */
-.tok-tb-btn:active { background: var(--border-hl); }
+.tok-tb-btn:active { background: var(--border); }
 
 .tok-tb-sep {
   height: 1px;
@@ -822,10 +825,10 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
 }
 
 
-#tok-del, .tok-tb-btn-danger { color: #e05555; }
-#tok-del:hover, .tok-tb-btn-danger:hover {
-  background: rgba(224,85,85,0.12) !important;
-  color: #f47474 !important;
+.tok-tb-btn-danger { color: var(--danger); }
+.tok-tb-btn-danger:hover {
+  background: rgba(200,80,80,0.12) !important;
+  color: var(--danger-hover) !important;
 }
 
 /* ── Settings overlay + popup ── */
@@ -840,28 +843,34 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
 }
 #settings-overlay.hidden { display: none; }
 
+/* Same fixed size as #help-popup (420px / min(500px, 80vh)) — #settings-body below is the one
+   flexible part, scrolling internally rather than growing the popup itself. */
 #settings-popup {
-  background: var(--box-bg);
-  border: 1px solid var(--border-hl);
+  background: var(--bg-1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  width: 340px;
+  width: 420px;
   max-width: 92vw;
+  max-height: 80vh;
   box-shadow: 0 0 20px rgba(0,0,0,0.8);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 #settings-header {
   display: grid;
   grid-template-columns: 28px 1fr 28px;
   align-items: center;
-  padding: 16px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 #settings-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-1);
   letter-spacing: 0.03em;
   text-align: center;
   grid-column: 2;
@@ -873,7 +882,7 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: #7070a0;
+  color: var(--text-2);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -881,29 +890,32 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
   transition: color 0.12s;
   grid-column: 3;
 }
-#settings-close:hover { color: var(--text); }
+#settings-close:hover { color: var(--text-1); }
 
 #settings-body {
-  padding: 10px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  flex: 1;
+  min-height: 0;
 }
 
 .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  background: #1e1e3c;
+  gap: 14px;
   border-radius: 10px;
   padding: 14px;
   cursor: pointer;
   transition: background 0.12s;
 }
-.setting-row:hover { background: #252548; }
+.setting-row:hover { background: var(--bg-2); }
 .setting-row-lang { cursor: pointer; padding-top: 9px; padding-bottom: 9px; }
-.setting-row-lang:hover { background: #252548; }
+.setting-row-lang:hover { background: var(--bg-2); }
 
 body.layout-mobile #settings-body { padding: 8px; gap: 6px; }
 body.layout-mobile .setting-row   { padding: 10px; }
@@ -912,13 +924,13 @@ body.layout-mobile .setting-row   { padding: 10px; }
 
 .setting-name {
   font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 600;
+  color: var(--text-1);
   margin-bottom: 4px;
 }
 .setting-desc {
   font-size: 12px;
-  color: var(--text-desc);
+  color: var(--text-2);
   line-height: 1.45;
 }
 
@@ -927,10 +939,8 @@ body.layout-mobile .setting-row   { padding: 10px; }
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-desc);
-  font-size: 12px;
-  font-weight: 600;
-  font-family: 'Segoe UI', sans-serif;
+  color: var(--text-2);
+  font-size: 14px;
   pointer-events: none;
   white-space: nowrap;
 }
@@ -942,7 +952,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
   position: fixed;
   flex-direction: column;
   align-items: stretch;
-  background: var(--box-bg);
+  background: var(--bg-1);
   border: 1px solid var(--border-hl);
   border-radius: var(--radius-md);
   padding: 4px;
@@ -956,7 +966,6 @@ body.layout-mobile .setting-row   { padding: 10px; }
   transform-origin: top center;
   transition: opacity 0.15s ease, scale 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Pointe vers le haut */
 #lang-submenu::before {
   content: '';
   position: absolute;
@@ -965,9 +974,9 @@ body.layout-mobile .setting-row   { padding: 10px; }
   transform: translateX(-50%) rotate(45deg);
   width: 10px;
   height: 10px;
-  background: var(--box-bg);
-  border-left: 1px solid var(--border-hl);
-  border-top: 1px solid var(--border-hl);
+  background: var(--bg-1);
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
   border-radius: 3px 0 0 0;
   z-index: -1;
 }
@@ -984,31 +993,29 @@ body.layout-mobile .setting-row   { padding: 10px; }
   padding: 9px 14px;
   border-radius: 7px;
   font-size: 13px;
-  font-family: 'Segoe UI', sans-serif;
-  color: #9090c8;
+  color: var(--text-2);
   cursor: pointer;
-  transition: color 0.1s;
 }
-.lang-option:hover { background: var(--btn-bg-h); color: #ffffff; border-radius: 5px; }
-.lang-option.active { color: #c8b86a; }
-.lang-option.active::after {
-  content: '✓';
-  font-size: 12px;
-  color: #c8b86a;
-  margin-left: 12px;
+.lang-option:hover { background: var(--bg-2); color: var(--text-1); border-radius: 5px; }
+.lang-option.active { background: var(--bg-2); color: var(--text-1); border-radius: 5px; }
+.lang-check {
+  display: none;
+  flex-shrink: 0;
 }
+.lang-option.active .lang-check { display: block; }
 
 /* ── Toggle switch ── */
+/* Track recolors (gray off / accent on); thumb stays a plain white circle in both states. */
 .toggle {
   position: relative;
-  width: 48px;
-  height: 28px;
-  border-radius: 14px;
-  border: 2px solid #2e2e58;
-  background: #252548;
+  width: 40px;
+  height: 24px;
+  border-radius: 12px;
+  border: none; /* it's a <button> — without this the browser's own default button border shows through */
+  background: var(--border-hl);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.22s, border-color 0.22s;
+  transition: background 0.15s ease;
 }
 .toggle::after {
   content: '';
@@ -1018,16 +1025,14 @@ body.layout-mobile .setting-row   { padding: 10px; }
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4a4a78;
-  transition: transform 0.22s, background 0.22s;
+  background: var(--text-1);
+  transition: transform 0.15s ease;
 }
 .toggle.active {
-  background: #3c3c90;
-  border-color: #5a5acc;
+  background: var(--accent);
 }
 .toggle.active::after {
-  transform: translateX(20px);
-  background: #a8a8ff;
+  transform: translateX(16px);
 }
 
 /* ── Help overlay + popup ── */
@@ -1042,13 +1047,15 @@ body.layout-mobile .setting-row   { padding: 10px; }
 }
 #help-overlay.hidden { display: none; }
 
+/* Fixed size — #help-body scrolls internally rather than growing the popup itself. */
 #help-popup {
-  background: var(--box-bg);
-  border: 1px solid var(--border-hl);
+  position: relative;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   width: 420px;
   max-width: 92vw;
-  max-height: 80vh;
+  height: min(500px, 80vh);
   box-shadow: 0 12px 48px rgba(0,0,0,0.8);
   overflow: hidden;
   display: flex;
@@ -1059,7 +1066,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
   display: grid;
   grid-template-columns: 28px 1fr 28px;
   align-items: center;
-  padding: 16px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -1067,7 +1074,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
 #help-title {
   font-size: 16px;
   font-weight: 700;
-  color: var(--text);
+  color: var(--text-1);
   letter-spacing: 0.03em;
   text-align: center;
   grid-column: 2;
@@ -1079,7 +1086,7 @@ body.layout-mobile .setting-row   { padding: 10px; }
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: #7070a0;
+  color: var(--text-2);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1087,16 +1094,20 @@ body.layout-mobile .setting-row   { padding: 10px; }
   transition: color 0.12s;
   grid-column: 3;
 }
-#help-close:hover { color: var(--text); }
+#help-close:hover { color: var(--text-1); }
 
+/* Thin, muted scrollbar matching the popup's own palette instead of the browser's default —
+   present but unobtrusive, rather than hidden outright. */
 #help-body {
   overflow-y: auto;
-  padding: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  scrollbar-width: thin;
-  scrollbar-color: #2a2a50 transparent;
+  flex: 1;
+  min-height: 0;
 }
 
 .help-section {
@@ -1106,14 +1117,13 @@ body.layout-mobile .setting-row   { padding: 10px; }
 }
 
 .help-section-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text);
-  padding: 10px 2px 5px;
+  color: var(--text-1);
+  padding: 10px 5px 5px;
 }
-
 .help-section:first-child .help-section-title {
   padding-top: 2px;
 }
@@ -1123,34 +1133,45 @@ body.layout-mobile .setting-row   { padding: 10px; }
   align-items: center;
   gap: 10px;
   min-height: 34px;
-  background: #1e1e3c;
+  background: var(--bg-3);
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 10px 12px;
 }
 body.layout-mobile #help-body { padding: 8px; }
-body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
+body.layout-mobile .help-row  { padding: 8px 10px; min-height: 30px; }
 
-.help-key, kbd {
+/* Wraps two alternative-shortcut <kbd>s as separate badges instead of one combined chip. */
+.help-keys {
+  order: 2;
+  display: flex;
+  gap: 4px;
   flex-shrink: 0;
-  /* Shrinks on narrow viewports so .help-desc keeps room to breathe inside the popup's
-     max-width:92vw cap; unchanged (120px) on anything wider than ~430px. */
-  width: clamp(90px, 28vw, 120px);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: 'Segoe UI', sans-serif;
-  color: var(--text-desc);
-  background: var(--box-bg);
-  border-radius: 6px;
-  padding: 5px 5px;
+}
+
+/* Key badge sits on the right (order swaps it past .help-desc's flex:1). */
+.help-key, kbd {
+  order: 2;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+  background: none;
+  border: 1px solid var(--bg-0);
+  box-shadow: 0 4px 0 var(--bg-0);
+  /* Nudge up to counter the downward-only shadow, so it reads as vertically centered. */
+  transform: translateY(-2px);
+  border-radius: 5px;
+  padding: 3px 6px;
   white-space: nowrap;
   text-align: center;
   box-sizing: border-box;
 }
 
 .help-desc {
+  order: 1;
   flex: 1;
-  font-size: 12px;
-  color: var(--text-desc);
+  font-size: 14px;
+  color: var(--text-2);
   line-height: 1.4;
   background: transparent;
 }
@@ -1159,27 +1180,23 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
    PALETTE 2 — SAUVEGARDES
    ══════════════════════════════════════════════════════════════════ */
 
-/* ── Panneau ── */
 #pal2-panel {
   position: absolute;
   top: 0; left: 0;
   display: flex;
   flex-direction: column;
-  background: var(--box-bg);
+  background: var(--bg-1);
   border-right: 1px solid var(--border);
   overflow: hidden;
   z-index: 40;
   transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
 }
 #pal2-panel.collapsed {
-  /* Same reasoning as #pal-panel.collapsed — constant width now, so this stays a clean slide. */
+  /* Same reasoning as #pal-panel.collapsed — constant width, so this stays a clean slide. */
   transform: translateX(-100%);
   opacity: 0;
   pointer-events: none;
 }
-
-
-/* ── Header / title — see #pal-header, #pal2-header above ── */
 
 /* ── Body ── */
 #pal2-body {
@@ -1194,41 +1211,35 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
 #pal2-list {
   display: flex;
   flex-direction: column;
+  padding: 14px;
 }
 
-/* ── Section — même séparation que .pal-section ── */
-/* Single source of truth for the panel's left/right inset — used identically by the section
-   header, the divider between sections, the config list, and each row, so sections and
-   positions always line up on both edges instead of drifting apart with their own paddings. */
-.pal2-section { position: relative; --pal2-pad-x: 16px; }
-.pal2-section:not(:last-of-type)::after {
-  content: '';
-  display: block;
-  height: 1px;
-  background: var(--border);
-  margin: 0 var(--pal2-pad-x);
-}
+.pal2-section { position: relative; }
 
 /* ── Section header ── */
 .pal2-section-hdr {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--pal2-pad-x);
-  height: 44px;
+  padding: 4px 4px 4px 8px;
+  border-radius: 6px;
   user-select: none;
-  transition: background 0.12s;
+  cursor: pointer;
 }
+.pal2-section .pal2-section-hdr:hover { background: var(--bg-2); }
 
 .pal2-sec-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
   cursor: pointer;
   flex: 1;
-  border-radius: 5px;
+}
+.pal2-section-hdr:hover .pal2-sec-arrow,
+.pal2-section-hdr:hover .pal2-sec-name {
+  color: var(--text-1);
 }
 /* Keyboard-only ring (mouse/touch activation never matches :focus-visible) — this is a <div
    role="button">, so without this it's focusable (tabindex=0) but gives no visual feedback at
@@ -1238,22 +1249,22 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   outline-offset: 2px;
 }
 
-/* Flèche de pliage */
 .pal2-sec-arrow {
   flex-shrink: 0;
-  color: rgb(100,100,160);
-  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1), color 0.15s;
+  color: var(--text-2);
+  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
   transform: rotate(-90deg);
 }
 .pal2-sec-arrow.open {
   transform: rotate(0deg);
-  color: rgb(132,132,186);
 }
 
-/* Nom de section — même style que .pal-sec-label */
 .pal2-sec-name {
-  font-size: 16px;
-  color: rgb(132,132,186);
+  /* flex:1 so this reclaims the space .pal2-sec-actions leaves behind when it shrinks to 0 at rest. */
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1267,31 +1278,43 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   flex-shrink: 0;
 }
 
-/* Boutons section — visibles au hover (swap with the count above) */
+.pal2-sec-count {
+  font-size: 12px;
+  color: var(--text-2);
+  opacity: 0.8;
+  flex-shrink: 0;
+  margin: 0 4px;
+}
+.pal2-section-hdr:hover .pal2-sec-count { display: none; }
+
+/* Visible on hover. width (not just opacity) collapses to 0 at rest, so .pal2-sec-name reclaims
+   that space instead of leaving it blank-but-reserved. */
 .pal2-sec-actions {
   display: flex;
   align-items: center;
+  gap: 4px;
   flex-shrink: 0;
+  width: 0;
   opacity: 0;
-  transition: opacity 0.15s;
+  overflow: hidden;
 }
 .pal2-section-hdr:hover .pal2-sec-actions,
 .pal2-section-hdr:focus-within .pal2-sec-actions {
+  width: 60px; /* two 28px buttons + 4px gap */
   opacity: 1;
 }
 
-/* Boutons section */
 .pal2-sec-actions .pal2-action-btn {
   width: 28px;
   height: 28px;
   border-radius: 6px;
   background: transparent;
   border: none;
-  color: var(--btn-c);
+  color: var(--text-2);
 }
 .pal2-sec-actions .pal2-action-btn:hover {
-  background: #141424;
-  color: #ffffff;
+  background: var(--bg-1);
+  color: var(--text-1);
 }
 
 /* ── Section body (collapsible) ── */
@@ -1305,36 +1328,45 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
 }
 
 /* ── Config list ── */
-/* The list's own left/right inset reuses --pal2-pad-x — the same gap as the section divider —
-   so each row's hover background sits exactly that far from the panel edge, matching the
-   divider's margin instead of an unrelated value. .pal2-row-main's own padding (below) adds
-   text/icon breathing room inside that. */
 .pal2-config-list {
   display: flex;
   flex-direction: column;
-  padding: 0 var(--pal2-pad-x) 8px;
+  padding: 0 0 8px;
 }
 
 /* ── Config rows ── */
 .pal2-row {
+  position: relative;
   border-radius: 6px;
   flex-shrink: 0;
-  transition: background 0.12s;
 }
-.pal2-row:hover {
-  background: var(--btn-bg-h);
+/* Tree guide: vertical bar centered (13px = 8px header padding + half the 10px chevron) under
+   the section's own collapse chevron, reading as a continuation of it. */
+.pal2-row::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--border);
+  pointer-events: none;
+}
+.pal2-row:hover .pal2-row-main {
+  background: var(--bg-2);
+}
+.pal2-row:hover .pal2-row-name {
+  color: var(--text-1);
 }
 
+/* Indented so the rect's left edge lines up with the section title's own start (8px header
+   padding + 10px chevron + 6px gap = 24px). */
 .pal2-row-main {
   display: flex;
   align-items: center;
-  /* Height comes from the 28px action buttons plus this padding (28 + 2*3 = 34px, matching the
-     old fixed height). Left is slightly larger than the other three sides — the icon reads better
-     with a bit more breathing room from the edge than the right side needs for the buttons. */
-  padding: 3px 3px 3px 12px;
+  margin-left: 24px;
+  padding: 4px 4px 4px 8px;
   cursor: pointer;
   border-radius: 6px;
-  gap: 8px;
 }
 /* Keyboard-only ring, same convention as .pal2-sec-left above — .pal2-row-main is a
    role="button" div, so it needs its own explicit focus style. */
@@ -1343,65 +1375,42 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   outline-offset: -2px;
 }
 
-/* Icône point */
-.pal2-row-icon {
-  flex-shrink: 0;
-  color: rgb(100,100,160);
-  display: flex;
-  align-items: center;
-}
-
-/* Boutons config — visibles au hover */
+/* Same width-collapse reasoning as .pal2-sec-actions — .pal2-row-name reclaims the space at rest. */
 .pal2-row-actions {
   display: flex;
   align-items: center;
+  gap: 4px;
   flex-shrink: 0;
+  width: 0;
+  margin-left: 0;
   opacity: 0;
-  transition: opacity 0.12s;
+  overflow: hidden;
 }
 .pal2-row:hover .pal2-row-actions,
 .pal2-row:focus-within .pal2-row-actions {
+  width: 60px; /* two 28px buttons + 4px gap */
+  margin-left: 6px;
   opacity: 1;
 }
 
-/* Touch devices have no hover state at all, so the action buttons above would otherwise never
-   appear without an explicit tap-and-hold — force them permanently visible there instead. Scoped
-   to (hover: none) so mouse/desktop behavior is untouched (a touchscreen laptop with a mouse
-   still gets normal hover, since it reports hover:hover there). */
+/* Touch has no hover state, so force these permanently visible there. width:auto (not a fixed px)
+   keeps this correct at both the 28px desktop size and the larger mobile one. */
 @media (hover: none) {
-  .pal2-sec-actions  { opacity: 1; }
-  .pal2-row-actions  { opacity: 1; }
+  .pal2-sec-actions  { width: auto; opacity: 1; }
+  .pal2-row-actions  { width: auto; opacity: 1; margin-left: 6px; }
 }
 
-/* Active config row */
-.pal2-row-active {
-  background: rgba(80, 60, 180, 0.18);
-}
-.pal2-row-active .pal2-row-icon {
-  color: #a0a0ff;
-}
-.pal2-row-active .pal2-row-name {
-  color: #c8c8ff;
-  font-weight: 700;
-}
-.pal2-row-active:hover {
-  background: rgba(80, 60, 180, 0.28);
-}
-
-/* Nom de config */
 .pal2-row-name {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
-  font-family: 'Segoe UI', sans-serif;
-  color: rgb(160,160,210);
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Nom en mode édition */
 .pal2-row-name.editing {
   overflow: visible;
   white-space: normal;
@@ -1418,20 +1427,28 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   border-radius: 5px;
   border: none;
   background: transparent;
-  color: var(--btn-c);
+  color: var(--text-2);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.1s, color 0.1s, scale 0.08s;
+  transition: scale 0.08s;
 }
 .pal2-action-btn:hover {
-  background: var(--btn-bg);
-  color: rgb(208,208,255);
+  background: var(--bg-1);
+  color: var(--text-1);
 }
 .pal2-action-btn:active { scale: 0.88; }
 .pal2-action-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+
+.pal2-add-section-btn {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pal2-add-section-btn .pal2-sec-left { min-height: 28px; }
+.pal2-add-section-btn svg { color: var(--text-2); }
+.pal2-add-section-btn .pal2-section-hdr:hover svg { color: var(--text-1); }
 
 /* ── Inline rename input ── */
 .pal2-inline-edit {
@@ -1448,38 +1465,29 @@ body.layout-mobile .help-row  { padding: 5px 8px; min-height: 30px; }
   color: inherit;
   font-size: inherit;
   font-weight: inherit;
-  font-family: inherit;
   letter-spacing: inherit;
   outline: none;
   height: 22px;
   transition: border-color 0.12s;
 }
 .pal2-inline-input:focus {
-  border-bottom-color: #8080e0;
+  border-bottom-color: var(--accent-light);
 }
 
-/* Mobile: bigger touch targets and more breathing room throughout, not less — this is a
-   touch-only context (no hover affordance at all; see the (hover: none) block above forcing
-   actions permanently visible), so rows and buttons need to read clearly and be comfortably
-   tappable (>=44px, the standard minimum touch-target size) rather than optimized for density
-   the way the mouse-driven desktop sizing is. Overrides --pal2-pad-x so the header/divider/
-   list/rows all grow their inset together. */
-body.layout-mobile .pal2-section { --pal2-pad-x: 18px; }
-body.layout-mobile .pal2-section-hdr { height: 52px; }
+/* Mobile: bigger touch targets (>=44px guideline) and more breathing room than desktop's
+   mouse-optimized density. */
+body.layout-mobile #pal2-list { padding: 18px; }
+body.layout-mobile .pal2-section-hdr { padding-top: 8px; padding-bottom: 8px; }
 body.layout-mobile .pal2-sec-name    { font-size: 16px; }
 body.layout-mobile .pal2-sec-arrow   { width: 12px; height: 12px; }
 
-/* Shared by both the section header's (+/⋮) buttons and each row's (update/rename/delete)
-   buttons — 40x40 comfortably clears the 44px touch-target guideline once the row/header's own
-   padding is added on top, vs. the 28px desktop size sized for mouse precision. A small gap
-   between adjacent buttons (absent on desktop, where mouse precision makes it unnecessary)
-   avoids them butting directly against each other now that they're this much bigger. */
+/* 40x40 clears the touch-target guideline once row/header padding is added, vs. 28px on desktop. */
 body.layout-mobile .pal2-action-btn     { width: 40px; height: 40px; border-radius: 8px; }
 body.layout-mobile .pal2-action-btn svg { width: 20px; height: 20px; }
 body.layout-mobile .pal2-sec-actions,
-body.layout-mobile .pal2-row-actions    { gap: 2px; }
+body.layout-mobile .pal2-row-actions    { gap: 8px; }
 
-body.layout-mobile .pal2-config-list { padding: 0 var(--pal2-pad-x) 10px; gap: 6px; }
+body.layout-mobile .pal2-config-list { padding: 0 0 10px; gap: 6px; }
 body.layout-mobile .pal2-row-main {
   /* 40px buttons + 8px top/bottom padding = 56px row height. */
   padding: 8px 8px 8px 14px;
@@ -1487,7 +1495,6 @@ body.layout-mobile .pal2-row-main {
   border-radius: 10px;
 }
 body.layout-mobile .pal2-row-name   { font-size: 15px; }
-body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
 
 /* ── Tooltips Discord-style ── */
 .dc-tooltip-el {
@@ -1503,7 +1510,6 @@ body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
 .dc-tooltip-el.tt-below  { transform: translateY(5px)  scale(0.96); }
 .dc-tooltip-el.visible   { opacity: 1; transform: translateY(0) scale(1); }
 
-/* Pointe arrondie commune — carré rotatif avec border-radius côté exposé */
 .dc-tooltip-el::after {
   content: '';
   position: absolute;
@@ -1514,30 +1520,26 @@ body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
   z-index: -1;
 }
 
-/* Pointe vers le bas (tooltip au-dessus) */
 .dc-tooltip-el.tt-above::after {
   bottom: -5px;
   border-right: 1px solid var(--border-hl);
   border-bottom: 1px solid var(--border-hl);
   border-radius: 0 0 3px 0;
-  background: var(--box-bg);
+  background: var(--bg-1);
 }
-/* Pointe vers le haut (tooltip en-dessous) */
 .dc-tooltip-el.tt-below::after {
   top: -5px;
   border-left: 1px solid var(--border-hl);
   border-top: 1px solid var(--border-hl);
   border-radius: 3px 0 0 0;
-  background: var(--box-bg);
+  background: var(--bg-1);
 }
 
-/* tt-simple surcharge le fond de la pointe pour matcher exactement */
-.dc-tooltip-el.tt-simple.tt-below::after { background: var(--box-bg); }
-.dc-tooltip-el.tt-simple.tt-above::after { background: var(--box-bg); }
+.dc-tooltip-el.tt-simple.tt-below::after { background: var(--bg-1); }
+.dc-tooltip-el.tt-simple.tt-above::after { background: var(--bg-1); }
 
-/* Tooltip simple — label bouton toolbar */
 .dc-tooltip-el.tt-simple {
-  background: var(--box-bg);
+  background: var(--bg-1);
   border: 1px solid var(--border-hl);
   border-radius: var(--radius-md);
   padding: 6px 11px;
@@ -1546,14 +1548,12 @@ body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
 .dc-tt-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text);
-  font-family: 'Segoe UI', sans-serif;
+  color: var(--text-1);
   white-space: nowrap;
 }
 
-/* Tooltip riche — jeton (nom + icône type + description) */
 .dc-tooltip-el.tt-rich {
-  background: var(--box-bg);
+  background: var(--bg-1);
   border: 1px solid var(--border-hl);
   border-radius: var(--radius-md);
   padding: 10px 12px;
@@ -1569,8 +1569,7 @@ body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
 .dc-tt-name {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text);
-  font-family: 'Segoe UI', sans-serif;
+  color: var(--text-1);
   letter-spacing: 0.01em;
 }
 .dc-tt-icon {
@@ -1581,7 +1580,11 @@ body.layout-mobile .pal2-row-icon svg { width: 10px; height: 10px; }
 }
 .dc-tt-ability {
   font-size: 12px;
-  color: var(--text-desc);
+  color: var(--text-2);
   line-height: 1.5;
-  font-family: 'Segoe UI', sans-serif;
+}
+.dc-tt-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
 }

@@ -1,6 +1,4 @@
 // ── TOOLTIP ICONS ─────────────────────────────────────────────────────────────
-// 3 types d'icônes SVG affichées dans le coin haut droit du tooltip.
-// Personnalise le contenu SVG de chaque type ici.
 const TOKEN_ICONS = {
   // Type A — actif
   'a': `<svg width="20" height="20" viewBox="0 0 320 320"><path d="M134.76,132.28v-67.16c0-1.91-2.44-2.71-3.57-1.17l-49.98,68.33v57.09s103.93,0,103.93,0v67.16c0,1.91,2.44,2.71,3.57,1.17l49.98-68.33v-57.09h-103.93Z" fill="#ef4e4b"/><path d="M160,16c38.46,0,74.63,14.98,101.82,42.18,27.2,27.2,42.18,63.36,42.18,101.82s-14.98,74.63-42.18,101.82c-27.2,27.2-63.36,42.18-101.82,42.18s-74.63-14.98-101.82-42.18c-27.2-27.2-42.18-63.36-42.18-101.82s14.98-74.63,42.18-101.82c27.2-27.2,63.36-42.18,101.82-42.18M160,0C71.63,0,0,71.63,0,160s71.63,160,160,160,160-71.63,160-160S248.37,0,160,0h0Z" fill="#ef4e4b"/></svg>`,
@@ -16,9 +14,6 @@ const TOKEN_ICONS = {
 };
 
 // ── TOOLTIP DATA ──────────────────────────────────────────────────────────────
-// Remplis les champs "name", "type" et "ability" pour chaque jeton.
-// "name" sera affiché en titre, "type" détermine l'icône (a/b/c ou absent),
-// "ability" comme description.
 const TOKEN_DATA_EN = {
   '1':  { name: 'Leader King', type: 'd', ability: '' },
   '2':  { name: 'Leader Queen', type: 'd', ability: '' },
@@ -44,7 +39,7 @@ const TOKEN_DATA_EN = {
   '22': { name: 'Frog',      type: 'c', ability: 'Moves up to two spaces. Can pass through a space occupied by a Character. Does not participate in capturing the opposing Leader.' },
   '23': { name: 'Sniper',    type: 'b', ability: 'At the start of your turn, captures the opposing Leader, even without any other allied participant, if they are at a distance of three spaces or more in a straight line, even if not visible.' },
   '24': { name: 'Tactician', type: 'a', ability: 'If an ally is adjacent to the opposing Leader: move one non-Leader ally by one space, that ally can no longer use its active ability this turn.' },
-  '25': { name: 'Leader Vermilion', type: 'd', ability: '' },
+  '25': { name: 'Leader Emperor', type: 'd', ability: '' },
 };
 
 const TOKEN_DATA_FR = {
@@ -72,7 +67,7 @@ const TOKEN_DATA_FR = {
   '22': { name: 'Grenouille',       type: 'c', ability: 'Se déplace jusqu’à deux cases. Peut traverser une case occupée par un Personnage. Ne participe pas à la Capture du Leader adverse.' },
   '23': { name: 'Sniper',           type: 'b', ability: 'Au début de votre tour, Capture le Leader adverse, même sans autre allié participant, s’il est à une distance de trois cases ou plus en ligne droite, même s’il n’est pas visible.' },
   '24': { name: 'Tacticienne',      type: 'a', ability: 'Si un allié est adjacent au Leader adverse: déplace d’une case un allié non-Leader, qui ne peut plus utiliser sa capacité active ce tour-ci.' },
-  '25': { name: 'Leader Vermillon', type: 'd', ability: '' },
+  '25': { name: 'Leader Empereur', type: 'd', ability: '' },
 };
 
 function _getTokenData(name) {
@@ -95,31 +90,52 @@ const Tooltip = (() => {
   function _build() {
     el = document.createElement('div');
     el.className = 'dc-tooltip-el tt-rich';
-    el.innerHTML = `
-      <div class="dc-tt-header">
-        <div class="dc-tt-icon" id="tt-type-icon"></div>
-        <div class="dc-tt-name" id="tt-name"></div>
-      </div>
-      <div class="dc-tt-ability" id="tt-ability"></div>`;
     document.body.appendChild(el);
   }
 
-  function _show(name, cx, cy, r) {
+  function _appendSection(name) {
     const data = _getTokenData(name);
     if (!data) return;
 
-    el.querySelector('#tt-name').textContent    = data.name;
-    el.querySelector('#tt-ability').textContent = data.ability;
-    el.querySelector('.dc-tt-header').style.marginBottom = data.ability ? '' : '0';
+    const header = document.createElement('div');
+    header.className = 'dc-tt-header';
+    if (!data.ability) header.style.marginBottom = '0';
 
-    const iconEl = el.querySelector('#tt-type-icon');
+    const iconEl = document.createElement('div');
+    iconEl.className = 'dc-tt-icon';
     if (data.type && TOKEN_ICONS[data.type]) {
       iconEl.innerHTML = TOKEN_ICONS[data.type];
       iconEl.style.display = 'flex';
     } else {
-      iconEl.innerHTML = '';
       iconEl.style.display = 'none';
     }
+    header.appendChild(iconEl);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'dc-tt-name';
+    nameEl.textContent = data.name;
+    header.appendChild(nameEl);
+
+    el.appendChild(header);
+
+    if (data.ability) {
+      const abilityEl = document.createElement('div');
+      abilityEl.className = 'dc-tt-ability';
+      abilityEl.textContent = data.ability;
+      el.appendChild(abilityEl);
+    }
+  }
+
+  // extraName: Frog this token transformed into (see editor.js) — shown above, own divider.
+  function _show(name, cx, cy, r, extraName) {
+    if (!_getTokenData(name)) return;
+
+    el.innerHTML = '';
+    if (extraName) {
+      _appendSection(extraName);
+      el.appendChild(Object.assign(document.createElement('div'), { className: 'dc-tt-sep' }));
+    }
+    _appendSection(name);
 
     el.style.visibility = 'hidden';
     el.style.display    = 'block';
@@ -138,7 +154,6 @@ const Tooltip = (() => {
       if (y < 8) { y = cy + r + GAP; above = false; }
       x = Math.max(MARGIN, Math.min(x, vw - tw - MARGIN));
 
-      // Position de la pointe du triangle : centre du jeton par rapport au tooltip
       const arrowX = cx - x;
       el.style.setProperty('--arrow-x', arrowX + 'px');
       el.classList.add(above ? 'tt-above' : 'tt-below');
@@ -159,12 +174,12 @@ const Tooltip = (() => {
     setTimeout(() => { if (el && !el.classList.contains('visible')) el.style.display = 'none'; }, 110);
   }
 
-  function scheduleBoard(name, cx, cy, key, r) {
+  function scheduleBoard(name, cx, cy, key, r, extraName) {
     if (!el) _build();
     if (activeKey === key) return;
     hide();
     activeKey = key;
-    timer = setTimeout(() => _show(name, cx, cy, r || 0), DELAY);
+    timer = setTimeout(() => _show(name, cx, cy, r || 0, extraName), DELAY);
   }
 
   function schedulePal(name, cx, cy, key, r) {
@@ -180,10 +195,9 @@ const Tooltip = (() => {
   return { init, scheduleBoard, schedulePal, hide };
 })();
 
-// ── BUTTON TOOLTIPS (toolbar) ─────────────────────────────────────────────────
+// ── BUTTON TOOLTIPS (toolbar + palette header filters) ────────────────────────
 function initButtonTooltips() {
-  document.querySelectorAll('#toolbar .btn').forEach(btn => {
-    // Supprimer le title natif définitivement
+  document.querySelectorAll('#toolbar .btn, .pal-filter-btn').forEach(btn => {
     btn.removeAttribute('title');
 
     let tt = null, timer = null;
@@ -208,7 +222,6 @@ function initButtonTooltips() {
         const vh  = window.innerHeight;
         const GAP = 10;
 
-        // Essayer en dessous d'abord (toolbar en haut de page)
         let y = br.bottom + GAP;
         let above = false;
         if (y + th > vh - 8) { y = br.top - th - GAP; above = true; }
@@ -216,7 +229,6 @@ function initButtonTooltips() {
         let x = br.left + br.width / 2 - tw / 2;
         x = Math.max(8, Math.min(x, vw - tw - 8));
 
-        // Repositionner la pointe du triangle sur le centre du bouton
         const arrowX = (br.left + br.width / 2) - x;
         tt.style.setProperty('--arrow-x', arrowX + 'px');
 

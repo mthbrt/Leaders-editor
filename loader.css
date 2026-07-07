@@ -20,7 +20,6 @@
   pointer-events: none;
 }
 
-/* ── Glow ambiant ── */
 #loader::after {
   content: '';
   position: absolute;
@@ -39,7 +38,6 @@
   to   { opacity: 1;   transform: translate(-50%, -50%) scale(1.1);  }
 }
 
-/* ── Conteneur ── */
 #loader-inner {
   position: relative;
   z-index: 1;
@@ -49,7 +47,6 @@
   gap: 20px;
 }
 
-/* ── Titre ── */
 #loader-title {
   font-family: 'Orbitron', monospace;
   font-weight: 900;
@@ -82,7 +79,6 @@
   }
 }
 
-/* ── Barre ── */
 #loader-bar-track {
   width: 100%;
   height: 2px;
@@ -98,7 +94,6 @@
   to   { opacity: 1; }
 }
 
-/* Glow sous la piste */
 #loader-bar-track::before {
   content: '';
   position: absolute;
@@ -126,7 +121,6 @@
     0 0 2px  rgba(255,255,255,0.7);
 }
 
-/* Tête lumineuse */
 #loader-bar-fill::before {
   content: '';
   position: absolute;
@@ -148,7 +142,6 @@
   to   { opacity: 1;   transform: scale(1.2); }
 }
 
-/* Shimmer */
 #loader-bar-shimmer {
   position: absolute;
   inset: 0;

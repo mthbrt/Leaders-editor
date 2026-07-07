@@ -15,89 +15,35 @@ const Palette = (() => {
   let collapsed     = false;
   let panel         = null;
   let lastCollapsed = false;
+  let _itemEls      = []; // [{ el, name }] — cached once in _buildSections, reused by _syncItems
+  let _sectionEls   = []; // [{ el, items: [{ el, name }] }] — reused by _applyFilters
 
-  // ── Palette token toolbar (ban / unban) ───────────────────────────────────
-  let palTb     = null;
+  // ── Header filter icons — single-select across a/b/c types (tooltip.js), re-click to clear.
+  // Plus an independent "hide on board" toggle. Leaders and id 26 have no type, so only that one.
+  const _loadFilterBool = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
+  let selectedType = localStorage.getItem('leaders-pal-filter-type') || null;
+  let hideOnBoard = _loadFilterBool('leaders-pal-filter-hide-on-board', false);
+
+  // ── Palette token context menu (ban / unban) ──────────────────────────────
   let palTbName = null;
 
-  function _mkPalToolbar() {
-    if (palTb) return palTb;
-    const el = document.createElement('div');
-    el.id = 'pal-tok-tb';
-    el.innerHTML = `<button class="tok-tb-btn" id="pal-tok-ban"><span id="pal-tok-ban-label"></span></button>`;
-    document.body.appendChild(el);
-    el.addEventListener('mousedown', e => e.stopPropagation());
-    el.querySelector('#pal-tok-ban').addEventListener('click', e => {
-      e.stopPropagation();
-      if (!palTbName) return;
-      isBanned(palTbName) ? doUnban(palTbName) : doBan(palTbName);
-      _hidePalToolbar();
-    });
-    palTb = el;
-    return el;
-  }
-
-  function _updatePalToolbarLabel() {
-    const label = palTb?.querySelector('#pal-tok-ban-label');
-    if (!label) return;
-    const banned = isBanned(palTbName);
-    const fr     = typeof currentLang !== 'undefined' && currentLang === 'fr';
-    label.textContent = banned ? (fr ? 'Débannir' : 'Unban') : (fr ? 'Bannir' : 'Ban');
-    const btn = palTb.querySelector('#pal-tok-ban');
-    if (btn) {
-      btn.style.color = banned ? 'var(--text)' : '#e05555';
-      btn.onmouseenter = () => { btn.style.background = 'var(--btn-bg-h)'; btn.style.color = banned ? '#ffffff' : '#f47474'; };
-      btn.onmouseleave = () => { btn.style.background = ''; btn.style.color = banned ? 'var(--text)' : '#e05555'; };
-    }
-  }
-
-  function _placePalToolbar(name, itemEl) {
+  function _placePalToolbar(name, x, y) {
     palTbName = name;
-    const el = _mkPalToolbar();
-    _updatePalToolbarLabel();
-
-    el.classList.remove('open', 'pal-tb-arrow-right', 'pal-tb-arrow-left');
-    el.style.display    = 'flex';
-    el.style.visibility = 'hidden';
-    el.style.transition = 'none';
-    void el.offsetWidth;
-
-    const elW = el.offsetWidth, elH = el.offsetHeight;
-    const GAP      = 10;
-    const itemRect = itemEl.getBoundingClientRect();
-    const itemCY   = itemRect.top + itemRect.height / 2;
-    const vh       = window.innerHeight;
-
-    let x = itemRect.left - elW - GAP;
-    let arrowSide = 'right';
-    if (x < 8) { x = itemRect.right + GAP; arrowSide = 'left'; }
-
-    let y = itemCY - elH / 2;
-    y = Math.max(8, Math.min(y, vh - elH - 8));
-
-    const arrowY = Math.max(14, Math.min(itemCY - y, elH - 14));
-    el.style.setProperty('--arrow-y', arrowY + 'px');
-    el.classList.add(arrowSide === 'right' ? 'pal-tb-arrow-right' : 'pal-tb-arrow-left');
-    el.style.position = 'fixed';
-    el.style.left     = x + 'px';
-    el.style.top      = y + 'px';
-
-    requestAnimationFrame(() => { el.style.transition = ''; el.style.visibility = ''; el.classList.add('open'); });
-
-    const _onOutside = ev => {
-      if (el.contains(ev.target)) return;
-      _hidePalToolbar();
-      document.removeEventListener('mousedown', _onOutside, true);
-    };
-    document.addEventListener('mousedown', _onOutside, true);
+    const fr     = typeof currentLang !== 'undefined' && currentLang === 'fr';
+    const banned = isBanned(name);
+    const items = [{
+      label: banned ? (fr ? 'Débannir' : 'Unban') : (fr ? 'Bannir' : 'Ban'),
+      danger: !banned,
+      onClick: () => {
+        banned ? doUnban(name) : doBan(name);
+        palTbName = null;
+      },
+    }];
+    _openCtxMenu('pal-tok-tb', x, y, items);
   }
 
   function _hidePalToolbar() {
-    if (!palTb) return;
-    palTb.classList.remove('open');
-    palTb.style.display    = 'none';
-    palTb.style.visibility = '';
-    palTb.style.transition = '';
+    _closeCtxMenu('pal-tok-tb');
     palTbName = null;
     Tooltip?.hide();
   }
@@ -105,12 +51,9 @@ const Palette = (() => {
   function isPalTbOpen() { return palTbName !== null; }
 
   // ── Layout ─────────────────────────────────────────────────────────────────
-  // Item diameter matches board tokens exactly (LO.r * 2) — no separate scale factor.
+  // Item diameter matches board tokens (LO.r * 2).
   const _itemSzFromR  = r => Math.round(r * 2);
-  // Width for `cols` items at `itemSz` px, matching .pal-grid's own padding/gap (INNER on each
-  // side, PAL_G between items) — #pal-panel has no border consuming this budget (see style.css,
-  // it uses a non-layout box-shadow instead). +4px is deliberate slack against fractional-pixel
-  // rounding under non-100% OS display scaling, not a correction for wrong math.
+  // +4px is deliberate slack against fractional-pixel rounding under non-100% display scaling.
   const _widthForCols = (cols, itemSz) => INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 4;
 
   // Desktop only — mobile sizes this panel entirely via CSS (see body.layout-mobile rules).
@@ -119,10 +62,8 @@ const Palette = (() => {
     return { palX: W - palW, palY: 0, palW, palH: H };
   }
 
-  // Decides the final column count (3..5) once the board's true radius `r` is locked in.
-  // Growing only ever consumes width the board didn't need — it never shrinks the board:
-  // a column is only added if the resulting center gap would stay at least as wide as the
-  // gap at which the board's own size is height-bound (i.e. width isn't yet the constraint).
+  // Growing only ever consumes width the board didn't need, never shrinking it: a column is added
+  // only if the resulting gap stays at least as wide as the board's own height-bound gap.
   function growColumns(mainW, mainH, pal2W, r) {
     const itemSz = _itemSzFromR(r);
     const heightBoundW = BOARD_COLS * (mainH / BOARD_ROWS);
@@ -136,8 +77,8 @@ const Palette = (() => {
   }
 
   // ── Hit testing ────────────────────────────────────────────────────────────
-  // x,y arrive relative to #board-area (see editor.js's _mainXY/_touchXY) — match that origin.
-  function _mainRect() { return document.getElementById('board-area').getBoundingClientRect(); }
+  // x,y are relative to #board-area (see editor.js's _mainXY/_touchXY) — match that origin.
+  function _mainRect() { return LO.boardRect; }
 
   function inPalette(x, y) {
     const r  = _mainRect();
@@ -158,9 +99,12 @@ const Palette = (() => {
     if (name) {
       const itemEl = panel?.querySelector(`.pal-item[data-name="${name}"]`);
       if (itemEl) {
+        // Rect is measured before the `:hover` translateY(-4px) (style.css) transitions in, but
+        // the tooltip appears after it has — offset compensates so it lines up with the risen token.
+        const HOVER_LIFT = 4;
         const r     = itemEl.getBoundingClientRect();
         const itemR = r.width / 2;
-        Tooltip.schedulePal(name, r.left + itemR, r.top + itemR, 'pal:' + name, itemR);
+        Tooltip.schedulePal(name, r.left + itemR, r.top + itemR - HOVER_LIFT, 'pal:' + name, itemR);
       }
     } else {
       Tooltip.hide();
@@ -173,14 +117,26 @@ const Palette = (() => {
     panel = document.createElement('div');
     panel.id = 'pal-panel';
     panel.innerHTML = `
-      <div id="pal-header"><span id="pal-title"></span></div>
+      <div id="pal-header">
+        <span id="pal-title"></span>
+        <button id="pal-filter-btn" class="pal-filter-btn" data-tooltip="${t('palFilterTitle')}" aria-label="${t('palFilterTitle')}">
+          <svg class="pal-filter-icon-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <svg class="pal-filter-icon-on" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+      </div>
       <div id="pal-body"><div id="pal-sections"></div></div>`;
     main.appendChild(panel);
 
     _buildSections();
+    _syncFilterButtons();
+    _applyFilters();
 
     panel.querySelector('#pal-header').addEventListener('mousedown', e => e.stopPropagation());
     panel.addEventListener('mousedown', e => { if (e.target.closest('.pal-sec-hdr')) e.stopPropagation(); });
+
+    panel.querySelector('#pal-filter-btn').addEventListener('click', e => {
+      _filterMenuEl ? _closeFilterMenu() : _openFilterMenu(e.currentTarget);
+    });
 
     // Clic molette → ban/unban
     panel.addEventListener('mousedown', e => {
@@ -197,20 +153,155 @@ const Palette = (() => {
       const item = e.target.closest('.pal-item');
       if (!item?.dataset.name) return;
       Tooltip.hide();
-      _placePalToolbar(item.dataset.name, item);
+      _placePalToolbar(item.dataset.name, e.clientX, e.clientY);
     });
 
     _syncCollapsed();
   }
 
+  // Header icon just reflects whether *any* filter is active — per-option state is in the dropdown.
+  function _syncFilterButtons() {
+    if (!panel) return;
+    const anyActive = selectedType !== null || hideOnBoard;
+    panel.querySelector('#pal-filter-btn')?.classList.toggle('active', anyActive);
+  }
+
+  function _selectType(type) {
+    selectedType = selectedType === type ? null : type;
+    if (selectedType) localStorage.setItem('leaders-pal-filter-type', selectedType);
+    else localStorage.removeItem('leaders-pal-filter-type');
+    _syncFilterButtons(); _applyFilters();
+  }
+
+  // ── Filter dropdown — its own menu, not the shared _openCtxMenu: stays open across multiple
+  // toggles, only closes on an outside click.
+  let _filterMenuEl = null;
+  let _filterMenuClose = null;
+
+  function _filterMenuItemDefs() {
+    const checkSvg = '<svg class="pal-filter-check" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2.5 7.5 5.5 10.5 11.5 3.5"/></svg>';
+    const eyeSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+    // Check slot is always rendered (empty when unchecked) so toggling never changes the row's width.
+    const row = (icon, label, checked) =>
+      `${icon}<span style="flex:1">${label}</span><span class="pal-filter-check-slot">${checked ? checkSvg : ''}</span>`;
+
+    return [
+      { html: row(eyeSvg, t('palFilterOnBoard'), hideOnBoard), onClick: () => {
+        hideOnBoard = !hideOnBoard;
+        localStorage.setItem('leaders-pal-filter-hide-on-board', hideOnBoard);
+        _syncFilterButtons(); _applyFilters(); _renderFilterMenuBody();
+      } },
+      { sep: true },
+      { html: row(TOKEN_ICONS.a, t('palFilterActive'),  selectedType === 'a'), onClick: () => { _selectType('a'); _renderFilterMenuBody(); } },
+      { html: row(TOKEN_ICONS.b, t('palFilterPassive'), selectedType === 'b'), onClick: () => { _selectType('b'); _renderFilterMenuBody(); } },
+      { html: row(TOKEN_ICONS.c, t('palFilterSpecial'), selectedType === 'c'), onClick: () => { _selectType('c'); _renderFilterMenuBody(); } },
+    ];
+  }
+
+  function _renderFilterMenuBody() {
+    if (!_filterMenuEl) return;
+    const items = _filterMenuItemDefs();
+    _filterMenuEl._items = items;
+    _filterMenuEl.innerHTML = items.map((it, i) => it.sep
+      ? `<div class="tok-tb-sep"></div>`
+      : `<button class="tok-tb-btn" data-idx="${i}">${it.html}</button>`
+    ).join('');
+  }
+
+  function _openFilterMenu(anchorBtn) {
+    const el = document.createElement('div');
+    el.id = 'pal-filter-menu';
+    document.body.appendChild(el);
+    _filterMenuEl = el;
+    _renderFilterMenuBody();
+
+    el.style.display    = 'flex';
+    el.style.visibility = 'hidden';
+    el.style.transition = 'none';
+    void el.offsetWidth;
+
+    // Top-right corner of the menu aligned to the button's right edge, clamped to stay on-screen.
+    const r   = anchorBtn.getBoundingClientRect();
+    const ew  = el.offsetWidth, eh = el.offsetHeight;
+    const vw  = window.innerWidth, vh = window.innerHeight;
+    const GAP = 4;
+    let left = Math.max(GAP, Math.min(r.right - ew, vw - ew - GAP));
+    let top  = r.bottom + GAP;
+    if (top + eh > vh - GAP) top = Math.max(GAP, r.top - eh - GAP);
+    el.style.left = left + 'px';
+    el.style.top  = top  + 'px';
+
+    requestAnimationFrame(() => {
+      el.style.transition = '';
+      el.style.visibility = '';
+      el.classList.add('open');
+      _menuOpened();
+    });
+
+    const onAction = e => {
+      const btn = e.target.closest('[data-idx]');
+      if (!btn) return;
+      e.preventDefault(); e.stopPropagation();
+      el._items[+btn.dataset.idx]?.onClick?.();
+    };
+    el.addEventListener('mousedown', onAction);
+
+    const onOutside = e => { if (!el.contains(e.target) && !anchorBtn.contains(e.target)) _closeFilterMenu(); };
+    document.addEventListener('mousedown', onOutside, true);
+    const onContext = e => { if (!el.contains(e.target)) _closeFilterMenu(); };
+    document.addEventListener('contextmenu', onContext, true);
+
+    _filterMenuClose = () => {
+      el.classList.remove('open');
+      el.removeEventListener('mousedown', onAction);
+      document.removeEventListener('mousedown', onOutside, true);
+      document.removeEventListener('contextmenu', onContext, true);
+      el.remove();
+      _menuClosed();
+    };
+  }
+
+  function _closeFilterMenu() {
+    _filterMenuClose?.();
+    _filterMenuClose = null;
+    _filterMenuEl    = null;
+  }
+
+  // Hides items that don't match selectedType, or (hideOnBoard) already have a copy on the board.
+  // Also hides a section entirely once every item in it is filtered out, tracking the last visible
+  // one so its divider (::after, style.css) doesn't trail a run of hidden sections.
+  function _applyFilters() {
+    if (!panel) return;
+    const onBoardSet = new Set(S.tokens.map(tok => tok.name));
+
+    for (const { el: item, name } of _itemEls) {
+      const type   = TOKEN_DATA_EN[name]?.type;
+      const hidden = (selectedType !== null && type !== selectedType)
+        || (hideOnBoard && onBoardSet.has(name));
+      item.classList.toggle('pal-item-filtered-out', hidden);
+    }
+
+    let lastVisibleSection = null;
+    for (const { el: sec, items } of _sectionEls) {
+      const empty = items.every(it => it.el.classList.contains('pal-item-filtered-out'));
+      sec.classList.toggle('pal-section-empty', empty);
+      sec.classList.remove('pal-section-last-visible');
+      if (!empty) lastVisibleSection = sec;
+    }
+    lastVisibleSection?.classList.add('pal-section-last-visible');
+  }
+
   function _buildSections() {
     const container = panel.querySelector('#pal-sections');
     container.innerHTML = '';
+    _itemEls = [];
+    _sectionEls = [];
 
     for (let gi = 0; gi < GROUPS.length; gi++) {
       const g   = GROUPS[gi];
       const sec = document.createElement('div');
       sec.className = 'pal-section';
+      const secItems = [];
 
       const grid = document.createElement('div');
       grid.className = 'pal-grid open';
@@ -225,9 +316,16 @@ const Palette = (() => {
         sec.appendChild(hdr);
       }
 
-      for (const name of g.names) grid.appendChild(_mkItem(name));
+      for (const name of g.names) {
+        const item  = _mkItem(name);
+        const entry = { el: item, name };
+        _itemEls.push(entry);
+        secItems.push(entry);
+        grid.appendChild(item);
+      }
       sec.appendChild(grid);
       container.appendChild(sec);
+      _sectionEls.push({ el: sec, items: secItems });
     }
   }
 
@@ -245,13 +343,16 @@ const Palette = (() => {
     img.draggable = false;
     item.appendChild(img);
 
+    item._badge = null;
     if (count >= 2) {
       const badge = document.createElement('span');
       badge.className   = 'pal-badge';
       badge.textContent = count;
       item.appendChild(badge);
+      item._badge = badge;
     }
 
+    item._banOverlay = null;
     if (banned) {
       const banOverlay = document.createElement('div');
       banOverlay.className = 'pal-item-ban-overlay';
@@ -260,6 +361,7 @@ const Palette = (() => {
       banImg.draggable = false;
       banOverlay.appendChild(banImg);
       item.appendChild(banOverlay);
+      item._banOverlay = banOverlay;
     }
 
     return item;
@@ -273,10 +375,7 @@ const Palette = (() => {
     onCollapseChange?.();
   }
 
-  // ── syncLayout — geometry only; called by relayout() on actual layout changes.
-  // Mobile sizes/shows this panel entirely via CSS (body.layout-mobile + .tab-active) — only
-  // the desktop grid needs any geometry help here, and only the .collapsed slide needs JS at all.
-  // Item sizing/outline are pure CSS, reactive to --tok-sz (see style.css) — nothing to do here.
+  // Geometry only; called by relayout(). Mobile sizes/shows this panel entirely via CSS.
   function syncLayout() {
     if (!panel) return;
     panel.style.left = panel.style.top = panel.style.width = panel.style.height = '';
@@ -287,41 +386,45 @@ const Palette = (() => {
     }
   }
 
-  // ── syncContent — token-state-dependent DOM patches; called by render() on every mutation ──
+  // No-ops during a drag — board state never changes mid-drag, only the ghost moves.
   function syncContent() {
-    if (!panel) return;
+    if (!panel || drag) return;
     _syncItems();
+    if (hideOnBoard) _applyFilters();
   }
 
   function _syncItems() {
-    for (const item of panel.querySelectorAll('.pal-item[data-name]')) {
-      const name   = item.dataset.name;
-      const banned = (S.banned || []).includes(name);
-      const count  = S.tokens.filter(t => t.name === name).length;
-      const img    = item.querySelector('img');
+    const bannedSet = new Set(S.banned || []);
+    const counts    = new Map();
+    for (const tok of S.tokens) counts.set(tok.name, (counts.get(tok.name) || 0) + 1);
 
-      item.classList.toggle('pal-item-banned',    banned);
-      item.classList.toggle('pal-item-on-board',  count > 0);
+    for (const { el: item, name } of _itemEls) {
+      const banned = bannedSet.has(name);
+      const count  = counts.get(name) || 0;
 
-      const expectedSrc = `jetons_noir/${name}.png`;
-      if (!img.src.endsWith(expectedSrc)) img.src = expectedSrc;
+      item.classList.toggle('pal-item-banned',   banned);
+      item.classList.toggle('pal-item-on-board', count > 0);
 
-      let badge = item.querySelector('.pal-badge');
       if (count >= 2) {
-        if (!badge) { badge = document.createElement('span'); badge.className = 'pal-badge'; item.appendChild(badge); }
-        badge.textContent = count;
-      } else {
-        badge?.remove();
+        if (!item._badge) {
+          item._badge = document.createElement('span');
+          item._badge.className = 'pal-badge';
+          item.appendChild(item._badge);
+        }
+        item._badge.textContent = count;
+      } else if (item._badge) {
+        item._badge.remove();
+        item._badge = null;
       }
 
-      let banOverlay = item.querySelector('.pal-item-ban-overlay');
-      if (banned && !banOverlay) {
-        banOverlay = document.createElement('div');
-        banOverlay.className = 'pal-item-ban-overlay';
+      if (banned && !item._banOverlay) {
+        item._banOverlay = document.createElement('div');
+        item._banOverlay.className = 'pal-item-ban-overlay';
         const banImg = document.createElement('img'); banImg.src = 'ui/ban.png'; banImg.draggable = false;
-        banOverlay.appendChild(banImg); item.appendChild(banOverlay);
-      } else if (!banned && banOverlay) {
-        banOverlay.remove();
+        item._banOverlay.appendChild(banImg); item.appendChild(item._banOverlay);
+      } else if (!banned && item._banOverlay) {
+        item._banOverlay.remove();
+        item._banOverlay = null;
       }
     }
   }
@@ -331,7 +434,6 @@ const Palette = (() => {
     const titleEl = panel.querySelector('#pal-title');
     if (titleEl) titleEl.textContent = t('palTitle');
 
-    // Les headers sont présents pour les groupes 1+ (gi > 0)
     panel.querySelectorAll('.pal-sec-hdr[data-group-index]').forEach(hdr => {
       const gi    = +hdr.dataset.groupIndex;
       const group = GROUPS[gi];
@@ -340,6 +442,12 @@ const Palette = (() => {
         if (label) label.textContent = t(group.labelKey);
       }
     });
+
+    const filterBtn = panel.querySelector('#pal-filter-btn');
+    if (filterBtn) {
+      const label = t('palFilterTitle');
+      filterBtn.dataset.tooltip = label; filterBtn.setAttribute('aria-label', label);
+    }
   }
 
   function isCollapsed()  { return collapsed; }

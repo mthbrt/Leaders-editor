@@ -15,15 +15,25 @@ const LANGS = {
     rowShadow:        'Ombres',
     descShadow:       'Ajoute une ombre sous chaque personnage',
     rowTooltips:      'Infobulles',
-    descTooltips:     'Affiche les détails des personnages au survol',
+    descTooltips:     'Affiche les capacités des personnages au survol',
+    rowAlertIcons:    'Icônes d\'alerte',
+    descAlertIcons:   'Signale les barrages, les encerclements et les captures',
+    rowBarrage:       'Afficher le barrage',
+    descBarrage:      'Affiche la ligne séparant le plateau',
     rowLang:          'Langue',
     palTitle:         'PERSONNAGES',
     palReset:         'Réinitialiser',
     secVermillon:     'Extension Vermillon',
     secArchetypes:    'Archétypes',
     secLeaders:       'Leaders',
+    palFilterTitle:   'Filtrer',
+    palFilterActive:  'Capacité active',
+    palFilterPassive: 'Capacité passive',
+    palFilterSpecial: 'Capacité spéciale',
+    palFilterOnBoard: 'Masquer sur le plateau',
     pal2Title:          'SAUVEGARDES',
     pal2AddSection:     'Ajouter une section',
+    pal2NewSection:     'Nouvelle section',
     pal2DefaultSection: 'Section',
     pal2DefaultConfig:  'Position',
     pal2LegacySection:  'Général',
@@ -32,19 +42,38 @@ const LANGS = {
     pal2TitleDelete:    'Supprimer',
     pal2TitleOverwrite: 'Écraser',
     pal2TitleUpdate:    'Mettre à jour la sauvegarde',
+    pal2TitleDuplicate: 'Dupliquer',
     pal2TitleMore:      'Plus d\'options',
     btnHelp:            'Aide',
     helpTitle:          'Commandes',
-    helpSecTokens:      'Personnages',
-    helpDragBoard:      'Clic gauche',
-    helpDragBoardDesc:  'Déplacer les personnages par glisser-déposer',
-    helpMiddleTok:      'Clic molette',
-    helpMiddleTokDesc:  'Plateau : changer équipe',
-    helpRightTok:       'Clic droit',
-    helpRightTokDesc:   'Plateau : menu (équipe / supprimer)<br>Liste des personnages : bannir / débannir',
-    helpSecGeneral:     'Général',
-    helpArrowKeys:      'Annuler / Rétablir',
-    helpEsc:            'Fermer le menu',
+    // Général
+    helpSecGeneral:      'Général',
+    helpUndo:            'Annuler',
+    helpRedo:            'Rétablir',
+    helpEsc:             'Fermer le menu',
+    helpKeyRightClick:   'Clic droit',
+    helpContextMenuDesc: 'Ouvrir le menu contextuel',
+    // Plateau
+    helpSecBoard:        'Plateau',
+    helpKeyDrag:         'Glisser',
+    helpBoardDragDesc:   'Déplacer un personnage',
+    helpKeyClick:        'Clic gauche',
+    helpBoardClickDesc:  'Sélectionner un personnage puis une case pour le déplacer',
+    helpKeyMiddle:       'Clic molette',
+    helpKeyC:            'C',
+    helpBoardTeamDesc:   'Changer d’équipe',
+    helpKeyDelete:       'Suppr',
+    helpBoardDeleteDesc: 'Retirer du plateau',
+    // Personnages
+    helpSecTokens:       'Personnages',
+    helpTokensDragDesc:  'Placer sur le plateau',
+    helpTokensClickDesc: 'Ajouter au plateau',
+    helpKeyB:            'B',
+    helpTokensBanDesc:   'Bannir / débannir',
+    // Sauvegardes
+    helpSecSaves:        'Sauvegardes',
+    helpSavesClickDesc:  'Restaurer une position enregistrée',
+    helpSavesDragDesc:   'Réorganiser sections et sauvegardes',
   },
   en: {
     btnUndo:          'Undo',
@@ -61,15 +90,25 @@ const LANGS = {
     rowShadow:        'Shadows',
     descShadow:       'Adds a shadow under each character',
     rowTooltips:      'Tooltips',
-    descTooltips:     'Show character details on hover',
+    descTooltips:     'Show character abilities on hover',
+    rowAlertIcons:    'Alert icons',
+    descAlertIcons:   'Notify barrier, encirclement, and capture events',
+    rowBarrage:       'Show barrage',
+    descBarrage:      'Draws the line separating the board',
     rowLang:          'Language',
     palTitle:         'CHARACTERS',
     palReset:         'Reset',
-    secVermillon:     'Vermillon Expansion',
+    secVermillon:     'Vermilion Expansion',
     secArchetypes:    'Archetypes',
     secLeaders:       'Leaders',
+    palFilterTitle:   'Filter',
+    palFilterActive:  'Active ability',
+    palFilterPassive: 'Passive ability',
+    palFilterSpecial: 'Special ability',
+    palFilterOnBoard: 'Hide on board',
     pal2Title:          'SAVES',
     pal2AddSection:     'Add section',
+    pal2NewSection:     'New section',
     pal2DefaultSection: 'Section',
     pal2DefaultConfig:  'Position',
     pal2LegacySection:  'General',
@@ -78,19 +117,38 @@ const LANGS = {
     pal2TitleDelete:    'Delete',
     pal2TitleOverwrite: 'Overwrite',
     pal2TitleUpdate:    'Update save',
+    pal2TitleDuplicate: 'Duplicate',
     pal2TitleMore:      'More options',
     btnHelp:            'Help',
     helpTitle:          'Controls',
-    helpSecTokens:      'Characters',
-    helpDragBoard:      'Left-click',
-    helpDragBoardDesc:  'Move the characters by drag and drop',
-    helpMiddleTok:      'Middle-click',
-    helpMiddleTokDesc:  'Board: toggle team',
-    helpRightTok:       'Right-click',
-    helpRightTokDesc:   'Board: menu (team / delete)<br>Character list: ban / unban',
-    helpSecGeneral:     'General',
-    helpArrowKeys:      'Undo / Redo',
-    helpEsc:            'Close menu',
+    // General
+    helpSecGeneral:      'General',
+    helpUndo:            'Undo',
+    helpRedo:            'Redo',
+    helpEsc:             'Close menu',
+    helpKeyRightClick:   'Right-click',
+    helpContextMenuDesc: 'Open context menu',
+    // Board
+    helpSecBoard:        'Board',
+    helpKeyDrag:         'Drag',
+    helpBoardDragDesc:   'Move a character',
+    helpKeyClick:        'Left-click',
+    helpBoardClickDesc:  'Select a character, then click a cell to move it',
+    helpKeyMiddle:       'Middle-click',
+    helpKeyC:            'C',
+    helpBoardTeamDesc:   'Toggle team',
+    helpKeyDelete:       'Delete',
+    helpBoardDeleteDesc: 'Remove from board',
+    // Characters
+    helpSecTokens:       'Characters',
+    helpTokensDragDesc:  'Place on the board',
+    helpTokensClickDesc: 'Add to board',
+    helpKeyB:            'B',
+    helpTokensBanDesc:   'Ban / unban',
+    // Saves
+    helpSecSaves:        'Saves',
+    helpSavesClickDesc:  'Restore a saved position',
+    helpSavesDragDesc:   'Reorder sections and saves',
   }
 };
 
@@ -125,6 +183,10 @@ function _applyLang() {
   document.querySelector('#row-shadow .setting-desc').textContent = t('descShadow');
   document.querySelector('#row-tooltips .setting-name').textContent = t('rowTooltips');
   document.querySelector('#row-tooltips .setting-desc').textContent = t('descTooltips');
+  document.querySelector('#row-alert-icons .setting-name').textContent = t('rowAlertIcons');
+  document.querySelector('#row-alert-icons .setting-desc').textContent = t('descAlertIcons');
+  document.querySelector('#row-barrage .setting-name').textContent = t('rowBarrage');
+  document.querySelector('#row-barrage .setting-desc').textContent = t('descBarrage');
   document.querySelector('#row-lang   .setting-name').textContent = t('rowLang');
   document.querySelectorAll('#help-popup [data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
 
@@ -162,12 +224,33 @@ const LABELS = (() => {
 })();
 const L2ID = Object.fromEntries(Object.entries(LABELS).map(([id, l]) => [l, +id]));
 
+// ── ADJACENCY (for board state validation) ────────────────────────────────────
+const ID2QR = new Map(CELLS.map(c => [c.id, c]));
+const QR2ID = new Map(CELLS.map(c => [`${c.q},${c.r}`, c.id]));
+const HEX_DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+function _neighborCellIds(cellId) {
+  const c = ID2QR.get(cellId);
+  if (!c) return [];
+  return HEX_DIRS
+    .map(([dq, dr]) => QR2ID.get(`${c.q + dq},${c.r + dr}`))
+    .filter(id => id !== undefined);
+}
+
+// Used by the barrage DFS/BFS in hints.js.
+const ALL_CELL_IDS = CELLS.map(c => c.id);
+const CELL_ADJ = new Map(CELLS.map(c => [
+  c.id,
+  HEX_DIRS.map(([dq, dr]) => QR2ID.get(`${c.q + dq},${c.r + dr}`)).filter(id => id !== undefined)
+]));
+
+// Barrage, encirclement, capture logic + board status icons → see hints.js
+
 // ── ENCODE / DECODE ───────────────────────────────────────────────────────────
 function enc({ tokens, banned }) {
   const whites = tokens.filter(t => t.c === 'w');
   const blacks  = tokens.filter(t => t.c === 'b');
   const parts   = [];
-  const fmt     = t => `${(LABELS[t.cell] ?? t.cell).toLowerCase()}:${t.name}`;
+  const fmt     = t => `${(LABELS[t.cell] ?? t.cell).toLowerCase()}:${t.name}${t.frog ? 'f' : ''}`;
   if (whites.length) parts.push('white=' + whites.map(fmt).join(','));
   if (blacks.length) parts.push('black=' + blacks.map(fmt).join(','));
   if (banned?.length) parts.push('ban=' + banned.join(','));
@@ -190,9 +273,13 @@ function dec(raw) {
         const col  = entry.indexOf(':');
         if (col === -1) continue;
         const ref  = entry.slice(0, col).toUpperCase();
-        const name = entry.slice(col + 1).trim();
+        let   name = entry.slice(col + 1).trim();
+        // Character ids are always plain digits, so a trailing 'f' unambiguously marks the token
+        // as transformed into a Frog rather than being part of the id itself.
+        let frog = false;
+        if (name.endsWith('f')) { frog = true; name = name.slice(0, -1); }
         const cell = L2ID[ref] ?? +ref;
-        if (name && !isNaN(cell)) tokens.push({ cell, name, c });
+        if (name && !isNaN(cell)) tokens.push(frog ? { cell, name, c, frog } : { cell, name, c });
       }
     };
     parseGroup(params['white'], 'w');
@@ -270,9 +357,11 @@ const redo = () => hidx < hist.length-1 && restH(hist[++hidx]);
 
 // ── SETTINGS ─────────────────────────────────────────────────────────────────
 const _loadSetting = (key, def) => { const v = localStorage.getItem(key); return v === null ? def : v === 'true'; };
-let showLabels = _loadSetting('leaders-labels', true);
-let showShadow = _loadSetting('leaders-shadow', true);
-let showTooltips = _loadSetting('leaders-tooltips', true);
+let showLabels     = _loadSetting('leaders-labels',      true);
+let showShadow     = _loadSetting('leaders-shadow',      true);
+let showTooltips   = _loadSetting('leaders-tooltips',    true);
+let showAlertIcons = _loadSetting('leaders-alert-icons', true);
+let showBarrageLine = _loadSetting('leaders-board-aids', true);
 
 // ── VIEW FLIP STATE (cosmétique, non sauvegardé dans l'URL) ──────────────────
 let viewFlipH = false;
@@ -284,27 +373,20 @@ const _mobileMQ = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT_PX}px)`);
 const isMobileLayout = () => _mobileMQ.matches;
 
 // ── PANEL OPEN/CLOSE ANIMATION ────────────────────────────────────────────────
-// A plain CSS transition on grid-template-columns doesn't work here: the board's cell positions
-// are computed in JS from a synchronous boardArea.clientWidth read (see _relayoutDesktop), and
-// that read reports the layout's *current* state at the instant it's called — at t=0 of a CSS
-// transition that's still the pre-change size, not an in-between animated one. The result is the
-// board snapping to a stale layout and sitting there while the container visually resizes
-// underneath it — the centering bug from last time.
-// Instead, _relayoutDesktop can take a forced width per panel (_panelWidthOverride) and skip its
-// own natural-width computation when one is set. Driving that override through a sequence of
-// values via requestAnimationFrame — calling the *real* relayout()/render() on every frame —
-// means every intermediate frame is a fully self-consistent layout, not an interpolation of a
-// stale one, so centering stays correct throughout.
+// A plain CSS transition on grid-template-columns doesn't work: the board's cell positions come
+// from a synchronous boardArea.clientWidth read (_relayoutDesktop), which at t=0 of a CSS
+// transition still reports the pre-change size — the board snaps to a stale layout while the
+// container visually resizes underneath it. Instead, _relayoutDesktop takes a forced width per
+// panel (_panelWidthOverride) and drives it through a sequence of values via requestAnimationFrame,
+// calling the real relayout()/render() every frame so each one is a fully self-consistent layout.
 const PANEL_ANIM_MS = 280; // matches #pal-panel/#pal2-panel's own transition duration
 const _panelWidthOverride = { pal: null, pal2: null };
 const _panelAnimRaf       = { pal: null, pal2: null };
 
-// The panel's own box stays a constant size at all times (so its content never reshuffles) and
-// just translates fully off-screen via CSS transform when collapsed — only the board's reserved
-// space (--pal-col-w/--pal2-col-w above) animates. The right panel's natural width depends on the
-// live column-growth computation, which in turn depends on real board measurements that are only
-// meaningful while the panel is actually open and settled — so its constant width is the last
-// value computed in that state, cached here, rather than recomputed while closed.
+// The panel's own box stays a constant size (content never reshuffles), translating off-screen
+// via CSS transform when collapsed — only the board's reserved space animates. The right panel's
+// natural width depends on live board measurements only meaningful while open, so this caches the
+// last value computed in that state instead of recomputing while closed.
 let _palPanelW = null;
 
 // Evaluates the same cubic-bezier(0.4,0,0.2,1) curve used by the panels' own CSS transition, via
@@ -345,18 +427,15 @@ function _animatePanelWidth(which, fromW, toW) {
   _panelAnimRaf[which] = requestAnimationFrame(step);
 }
 
-// Reads the panel's currently-applied column width, computes its natural target width for the
-// *other* side of the toggle, and kicks off the animation between them. Called from each panel's
-// collapse-change callback (see init()) instead of a plain relayout()+render().
+// Reads the panel's current column width, computes the natural target for the other side of the
+// toggle, and kicks off the animation between them.
 function _animatePanelToggle(which) {
   const main = document.getElementById('main');
   const varName = which === 'pal' ? '--pal-col-w' : '--pal2-col-w';
   const fromW = parseFloat(getComputedStyle(main).getPropertyValue(varName)) || 0;
 
-  // Compute the natural target by actually relayouting once — this only mutates inline styles
-  // synchronously within this same tick, with no paint in between, so it's invisible: we reset
-  // everything back to fromW before returning, and the browser only ever paints that reset state
-  // until the rAF loop above starts advancing it.
+  // Relayout once to read the natural target, then reset back to fromW before returning — no
+  // paint happens in between, so this is invisible until the rAF loop below starts advancing it.
   _panelWidthOverride[which] = null;
   relayout();
   const toW = parseFloat(getComputedStyle(main).getPropertyValue(varName)) || 0;
@@ -406,11 +485,9 @@ function _buildMobileTabs() {
   _updateMobileTabLabels();
 }
 
-// Swipe-down-to-close / swipe-up-to-open on the tab bar — the only part of the panel that's
-// always visible (the content area has its own scrollable lists, so a swipe gesture there would
-// fight normal scrolling). Attached to the bar itself rather than a separate handle, since a tap
-// that doesn't move past the threshold below still reaches the tab/collapse buttons normally —
-// only an actual vertical drag is treated as a swipe.
+// Swipe-down-to-close / swipe-up-to-open on the tab bar — the content area has its own scrollable
+// lists, so a swipe there would fight normal scrolling. A tap that doesn't cross the threshold
+// below still reaches the tab/collapse buttons normally.
 function _initMobileTabsSwipe(bar) {
   const SWIPE_PX = 24;
   let startX = 0, startY = 0, tracking = false;
@@ -442,16 +519,10 @@ function _updateMobileTabLabels() {
   _mobileTabsEl.querySelector('[data-tab="tokens"]').textContent = t('palTitle');
 }
 
-// #board-area is a normal flex child on mobile (see style.css) — #mobile-tabs growing/shrinking
-// genuinely resizes it, which is exactly what should happen so the board stays fully visible
-// above the panel (see _relayoutMobile). But #board-area's clientHeight is read synchronously in
-// _relayoutMobile, and #mobile-tabs' height changes via a plain CSS transition — so a single
-// relayout() right after toggling the class would only ever see that transition's *start* value
-// (t=0, before any time has actually passed), leaving the board snapped to the old size for the
-// whole animation. Polling relayout()/render() on every subsequent frame instead samples the
-// panel's real, already-progressed (CSS-animated) height each time, so the board resizes/
-// recenters smoothly in step with it. No separate JS-side easing needed: the height transition
-// itself is still plain CSS — this just re-renders against it as it plays, not driving it.
+// #mobile-tabs' height animates via plain CSS transition, so a single relayout() right after
+// toggling the class would only see its t=0 start value. Polling relayout()/render() every frame
+// instead samples the panel's real, already-progressed height each time, resizing the board
+// (#board-area, a flex child) smoothly in step with it — no separate JS easing needed.
 let _mobileTabsResizeRaf = null;
 
 function _toggleMobileTabsCollapsed() {
@@ -535,6 +606,10 @@ function relayout() {
   // drop targets, palette items — they're all the same diameter). CSS derives width/height and
   // the responsive, centered outline/ring from this one variable; JS never sizes them directly.
   document.body.style.setProperty('--tok-sz', Math.round(LO.r * 2) + 'px');
+  // Rounded to a whole pixel for the same reason as --tok-sz above — a fractional-pixel box for
+  // the frog badge's background-image forces the browser to anti-alias the whole image, not just
+  // its edges, which reads as blurry rather than just a soft edge (see _applyFrogBadge).
+  document.body.style.setProperty('--frog-badge-sz', Math.round(LO.r * 2 * 0.4) + 'px');
 }
 
 // Desktop: #main is a CSS grid (fixed-280px saves | board | tokens). The board's size is read
@@ -554,11 +629,8 @@ function _relayoutDesktop() {
   const pal2NaturalW = (typeof Palette2 !== 'undefined') ? (Palette2.layout(mainW, mainH).palW || 0) : 0;
   main.style.setProperty('--pal2-panel-w', pal2NaturalW + 'px');
 
-  // While a panel's open/close animation is running (see _animatePanelToggle), the *board's*
-  // reserved space is driven frame-by-frame from outside instead of computed naturally here —
-  // every frame must still resolve to a fully consistent board layout, just for that frame's
-  // forced width. This is intentionally separate from --pal2-panel-w above: that's the panel's
-  // own constant box size, this is how much of it the board currently treats as reserved.
+  // Separate from --pal2-panel-w above (the panel's own constant box size): this is how much of
+  // it the board currently treats as reserved, driven frame-by-frame during an open/close animation.
   const pal2W = _panelWidthOverride.pal2 != null ? _panelWidthOverride.pal2 : (pal2Collapsed ? 0 : pal2NaturalW);
   main.style.setProperty('--pal2-col-w', pal2W + 'px');
 
@@ -573,24 +645,17 @@ function _relayoutDesktop() {
     H = boardArea.clientHeight || 560;
     ({ sp, r } = _boardSpacing(W, H));
   } else if (palCollapsed) {
-    // Closed and settled: the board gets the full remaining space (0 reserved); the panel's own
-    // box keeps whatever width it last had while open (see _palPanelW below) — recomputing it
-    // against the now-wider board would give a different (likely larger) column count, which is
-    // exactly the "size changes while closed" this is meant to avoid.
+    // Closed: board gets the full space; panel keeps whatever width it last had while open
+    // (_palPanelW) rather than recomputing against the now-wider board.
     palW = 0;
     main.style.setProperty('--pal-col-w', '0px');
     W = boardArea.clientWidth  || 800;
     H = boardArea.clientHeight || 560;
     ({ sp, r } = _boardSpacing(W, H));
   } else {
-    // Open and settled: reserving width for the right panel changes the board's space, which
-    // changes its radius, which changes how wide the panel needs to be to fit N item-sized
-    // columns — so converge panel width and board radius together instead of trusting a single
-    // estimate-based pass. Each step only narrows the gap (reserving more than needed shrinks the
-    // board, which then asks for less; reserving less grows the board, which then asks for more),
-    // so this settles within a handful of iterations — capped here as a safety net, not because
-    // it needs it. The result becomes both the board's reserved width AND the panel's own
-    // (cached) constant width, since they agree while open.
+    // Open: reserving width for the panel changes the board's radius, which changes how wide the
+    // panel needs to be — so converge the two together (each step only narrows the gap) instead
+    // of trusting one estimate-based pass. Iteration cap below is a safety net, not a necessity.
     palW = Palette.layout(mainW, mainH, _boardSpacing(mainW, mainH).r).palW;
     for (let i = 0; i < 8; i++) {
       main.style.setProperty('--pal-col-w', palW + 'px');
@@ -611,18 +676,18 @@ function _relayoutDesktop() {
   const cx = W / 2, cy = H / 2;
   const { cells, byId } = _computeCells(cx, cy, sp);
   const hs = _layoutBoardLayer(cx, cy, cells, r);
+  // Free read (layout already flushed above) — cached so mousemove/touchmove handlers don't
+  // each call getBoundingClientRect() themselves (_mainXY/_touchXY/_syncGhost/Palette._mainRect).
+  const boardRect = boardArea.getBoundingClientRect();
 
-  LO = { W, H, r, cx, cy, cells, byId, hs };
+  LO = { W, H, r, cx, cy, cells, byId, hs, boardRect };
 
   Palette.syncLayout();
   if (typeof Palette2 !== 'undefined') Palette2.syncLayout();
 }
 
-// Mobile: #board-area is a normal flex child that takes whatever height #mobile-tabs doesn't
-// (see style.css) — so its own clientWidth/clientHeight already *is* "however much space is
-// currently available above the panel," and centering within it is just W/2,H/2. No separate
-// shift/overlap math needed: as #mobile-tabs grows, #board-area's box genuinely shrinks (a real
-// resize), and the board recenters in whatever's left, same as it always has.
+// Mobile: #board-area is a flex child that takes whatever height #mobile-tabs doesn't (style.css),
+// so its clientWidth/clientHeight already is the available space, and centering is just W/2,H/2.
 function _relayoutMobile() {
   const boardArea = document.getElementById('board-area');
   const W = boardArea.clientWidth  || 800;
@@ -632,8 +697,9 @@ function _relayoutMobile() {
 
   const { cells, byId } = _computeCells(cx, cy, sp);
   const hs = _layoutBoardLayer(cx, cy, cells, r);
+  const boardRect = boardArea.getBoundingClientRect();
 
-  LO = { W, H, r, cx, cy, cells, byId, hs };
+  LO = { W, H, r, cx, cy, cells, byId, hs, boardRect };
 
   Palette.syncLayout();
   if (typeof Palette2 !== 'undefined') Palette2.syncLayout();
@@ -648,10 +714,10 @@ function _updateBoardClip(el, bw, bh, hs) {
 }
 
 // ── HIT TESTING ───────────────────────────────────────────────────────────────
-// Coordinates are relative to #board-area (where LO's cell positions live), not #main —
-// on desktop the two differ by the left panel's width.
+// Coordinates are relative to #board-area (where LO's cell positions live), not #main — on
+// desktop the two differ by the left panel's width.
 function _mainXY(e) {
-  const b = document.getElementById('board-area').getBoundingClientRect();
+  const b = LO.boardRect;
   return { x: e.clientX - b.left, y: e.clientY - b.top };
 }
 
@@ -692,9 +758,8 @@ function _palRecruitOne(name) {
   saveH(); render();
 }
 
-// ── MOVE SELECTED TOKEN — helper partagé souris + tactile ─────────────────────
-// Déplace le jeton sélectionné (_selected.id) vers destCellId.
-// Échange si la case est déjà occupée. Retourne true si un mouvement a eu lieu.
+// ── MOVE SELECTED TOKEN — shared by mouse + touch ─────────────────────────────
+// Moves _selected.id to destCellId, swapping if occupied. Returns true if it moved.
 function _moveSelectedToCell(destCellId) {
   const srcTok = S.tokens.find(t => t.id === _selected.id);
   if (!srcTok) return false;
@@ -759,29 +824,24 @@ function _closeAllToolbars(target) {
   }
 }
 
-// ── RIGHT-CLICK / LONG-PRESS → menu contextuel ───────────────────────────────
-function _simulateRightClick(x, y) {
+// ── RIGHT-CLICK / LONG-PRESS → context menu ───────────────────────────────────
+// x,y are board-local (hit-testing); clientX,clientY are viewport coords (where the menu opens).
+function _simulateRightClick(x, y, clientX, clientY) {
   if (Palette.inPalette(x, y)) {
     const name = Palette.palAt(x, y);
-    if (name) {
-      const item = document.querySelector(`#pal-panel .pal-item[data-name="${name}"]`);
-      if (item) { Tooltip.hide(); Palette.openPalToolbar(name, item); }
-    }
+    if (name) { Tooltip.hide(); Palette.openPalToolbar(name, clientX, clientY); }
     return;
   }
   const tok = tokAt(x, y);
-  if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(); render(); }
+  if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(clientX, clientY); }
 }
 
 // ── TOUCH EVENTS ──────────────────────────────────────────────────────────────
-// Tap-to-select (the original model) handles everything by default — it's what the mobile
-// bottom panel's own taps/scroll/swipe rely on working normally, since #main's listeners here
-// see every touch in the document, including ones that land on the panel. Real drag-and-drop is
-// layered on top of that, but only ever armed when a touch starts on an actual board token
-// (checked in onTouchStart below) — so it can't intercept/preventDefault touches anywhere else,
-// panel included.
+// Tap-to-select handles everything by default. Real drag-and-drop is layered on top, only armed
+// when a touch starts on an actual board token (onTouchStart), so it never intercepts touches
+// elsewhere (panel taps/scroll/swipe keep working normally).
 function _touchXY(touch) {
-  const b = document.getElementById('board-area').getBoundingClientRect();
+  const b = LO.boardRect;
   return { x: touch.clientX - b.left, y: touch.clientY - b.top };
 }
 
@@ -805,7 +865,7 @@ function onTouchStart(e) {
     if (navigator.vibrate) navigator.vibrate(40);
     drag = null; dpos = null; // a long-press always means "context menu," not "drag"
     _cancelTouchSelection();
-    _simulateRightClick(x, y);
+    _simulateRightClick(x, y, onTouchStart._startX, onTouchStart._startY);
     render();
   }, LONG_PRESS_MS);
 
@@ -893,9 +953,7 @@ function onTouchEnd(e) {
         const tok = S.tokens.find(t => t.id === _selected.id);
         if (tok) { _palAdd(tok.name); S.tokens = S.tokens.map(t => t.id === _selected.id ? { ...t, name: palName } : t); _palRemove(palName); saveH(); }
       }
-    } else {
-      // Clic hors plateau → déselectionner seulement (pas de suppression)
-    }
+    } // else: tap outside the board just deselects, no deletion
     _cancelTouchSelection(); render(); e.preventDefault(); return;
   }
 
@@ -927,96 +985,148 @@ function _initTouchEvents() {
   main.addEventListener('touchcancel', () => { _cancelLongPress(); drag = null; dpos = null; _cancelTouchSelection(); render(); });
 }
 
-// ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────
-let tokTb   = null;
-let tokTbId = null;
+// ── SHARED RIGHT-CLICK CONTEXT MENU ───────────────────────────────────────────
+// Backs the board's token menu (#tok-tb) and the palette's ban menu (#pal-tok-tb) — same design
+// as the Saves panel's own (#pal2-ctx-menu). elId lets each menu keep its own DOM element/close-fn.
+const _ctxMenus = new Map(); // elId -> close function
 
-function _mkTokToolbar() {
-  if (tokTb) return tokTb;
-  const el = document.createElement('div');
-  el.id = 'tok-tb';
-  el.innerHTML = `
-    <button id="tok-color" class="tok-tb-btn"><span id="tok-color-label"></span></button>
-    <div class="tok-tb-sep"></div>
-    <button id="tok-del" class="tok-tb-btn"><span id="tok-del-label"></span></button>`;
-
-  document.getElementById('board-area').appendChild(el);
-  el.addEventListener('mousedown', e => e.stopPropagation());
-  el.addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
-  el.addEventListener('touchend',   e => e.stopPropagation(), { passive: true });
-
-  el.querySelector('#tok-color').addEventListener('click', e => {
-    e.stopPropagation();
-    if (tokTbId === null) return;
-    S.tokens = S.tokens.map(t => t.id === tokTbId ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
-    _hideTokToolbar(); saveH(); render();
-  });
-
-  el.querySelector('#tok-del').addEventListener('click', e => {
-    e.stopPropagation();
-    if (tokTbId === null) return;
-    const tok = S.tokens.find(t => t.id === tokTbId);
-    if (tok) _palAdd(tok.name);
-    S.tokens = S.tokens.filter(t => t.id !== tokTbId);
-    _hideTokToolbar(); saveH(); render();
-  });
-
-  tokTb = el;
-  return el;
+let _menuOpenCount = 0;
+let _lastClientX = 0, _lastClientY = 0;
+// Track cursor position at window level — fires even while body has pointer-events:none,
+// so coordinates stay current while menus are open.
+window.addEventListener('mousemove', e => { _lastClientX = e.clientX; _lastClientY = e.clientY; }, true);
+function _menuOpened() { if (++_menuOpenCount === 1) document.body.classList.add('menu-open'); }
+function _menuClosed() {
+  if (--_menuOpenCount <= 0) {
+    _menuOpenCount = 0;
+    document.body.classList.remove('menu-open');
+    // pointer-events:none on body bypassed #main, so onDown/_closeAllToolbars never ran — clear
+    // toolbar/tooltip state here so onMove's guards don't stay stuck after close.
+    tokTbId = null;
+    Palette?.hidePalToolbar?.();
+    Tooltip.hide();
+    setTimeout(() => {
+      document.getElementById('main')?.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true, cancelable: true, clientX: _lastClientX, clientY: _lastClientY,
+      }));
+    }, 0);
+  }
 }
 
-function _updateTokToolbarLabels() {
-  const fr = currentLang === 'fr';
-  const label = document.getElementById('tok-color-label');
-  const del   = document.getElementById('tok-del-label');
-  if (label) label.textContent = fr ? 'Changer de couleur' : 'Toggle color';
-  if (del)   del.textContent   = fr ? 'Supprimer' : 'Delete';
+function _closeCtxMenu(elId) {
+  const close = _ctxMenus.get(elId);
+  if (close) { _ctxMenus.delete(elId); close(); }
 }
 
-function _placeTokToolbar() {
-  if (tokTbId === null) { _hideTokToolbar(); return; }
-  const tok  = S.tokens.find(t => t.id === tokTbId);
-  if (!tok)  { _hideTokToolbar(); return; }
-  const cell = LO.byId.get(tok.cell);
-  if (!cell) { _hideTokToolbar(); return; }
+// items: [{ label, danger?, onClick }] — a { sep: true } entry renders a divider instead.
+function _openCtxMenu(elId, x, y, items) {
+  _closeCtxMenu(elId);
 
-  const el = _mkTokToolbar();
-  _updateTokToolbarLabels();
-
-  el.classList.remove('open', 'arrow-left', 'arrow-right');
+  let el = document.getElementById(elId);
+  if (!el) { el = document.createElement('div'); el.id = elId; document.body.appendChild(el); }
+  el.innerHTML = items.map((it, i) => it.sep
+    ? `<div class="tok-tb-sep"></div>`
+    : `<button class="tok-tb-btn${it.danger ? ' tok-tb-btn-danger' : ''}" data-idx="${i}">${it.label}</button>`
+  ).join('');
+  el.classList.remove('open', 'ctx-flip-x', 'ctx-flip-y');
   el.style.display    = 'flex';
   el.style.visibility = 'hidden';
   el.style.transition = 'none';
   void el.offsetWidth;
 
-  const elW = el.offsetWidth, elH = el.offsetHeight;
-  const GAP = 12, r = LO.r;
-
-  let x = cell.x + r + GAP;
-  let y = cell.y - elH / 2;
-  const goLeft = x + elW + 4 > LO.W;
-  if (goLeft) x = cell.x - r - GAP - elW;
-  y = Math.max(4, Math.min(y, LO.H - elH - 4));
-
-  const arrowY = Math.max(14, Math.min(cell.y - y, elH - 14));
-  el.style.setProperty('--arrow-y', arrowY + 'px');
-  el.classList.add(goLeft ? 'arrow-right' : 'arrow-left');
-  el.style.left = x + 'px';
-  el.style.top  = y + 'px';
+  // Opens with its top-left at the cursor, like a native context menu — flipping to whichever
+  // side keeps it on-screen instead of an anchored arrow (there's no button to point back at).
+  const ew = el.offsetWidth, eh = el.offsetHeight;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const GAP = 4;
+  let left = x, flipX = false, top = y, flipY = false;
+  if (left + ew > vw - GAP) { left = Math.max(GAP, x - ew); flipX = true; }
+  if (top + eh > vh - GAP)  { top  = Math.max(GAP, y - eh); flipY = true; }
+  el.classList.toggle('ctx-flip-x', flipX);
+  el.classList.toggle('ctx-flip-y', flipY);
+  el.style.left = left + 'px';
+  el.style.top  = top  + 'px';
 
   requestAnimationFrame(() => {
     el.style.transition = '';
     el.style.visibility = '';
     el.classList.add('open');
+    _menuOpened();
+  });
+
+  const onAction = e => {
+    const btn = e.target.closest('[data-idx]');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    const item = items[+btn.dataset.idx];
+    _closeCtxMenu(elId);
+    item?.onClick?.();
+  };
+  el.addEventListener('mousedown', onAction);
+
+  const onOutside = e => { if (!el.contains(e.target)) _closeCtxMenu(elId); };
+  document.addEventListener('mousedown', onOutside, true);
+  const onContext = e => { if (!el.contains(e.target)) _closeCtxMenu(elId); };
+  document.addEventListener('contextmenu', onContext, true);
+
+  _ctxMenus.set(elId, () => {
+    el.classList.remove('open');
+    el.removeEventListener('mousedown', onAction);
+    document.removeEventListener('mousedown', onOutside, true);
+    document.removeEventListener('contextmenu', onContext, true);
+    el.style.display = 'none';
+    _menuClosed();
   });
 }
 
+// ── TOKEN TOOLBAR ─────────────────────────────────────────────────────────────
+let tokTbId = null;
+
+function _placeTokToolbar(x, y) {
+  if (tokTbId === null) { _hideTokToolbar(); return; }
+  const tok = S.tokens.find(t => t.id === tokTbId);
+  if (!tok) { _hideTokToolbar(); return; }
+
+  const fr = currentLang === 'fr';
+  const id = tokTbId;
+  // Leaders (type 'd') and the Frog itself (id 22) can never become a Frog — only offer the
+  // toggle when transforming is actually possible, or the token is already transformed (so it
+  // can still be detransformed).
+  const canFrog = tok.name !== '22' && _getTokenData(tok.name)?.type !== 'd';
+  const items = [
+    {
+      label: fr ? 'Changer de couleur' : 'Toggle color',
+      onClick: () => {
+        S.tokens = S.tokens.map(t => t.id === id ? { ...t, c: t.c === 'w' ? 'b' : 'w' } : t);
+        tokTbId = null; saveH(); render();
+      },
+    },
+    ...(tok.frog || canFrog ? [{
+      label: tok.frog
+        ? (fr ? 'Détransformer' : 'Remove Transformation')
+        : (fr ? 'Transformer en grenouille' : 'Transform into Frog'),
+      onClick: () => {
+        S.tokens = S.tokens.map(t => t.id === id ? { ...t, frog: !t.frog } : t);
+        tokTbId = null; saveH(); render();
+      },
+    }] : []),
+    { sep: true },
+    {
+      label: fr ? 'Supprimer' : 'Delete',
+      danger: true,
+      onClick: () => {
+        const tk = S.tokens.find(t => t.id === id);
+        if (tk) _palAdd(tk.name);
+        S.tokens = S.tokens.filter(t => t.id !== id);
+        tokTbId = null; saveH(); render();
+      },
+    },
+  ];
+  _openCtxMenu('tok-tb', x, y, items);
+}
+
 function _hideTokToolbar() {
-  if (!tokTb) return;
-  tokTb.classList.remove('open');
-  tokTb.style.display    = 'none';
-  tokTb.style.visibility = '';
-  tokTb.style.transition = '';
+  _closeCtxMenu('tok-tb');
   tokTbId = null;
 }
 
@@ -1027,13 +1137,9 @@ function onDown(e) {
 
   _closeAllToolbars(e.target);
 
-  if (e.button === 2) {
-    e.preventDefault();
-    if (inP) return;
-    const tok = tokAt(x, y);
-    if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(); render(); }
-    return;
-  }
+  // Menu opens from 'contextmenu' below, not here — opening on mousedown(button 2) raced with
+  // the native 'contextmenu' that follows, closing the menu right after it opened.
+  if (e.button === 2) { e.preventDefault(); return; }
 
   if (e.button === 1) {
     e.preventDefault();
@@ -1068,8 +1174,7 @@ function onDown(e) {
     const destCell = nearCell(x, y);
     if (destCell) {
       _moveSelectedToCell(destCell.id);
-    }
-    // Sinon (clic hors plateau) → déselectionner seulement, pas de suppression
+    } // else: click outside the board just deselects, no deletion
     _cancelTouchSelection(); render();
     return;
   }
@@ -1086,16 +1191,18 @@ function onMove(e) {
     _cancelTouchSelection();
   }
 
+  const inPal = Palette.inPalette(x, y);
+  const hoveredBoardTok = (!inPal && !drag) ? tokAt(x, y) : null;
+
   if (tokTbId === null && !Palette.isPalTbOpen?.()) {
-    if (Palette.inPalette(x, y)) {
+    if (inPal) {
       Palette.onMove(x, y);
     } else {
-      const hoveredTok = tokAt(x, y);
-      if (hoveredTok && !drag && showTooltips) {
-        const cell = LO.byId.get(hoveredTok.cell);
+      if (hoveredBoardTok && showTooltips) {
+        const cell = LO.byId.get(hoveredBoardTok.cell);
         if (cell) {
-          const boardRect = document.getElementById('board-area').getBoundingClientRect();
-          Tooltip.scheduleBoard(hoveredTok.name, boardRect.left + cell.x, boardRect.top + cell.y, 'board:' + hoveredTok.id, LO.r);
+          const boardRect = LO.boardRect;
+          Tooltip.scheduleBoard(hoveredBoardTok.name, boardRect.left + cell.x, boardRect.top + cell.y, 'board:' + hoveredBoardTok.id, LO.r, hoveredBoardTok.frog ? '22' : null);
         }
       } else {
         Tooltip.hide();
@@ -1104,7 +1211,7 @@ function onMove(e) {
   }
 
   if (drag) { dpos = { x, y }; render(); }
-  document.getElementById('main').style.cursor = 'default';
+  document.getElementById('main').style.cursor = hoveredBoardTok ? 'pointer' : 'default';
 }
 
 function onUp(e) {
@@ -1118,7 +1225,6 @@ function onUp(e) {
     const tok = S.tokens.find(t => t.id === drag.id);
     if (tok) {
       if (drag._pending) {
-        // Clic simple → logique de sélection
         const wasSelf = _selected?.type === 'brd' && _selected.id === tok.id;
         if (wasSelf) {
           _cancelTouchSelection();
@@ -1130,7 +1236,6 @@ function onUp(e) {
           _syncTouchSelectionHighlight();
         }
       } else {
-        // Drag réel → déposer
         if (inP || !cell) {
           S.tokens = S.tokens.filter(t => t.id !== drag.id);
           _palAdd(tok.name);
@@ -1155,9 +1260,19 @@ function onUp(e) {
       _palRecruitOne(drag.name);
     } else if (!inP && cell) {
       const other = S.tokens.find(t => t.cell === cell.id);
-      if (other) {
+      // A Frog target is excluded whether it's a raw Frog character (name '22') or a token
+      // already transformed into one (frog: true) — either way it's already "a Frog" visually.
+      const otherIsFrog = other && (other.name === '22' || other.frog);
+      if (other && drag.name === '22' && !otherIsFrog && _getTokenData(other.name)?.type !== 'd') {
+        // Dropping a Frog from the palette onto an existing token transforms it in place instead
+        // of replacing its character (board-to-board Frog drags keep the normal swap behavior).
+        S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, frog: true } : t);
+      } else if (other) {
+        // Plain swap (also covers Frog-onto-Frog and Frog-onto-Leader) — the old character goes
+        // back to the palette and the target cell's frog flag is cleared, exactly like a normal
+        // character exchange.
         _palAdd(other.name);
-        S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, name: drag.name, c: drag.c } : t);
+        S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, name: drag.name, c: drag.c, frog: false } : t);
       } else {
         S.tokens = [...S.tokens, { id: S.nid++, cell: cell.id, name: drag.name, c: drag.c }];
       }
@@ -1187,7 +1302,7 @@ function doFlipPositionsV() { _hideTokToolbar(); _cancelTouchSelection(); viewFl
 function doReset() {
   _hideTokToolbar(); _cancelTouchSelection();
   S = mkState();
-  hist = []; hidx = -1; saveH(); render();
+  saveH(); render();
 }
 
 function _loadState({ tokens, banned }) {
@@ -1221,6 +1336,16 @@ function doCopy() {
 }
 
 // ── HTML LAYERS ───────────────────────────────────────────────────────────────
+// Toggles the small corner badge showing a transformed token's original character (pure CSS —
+// .frog-badge-on::after in style.css). Shared by the resting token (_syncTokenLayer) and the
+// drag ghost (_syncGhost). The "?badge" suffix keeps this small rendering a distinct cached
+// resource from the same artwork's full-size uses elsewhere (palette, board), avoiding a shared
+// resampled bitmap that would otherwise show this badge as a blurry downscale of the other one.
+function _applyFrogBadge(el, tok, color) {
+  el.classList.toggle('frog-badge-on', !!tok.frog);
+  if (tok.frog) el.style.setProperty('--frog-badge-src', `url("jetons_${color}/${tok.name}.png?badge")`);
+}
+
 function _dragMoved() {
   if (!drag || !dpos || drag._pending) return false;
   return Math.hypot(dpos.x - (drag._startX ?? dpos.x), dpos.y - (drag._startY ?? dpos.y)) >= 6;
@@ -1249,13 +1374,16 @@ function _syncTokenLayer() {
       const img = document.createElement('img');
       img.draggable  = false;
       el.appendChild(img);
+      el._img = img;
       layer.appendChild(el);
     }
 
     const color = tok.c === 'w' ? 'blanc' : 'noir';
-    const img   = el.querySelector('img');
-    const src   = `jetons_${color}/${tok.name}.png`;
+    const img   = el._img;
+    const src   = `jetons_${color}/${tok.frog ? '22' : tok.name}.png`;
     if (!img.src.endsWith(src)) img.src = src;
+
+    _applyFrogBadge(el, tok, color);
 
     // Size, shadow and ring are all CSS (driven by --tok-sz, see style.css) — only position
     // and the per-token "used" state are dynamic enough to need setting from here.
@@ -1312,10 +1440,9 @@ function _syncLabelLayer() {
   for (const [cid, el] of existing) { if (!seen.has(cid)) el.remove(); }
 }
 
-// Tracks which mode/cell is currently rendered so an active drag (which calls this on every
-// mousemove) only ever repositions one persistent div instead of tearing the layer down and
-// rebuilding it every frame — that DOM churn was stealing frame budget from the trash-bin
-// animation on the drag ghost, making it look choppy even though the animation itself is fine.
+// Tracks the current mode/cell so a drag (calling this on every mousemove) repositions one
+// persistent div instead of rebuilding the layer every frame (was stealing frame budget from the
+// ghost's trash-bin animation).
 let _dropTargetMode = null; // null | 'drag' | 'hint'
 let _dropTargetCellId = null;
 
@@ -1378,15 +1505,16 @@ function _syncGhost() {
   const r     = LO.r; // palette items now render at the same size as board tokens
   const color = tok.c === 'w' ? 'blanc' : 'noir';
   const img   = ghost.querySelector('img');
-  const src   = `jetons_${color}/${tok.name}.png`;
+  const src   = `jetons_${color}/${tok.frog ? '22' : tok.name}.png`;
   if (!img.src.endsWith(src)) img.src = src;
 
-  // Position only — size/shadow/overflow/position-scheme all come from CSS (.html-token,
-  // #drag-ghost in style.css). Viewport coordinates: mounted on <body>, not #board-area, so
-  // it's never clipped by #board-area's overflow:hidden while dragged across a panel boundary.
-  // Moved via transform (not left/top) so repositioning every mousemove never forces layout —
-  // this is also why the trash-bin pulse animation on its child reads smoothly while dragging.
-  const boardRect = document.getElementById('board-area').getBoundingClientRect();
+  // Same corner badge as the resting token — kept visible through the drag instead of
+  // disappearing while the token is being moved.
+  _applyFrogBadge(ghost, tok, color);
+
+  // Mounted on <body> (viewport coords) so it's never clipped by #board-area while dragged across
+  // a panel boundary. Moved via transform, not left/top, so repositioning never forces layout.
+  const boardRect = LO.boardRect;
   ghost.style.display   = 'block';
   ghost.style.transform = `translate(${boardRect.left + dpos.x - r}px, ${boardRect.top + dpos.y - r}px)`;
   ghost.style.opacity   = '1';
@@ -1418,9 +1546,8 @@ function _syncGhost() {
 let _lastEncodedState = null;
 
 function render() {
-  // S itself doesn't change while a drag is in progress (only the ghost follows the cursor),
-  // so skip the URL/history write — a real browser API call, not free — when it'd be a no-op.
-  // render() runs on every mousemove during a drag, so this matters for staying smooth.
+  // Skip the URL/history write when it'd be a no-op — S doesn't change mid-drag, and render()
+  // runs on every mousemove during one.
   const encoded = enc(S);
   if (encoded !== _lastEncodedState) {
     _lastEncodedState = encoded;
@@ -1432,7 +1559,8 @@ function render() {
   _syncGhost();
   _syncTouchSelectionHighlight();
   Palette.syncContent();
-  if (tokTbId !== null) _placeTokToolbar();
+  // Board state is frozen mid-drag, so skip re-running the barrage region search every mousemove.
+  if (!drag) _updateBoardStatusIcons();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -1441,10 +1569,16 @@ function init() {
 
   const main = document.getElementById('main');
   main.addEventListener('mousedown',   onDown);
-  main.addEventListener('mousemove',   e => { mousePos = _mainXY(e); onMove(e); });
+  main.addEventListener('mousemove',   onMove);
   main.addEventListener('mouseup',     onUp);
   main.addEventListener('click',       () => { if (justDropped) justDropped = false; });
-  main.addEventListener('contextmenu', e => e.preventDefault());
+  main.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const { x, y } = _mainXY(e);
+    if (Palette.inPalette(x, y)) return; // palette.js has its own contextmenu listener for this
+    const tok = tokAt(x, y);
+    if (tok) { tokTbId = tok.id; Tooltip.hide(); _placeTokToolbar(e.clientX, e.clientY); render(); }
+  });
   main.addEventListener('mouseleave',  () => { drag = null; dpos = null; render(); });
   document.addEventListener('mouseup', e => { if (drag && e.button === 0) { drag = null; dpos = null; render(); } });
   const _onGlobalDown = e => {
@@ -1461,6 +1595,18 @@ function init() {
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
     if (e.key === 'ArrowLeft')  undo();
     if (e.key === 'ArrowRight') redo();
+    if (!Palette.inPalette(mousePos.x, mousePos.y)) {
+      const hoverTok = tokAt(mousePos.x, mousePos.y);
+      if (hoverTok && (e.key === 'c' || e.key === 'C')) toggleC(hoverTok.id);
+      if (hoverTok && (e.key === 'Delete' || e.key === 'Backspace')) {
+        _palAdd(hoverTok.name);
+        S.tokens = S.tokens.filter(t => t.id !== hoverTok.id);
+        saveH(); render();
+      }
+    } else if (e.key === 'b' || e.key === 'B') {
+      const hoverName = Palette.palAt(mousePos.x, mousePos.y);
+      if (hoverName) isBanned(hoverName) ? doUnban(hoverName) : doBan(hoverName);
+    }
     if (e.key === 'Escape') {
       _hideTokToolbar(); _cancelTouchSelection();
       document.getElementById('settings-overlay').classList.add('hidden');
@@ -1487,9 +1633,11 @@ function init() {
   };
   const settingsOverlay = document.getElementById('settings-overlay');
   const _openSettings = () => {
-    _syncToggle('tog-labels', showLabels);
-    _syncToggle('tog-shadow', showShadow);
-    _syncToggle('tog-tooltips', showTooltips);
+    _syncToggle('tog-labels',   showLabels);
+    _syncToggle('tog-shadow',   showShadow);
+    _syncToggle('tog-tooltips',    showTooltips);
+    _syncToggle('tog-alert-icons', showAlertIcons);
+    _syncToggle('tog-barrage',  showBarrageLine);
     settingsOverlay.classList.remove('hidden');
   };
   const _closeSettings = () => settingsOverlay.classList.add('hidden');
@@ -1512,6 +1660,16 @@ function init() {
     _syncToggle('tog-tooltips', showTooltips);
     if (!showTooltips) Tooltip.hide();
   });
+  document.getElementById('row-alert-icons').addEventListener('click', () => {
+    showAlertIcons = !showAlertIcons; localStorage.setItem('leaders-alert-icons', showAlertIcons);
+    _syncToggle('tog-alert-icons', showAlertIcons);
+    if (!showAlertIcons) _clearAlertIcons(); else render();
+  });
+  document.getElementById('row-barrage').addEventListener('click', () => {
+    showBarrageLine = !showBarrageLine; localStorage.setItem('leaders-board-aids', showBarrageLine);
+    _syncToggle('tog-barrage', showBarrageLine);
+    if (!showBarrageLine) _clearBoardAids(); else render();
+  });
 
   // ── Help ──
   const helpOverlay = document.getElementById('help-overlay');
@@ -1531,30 +1689,33 @@ function init() {
       opt.classList.toggle('active', opt.dataset.lang === currentLang)
     );
   };
-  const _closeLangMenu = () => langSubmenu.classList.remove('open');
+  // Guarded on the actual open/close transition since _closeLangMenu is called unconditionally
+  // from several places and would otherwise decrement the shared _menuOpenCount too many times.
+  const _closeLangMenu = () => {
+    if (!langSubmenu.classList.contains('open')) return;
+    langSubmenu.classList.remove('open');
+    _menuClosed();
+  };
   const _openLangMenu  = () => {
     _syncLangUI();
     langSubmenu.classList.add('open');
+    _menuOpened();
     const menuW       = langSubmenu.offsetWidth;
     const menuH       = langSubmenu.offsetHeight;
     const GAP         = 8;
     const vw          = window.innerWidth;
     const vh          = window.innerHeight;
 
-    // Centre du bouton lang-trigger
     const triggerRect = document.getElementById('lang-trigger').getBoundingClientRect();
     const triggerCX = triggerRect.left + triggerRect.width / 2;
 
-    // Horizontal : centré sur le bouton, clampé à l'écran
     let left = triggerCX - menuW / 2;
     left = Math.max(GAP, Math.min(left, vw - menuW - GAP));
 
-    // Vertical : juste sous la row-lang
     const rowRect = document.getElementById('row-lang').getBoundingClientRect();
     let top = rowRect.bottom + 8;
     if (top + menuH > vh - GAP) top = rowRect.top - menuH - 8;
 
-    // Pointe : position X relative au menu qui pointe vers le centre du bouton
     const arrowX = Math.max(14, Math.min(triggerCX - left, menuW - 14));
     langSubmenu.style.setProperty('--arrow-x', arrowX + 'px');
     langSubmenu.style.left = left + 'px';
@@ -1592,11 +1753,18 @@ function init() {
       isMobileLayout() ? (relayout(), render()) : _animatePanelToggle('pal2');
     });
   }
-  _mkTokToolbar();
   if (typeof initButtonTooltips === 'function') initButtonTooltips();
   _initTouchEvents();
 
-  new ResizeObserver(() => { relayout(); render(); }).observe(main);
+  // Coalesced to one relayout()+render() per animation frame — ResizeObserver can fire several
+  // times before the browser paints, and relayout()'s column-convergence loop forces a
+  // synchronous layout flush on every iteration.
+  let _resizePending = false;
+  new ResizeObserver(() => {
+    if (_resizePending) return;
+    _resizePending = true;
+    requestAnimationFrame(() => { _resizePending = false; relayout(); render(); });
+  }).observe(main);
   relayout(); saveH(); render(); _applyLang();
 }
 

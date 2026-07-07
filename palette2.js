@@ -18,7 +18,6 @@ const Palette2 = (() => {
   const _esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const _t   = key => (typeof t === 'function' ? t(key) : key);
 
-  // Retourne le prochain numéro disponible pour éviter les doublons de noms
   function _nextNum(collection, prefix) {
     const used = new Set(collection.map(item => item.name));
     let n = 1;
@@ -31,7 +30,7 @@ const Palette2 = (() => {
     try {
       const arr = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       if (arr.length && arr[0] && !arr[0].configs) {
-        // Migration ancien format plat → une section par défaut
+        // Old flat format → migrate into one default section
         sections = [{ id: _uid(), name: _t('pal2LegacySection'), open: true, configs: arr.map(c => ({ ...c, id: String(c.id) })) }];
       } else {
         sections = arr.map(s => ({
@@ -92,9 +91,8 @@ const Palette2 = (() => {
   // ── CRUD Sections ─────────────────────────────────────────────────────────
   function _addSection() {
     const prefix = _t('pal2DefaultSection') + ' ';
-    // A new section starts with one default position (the current board state) instead of
-    // empty — an empty section had no body rendered at all (see _renderList), which made the
-    // open/closed arrow meaningless and forced drop-target logic to special-case it.
+    // Starts with one default position, not empty — an empty section rendered no body at all
+    // (see _renderList), making the open/closed arrow meaningless.
     sections.push({
       id: _uid(), name: prefix + _nextNum(sections, prefix), open: true,
       configs: [{ id: _uid(), name: _t('pal2DefaultConfig') + ' 1', state: _snapshot(), timestamp: Date.now() }],
@@ -134,6 +132,15 @@ const Palette2 = (() => {
     _save(); _renderList();
   }
 
+  function _duplicateConfig(sectionId, configId) {
+    const sec = sections.find(s => s.id === sectionId); if (!sec) return;
+    const idx = sec.configs.findIndex(c => c.id === configId); if (idx === -1) return;
+    const src = sec.configs[idx];
+    const copy = { id: _uid(), name: src.name + ' (2)', state: JSON.parse(JSON.stringify(src.state)), timestamp: Date.now() };
+    sec.configs.splice(idx + 1, 0, copy);
+    _save(); _renderList();
+  }
+
   function _deleteConfig(sectionId, configId) {
     const sec = sections.find(s => s.id === sectionId); if (!sec) return;
     sec.configs = sec.configs.filter(c => c.id !== configId);
@@ -152,7 +159,34 @@ const Palette2 = (() => {
     if (!panel) return;
     const sec   = sections.find(s => s.id === id); if (!sec) return;
     const secEl = panel.querySelector(`.pal2-section[data-sid="${id}"]`); if (!secEl) return;
-    secEl.querySelector('.pal2-section-body')?.classList.toggle('open', sec.open);
+    const body  = secEl.querySelector('.pal2-section-body');
+    if (body) {
+      // Bound once, never removed — reads sec.open at the moment it fires rather than closing
+      // over the click that created it, so a late transitionend (a second click arrives before
+      // the transition finishes) still applies the correct final state.
+      if (!body._toggleEndBound) {
+        body.addEventListener('transitionend', e => {
+          if (e.propertyName !== 'max-height') return;
+          if (sec.open) { body.style.maxHeight = ''; }
+          else { body.classList.remove('open'); body.style.maxHeight = ''; }
+        });
+        body._toggleEndBound = true;
+      }
+      const h = body.scrollHeight;
+      body.style.transition = 'none';
+      if (sec.open) {
+        body.classList.add('open');
+        body.style.maxHeight = '0';
+        body.offsetHeight; // force reflow so browser registers 0 as the start
+        body.style.transition = '';
+        body.style.maxHeight = h + 'px';
+      } else {
+        body.style.maxHeight = h + 'px';
+        body.offsetHeight; // force reflow so browser registers h as the start
+        body.style.transition = '';
+        body.style.maxHeight = '0';
+      }
+    }
     secEl.querySelector('.pal2-sec-arrow')?.classList.toggle('open', sec.open);
     secEl.querySelector('.pal2-sec-left')?.setAttribute('aria-expanded', sec.open);
   }
@@ -183,9 +217,7 @@ const Palette2 = (() => {
   }
 
   // ── Drag & Drop ───────────────────────────────────────────────────────────
-  // Tout l'état DnD est dans _dnd pour éviter des variables globales éparses
-  let _dnd = null;
-  // _dnd = { type, id, srcSid?, el, startX, startY, moved }
+  let _dnd = null; // { type, id, srcSid?, el, startX, startY, moved }
 
   function _getOrCreateIndicator() {
     let ind = panel.querySelector('.pal2-dnd-indicator');
@@ -197,9 +229,6 @@ const Palette2 = (() => {
     return ind;
   }
 
-  // Calcule la cible de drop pour les sections ou les configs
-  // commit=false → peut utiliser des éléments DOM transients (indicateur)
-  // commit=true  → utilise les éléments réels pour le drop final
   function _getSectionDrop(clientY, draggedEl) {
     const secEls = Array.from(panel.querySelectorAll('#pal2-list .pal2-section'));
     for (const el of secEls) {
@@ -210,13 +239,9 @@ const Palette2 = (() => {
     return { before: null };
   }
 
-  // `sec.open` (the data model) decides closed vs. open — not a DOM class lookup — so this can
-  // never disagree with what _renderList actually drew. `rows` always excludes the dragged
-  // element itself, so the returned insertIdx is already correct for splicing into the (post-
-  // removal) configs array — no separate "am I committing, and did the source index shift"
-  // adjustment needed, unlike the old version of this function.
-  // draggedEl is passed explicitly (not read off the module-level _dnd) so this stays correct
-  // even when called after _dnd has already been cleared.
+  // `rows` always excludes draggedEl, so insertIdx is already correct for splicing into the
+  // post-removal configs array. draggedEl is passed explicitly rather than read off _dnd so this
+  // stays correct even after _dnd has been cleared.
   function _getConfigDrop(clientY, draggedEl) {
     const secEls = Array.from(panel.querySelectorAll('#pal2-list .pal2-section'));
     for (const secEl of secEls) {
@@ -309,8 +334,7 @@ const Palette2 = (() => {
     _save(); _renderList();
   }
 
-  // Cleans up an in-progress drag without committing a reorder — used when a gesture is
-  // interrupted (touchcancel, window losing focus mid-drag) rather than deliberately released.
+  // Cleans up an in-progress drag without committing — interrupted (touchcancel, blur) not released.
   function _dndAbort() {
     panel?.querySelector('.pal2-dnd-indicator')?.remove();
     if (!_dnd) return;
@@ -346,12 +370,13 @@ const Palette2 = (() => {
   }
 
   function _attachDrag(el, type, id, srcSid) {
-    el.style.cursor = 'grab';
+    if (type !== 'section') el.style.cursor = 'grab'; // sections keep their own cursor styling
     const startDrag = (startX, startY) => {
       _dnd = { type, id, srcSid, el: type === 'section' ? el.closest('.pal2-section') : el, startX, startY, moved: false };
     };
 
     el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return; // right-click opens the context menu instead
       if (e.target.closest('.pal2-sec-actions, .pal2-row-actions, input')) return;
       e.stopPropagation();
       startDrag(e.clientX, e.clientY);
@@ -359,9 +384,7 @@ const Palette2 = (() => {
       document.addEventListener('mouseup',   _dndOnMouseUp);
     });
 
-    // Touch: gated behind a brief hold (LONG_PRESS_MS, same convention as the board's own touch
-    // interactions) so an ordinary swipe over a row still scrolls the list normally — only a
-    // deliberate hold-then-drag starts a reorder.
+    // Touch: gated behind a hold (LONG_PRESS_MS) so an ordinary swipe still scrolls the list.
     let pressTimer = null, pressX = 0, pressY = 0;
     const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
 
@@ -390,80 +413,74 @@ const Palette2 = (() => {
     el.addEventListener('touchcancel', cancelPress);
   }
 
-  // ── Section ⋮ menu — same visual design as the board's token toolbar (#tok-tb / #pal-tok-tb
-  // in editor.js/palette.js: a small floating box of .tok-tb-btn rows with a .tok-tb-sep
-  // divider), reused here via the same CSS classes rather than a parallel set of styles. ──
-  let _secMenuEl = null, _secMenuCloseFn = null;
+  // ── Right-click context menu — same design as #tok-tb/#pal-tok-tb (editor.js/palette.js) ──
+  let _ctxMenuEl = null, _ctxMenuCloseFn = null;
 
-  function _closeSectionMenu() {
-    if (_secMenuCloseFn) { _secMenuCloseFn(); _secMenuCloseFn = null; }
+  function _closeContextMenu() {
+    if (_ctxMenuCloseFn) { _ctxMenuCloseFn(); _ctxMenuCloseFn = null; }
   }
 
-  function _openSectionMenu(sec, anchorBtn, startRename) {
-    _closeSectionMenu();
+  // items: [{ label, danger?, onClick }] — a { sep: true } entry renders a divider instead.
+  function _openContextMenu(x, y, items) {
+    _closeContextMenu();
 
-    const el = _secMenuEl || (_secMenuEl = document.createElement('div'));
-    el.id = 'pal2-sec-menu';
+    const el = _ctxMenuEl || (_ctxMenuEl = document.createElement('div'));
+    el.id = 'pal2-ctx-menu';
     el.className = '';
-    el.innerHTML = `
-      <button class="tok-tb-btn" data-action="rename">${_esc(_t('pal2TitleRename'))}</button>
-      <button class="tok-tb-btn" data-action="add-section">${_esc(_t('pal2AddSection'))}</button>
-      <div class="tok-tb-sep"></div>
-      <button class="tok-tb-btn tok-tb-btn-danger" data-action="delete">${_esc(_t('pal2TitleDelete'))}</button>`;
+    el.innerHTML = items.map((it, i) => it.sep
+      ? `<div class="tok-tb-sep"></div>`
+      : `<button class="tok-tb-btn${it.danger ? ' tok-tb-btn-danger' : ''}" data-idx="${i}">${_esc(it.label)}</button>`
+    ).join('');
     document.body.appendChild(el);
     el.style.display    = 'flex';
     el.style.visibility = 'hidden';
     el.style.transition = 'none';
     void el.offsetWidth;
 
-    // Same placement rule as _placePalToolbar (palette.js): open to the right of the icon by
-    // default (arrow on the menu's left edge, pointing back at it), falling back to the left
-    // only if there's no room on the right — same GAP, same clamping, same arrow-y formula.
-    const br  = anchorBtn.getBoundingClientRect();
-    const ew  = el.offsetWidth, eh = el.offsetHeight;
-    const GAP = 10;
-    const btnCY = br.top + br.height / 2;
+    // Opens with its top-left at the cursor, like a native context menu — flipping to whichever
+    // side keeps it on-screen instead of an anchored arrow (there's no button to point back at).
+    const ew = el.offsetWidth, eh = el.offsetHeight;
     const vw = window.innerWidth, vh = window.innerHeight;
-
-    let x = br.right + GAP;
-    let arrowSide = 'left';
-    if (x + ew > vw - 8) { x = br.left - ew - GAP; arrowSide = 'right'; }
-
-    let y = btnCY - eh / 2;
-    y = Math.max(8, Math.min(y, vh - eh - 8));
-
-    const arrowY = Math.max(14, Math.min(btnCY - y, eh - 14));
-    el.style.setProperty('--arrow-y', arrowY + 'px');
-    el.classList.add(arrowSide === 'right' ? 'pal-tb-arrow-right' : 'pal-tb-arrow-left');
-    el.style.left = x + 'px';
-    el.style.top  = y + 'px';
+    const GAP = 4;
+    let left = x, flipX = false, top = y, flipY = false;
+    if (left + ew > vw - GAP) { left = Math.max(GAP, x - ew); flipX = true; }
+    if (top + eh > vh - GAP)  { top  = Math.max(GAP, y - eh); flipY = true; }
+    el.classList.toggle('ctx-flip-x', flipX);
+    el.classList.toggle('ctx-flip-y', flipY);
+    el.style.left = left + 'px';
+    el.style.top  = top  + 'px';
 
     requestAnimationFrame(() => {
       el.style.transition = '';
       el.style.visibility = '';
       el.classList.add('open');
+      _menuOpened();
     });
 
     const onAction = e => {
-      const action = e.target.closest('[data-action]')?.dataset.action;
-      if (!action) return;
+      const btn = e.target.closest('[data-idx]');
+      if (!btn) return;
       e.preventDefault(); e.stopPropagation();
-      _closeSectionMenu();
-      if (action === 'rename')           startRename();
-      else if (action === 'add-section') _addSection();
-      else if (action === 'delete')      _deleteSection(sec.id);
+      const item = items[+btn.dataset.idx];
+      _closeContextMenu();
+      item?.onClick?.();
     };
     el.addEventListener('mousedown', onAction);
 
-    const onOutside = e => { if (!el.contains(e.target)) _closeSectionMenu(); };
+    const onOutside = e => { if (!el.contains(e.target)) _closeContextMenu(); };
     document.addEventListener('mousedown', onOutside, true);
+    // Dismisses on a right-click with no menu of its own (e.g. the panel background).
+    const onContext = e => { if (!el.contains(e.target)) _closeContextMenu(); };
+    document.addEventListener('contextmenu', onContext, true);
 
-    _secMenuCloseFn = () => {
+    _ctxMenuCloseFn = () => {
       el.classList.remove('open');
       el.removeEventListener('mousedown', onAction);
       document.removeEventListener('mousedown', onOutside, true);
+      document.removeEventListener('contextmenu', onContext, true);
       el.remove();
-      if (_secMenuEl === el) _secMenuEl = null;
+      if (_ctxMenuEl === el) _ctxMenuEl = null;
+      _menuClosed();
     };
   }
 
@@ -525,23 +542,23 @@ const Palette2 = (() => {
       secEl.className  = 'pal2-section';
       secEl.dataset.sid = sec.id;
 
-      // Header de section
       const hdr = document.createElement('div');
       hdr.className = 'pal2-section-hdr';
       hdr.innerHTML = `
         <div class="pal2-sec-left" tabindex="0" role="button" aria-expanded="${sec.open}">
-          <svg class="pal2-sec-arrow ${sec.open ? 'open' : ''}" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="2 3 5 7 8 3"/>
+          <svg class="pal2-sec-arrow ${sec.open ? 'open' : ''}" width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 3 5 7 9 3"/>
           </svg>
           <span class="pal2-sec-name">${_esc(sec.name)}</span>
         </div>
         <div class="pal2-sec-right">
+          <span class="pal2-sec-count">${sec.configs.length}</span>
           <div class="pal2-sec-actions">
             <button class="pal2-action-btn pal2-btn-sec-add"  title="${_esc(_t('pal2TitleNewSave'))}" aria-label="${_esc(_t('pal2TitleNewSave'))}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/></svg>
             </button>
             <button class="pal2-action-btn pal2-btn-sec-menu" title="${_esc(_t('pal2TitleMore'))}" aria-label="${_esc(_t('pal2TitleMore'))}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
             </button>
           </div>
         </div>`;
@@ -558,27 +575,42 @@ const Palette2 = (() => {
         nameEl.classList.add('editing');
       };
 
-      hdr.querySelector('.pal2-sec-left').addEventListener('click', e => {
-        if (e.target.closest('input')) return;
+      hdr.addEventListener('click', e => {
+        if (e.target.closest('.pal2-sec-actions, input')) return;
         e.stopPropagation(); _toggleSection(sec.id);
+        // Blur so hover, not stale :focus-within, controls the "+" button's visibility afterwards.
+        hdr.querySelector('.pal2-sec-left')?.blur();
       });
-      // role="button" on a div carries no native Enter/Space activation — wire it explicitly so
-      // the section is actually keyboard-operable, not just visually focusable.
+      // role="button" on a div has no native Enter/Space activation — wire it explicitly.
       hdr.querySelector('.pal2-sec-left').addEventListener('keydown', e => {
         if (e.key !== 'Enter' && e.key !== ' ') return;
         e.preventDefault(); e.stopPropagation(); _toggleSection(sec.id);
       });
-      hdr.querySelector('.pal2-sec-name').addEventListener('dblclick', e => {
-        e.stopPropagation(); startRename();
-      });
       hdr.querySelector('.pal2-btn-sec-add').addEventListener('mousedown', e => {
+        if (e.button !== 0) return; // right-click opens the context menu, not this button's action
         e.preventDefault(); e.stopPropagation();
         _addConfig(sec.id);
         if (!sec.open) { sec.open = true; _save(); _renderSectionToggle(sec.id); }
       });
       hdr.querySelector('.pal2-btn-sec-menu').addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
         e.preventDefault(); e.stopPropagation();
-        _openSectionMenu(sec, hdr.querySelector('.pal2-btn-sec-menu'), startRename);
+        const rect = e.currentTarget.getBoundingClientRect();
+        _openContextMenu(rect.left, rect.bottom, [
+          { label: _t('pal2TitleRename'),               onClick: startRename },
+          { label: _t('pal2AddSection'),                 onClick: _addSection },
+          { sep: true },
+          { label: _t('pal2TitleDelete'), danger: true,  onClick: () => _deleteSection(sec.id) },
+        ]);
+      });
+      hdr.addEventListener('contextmenu', e => {
+        e.preventDefault(); e.stopPropagation();
+        _openContextMenu(e.clientX, e.clientY, [
+          { label: _t('pal2TitleRename'),                onClick: startRename },
+          { label: _t('pal2AddSection'),                  onClick: _addSection },
+          { sep: true },
+          { label: _t('pal2TitleDelete'), danger: true,   onClick: () => _deleteSection(sec.id) },
+        ]);
       });
 
       _attachDrag(hdr, 'section', sec.id, null);
@@ -595,61 +627,64 @@ const Palette2 = (() => {
         row.dataset.id = cfg.id;
         row.innerHTML  = `
           <div class="pal2-row-main" tabindex="0" role="button">
-            <div class="pal2-row-icon">
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><circle cx="4.5" cy="4.5" r="2.5"/></svg>
-            </div>
             <span class="pal2-row-name">${_esc(cfg.name)}</span>
             <div class="pal2-row-actions">
               <button class="pal2-action-btn pal2-btn-update" title="${_esc(_t('pal2TitleUpdate'))}" aria-label="${_esc(_t('pal2TitleUpdate'))}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h12l4 4v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M8 3v5h8V3"/><rect x="7" y="13" width="10" height="8"/></svg>
               </button>
-              <button class="pal2-action-btn pal2-btn-rename" title="${_esc(_t('pal2TitleRename'))}" aria-label="${_esc(_t('pal2TitleRename'))}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h8M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-              </button>
-              <button class="pal2-action-btn pal2-btn-del" title="${_esc(_t('pal2TitleDelete'))}" aria-label="${_esc(_t('pal2TitleDelete'))}">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M5 6l1 14h12l1-14M9 6V4h6v2m-5 4v6m4-6v6"/></svg>
+              <button class="pal2-action-btn pal2-btn-row-menu" title="${_esc(_t('pal2TitleMore'))}" aria-label="${_esc(_t('pal2TitleMore'))}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
               </button>
             </div>
           </div>`;
 
+        const startRenameConfig = () => {
+          const nameEl = row.querySelector('.pal2-row-name');
+          if (!nameEl || nameEl.querySelector('input')) return;
+          const original = cfg.name;
+          nameEl.innerHTML = '';
+          nameEl.appendChild(_mkInlineInput(original, original,
+            val => _renameConfig(sec.id, cfg.id, val || original),
+            ()  => { nameEl.textContent = original; nameEl.classList.remove('editing'); }
+          ));
+          nameEl.classList.add('editing');
+        };
+
         row.querySelector('.pal2-row-main').addEventListener('click', e => {
           if (e.target.closest('.pal2-row-actions, input')) return;
           _restore(cfg);
+          e.currentTarget.blur(); // hover, not stale :focus-within, controls "Update" visibility
         });
         row.querySelector('.pal2-row-main').addEventListener('keydown', e => {
           if (e.key !== 'Enter' && e.key !== ' ') return;
           if (e.target.closest('.pal2-row-actions, input')) return;
           e.preventDefault(); _restore(cfg);
         });
-        row.querySelector('.pal2-row-name').addEventListener('dblclick', e => {
-          e.stopPropagation();
-          const nameEl = row.querySelector('.pal2-row-name');
-          if (!nameEl || nameEl.querySelector('input')) return;
-          const original = cfg.name;
-          nameEl.innerHTML = '';
-          nameEl.appendChild(_mkInlineInput(original, original,
-            val => _renameConfig(sec.id, cfg.id, val || original),
-            ()  => { nameEl.textContent = original; nameEl.classList.remove('editing'); }
-          ));
-          nameEl.classList.add('editing');
-        });
         row.querySelector('.pal2-btn-update').addEventListener('mousedown', e => {
+          if (e.button !== 0) return; // right-click opens the context menu, not this button's action
           e.preventDefault(); e.stopPropagation(); _updateConfig(sec.id, cfg.id);
         });
-        row.querySelector('.pal2-btn-rename').addEventListener('mousedown', e => {
+        row.querySelector('.pal2-btn-row-menu').addEventListener('mousedown', e => {
+          if (e.button !== 0) return;
           e.preventDefault(); e.stopPropagation();
-          const nameEl = row.querySelector('.pal2-row-name');
-          if (!nameEl || nameEl.querySelector('input')) return;
-          const original = cfg.name;
-          nameEl.innerHTML = '';
-          nameEl.appendChild(_mkInlineInput(original, original,
-            val => _renameConfig(sec.id, cfg.id, val || original),
-            ()  => { nameEl.textContent = original; nameEl.classList.remove('editing'); }
-          ));
-          nameEl.classList.add('editing');
+          const rect = e.currentTarget.getBoundingClientRect();
+          _openContextMenu(rect.left, rect.bottom, [
+            { label: _t('pal2TitleRename'),                 onClick: startRenameConfig },
+            { label: _t('pal2TitleUpdate'),                 onClick: () => _updateConfig(sec.id, cfg.id) },
+            { label: _t('pal2TitleDuplicate'),              onClick: () => _duplicateConfig(sec.id, cfg.id) },
+            { sep: true },
+            { label: _t('pal2TitleDelete'), danger: true,   onClick: () => _deleteConfig(sec.id, cfg.id) },
+          ]);
         });
-        row.querySelector('.pal2-btn-del').addEventListener('mousedown', e => {
-          e.preventDefault(); e.stopPropagation(); _deleteConfig(sec.id, cfg.id);
+        row.addEventListener('contextmenu', e => {
+          e.preventDefault(); e.stopPropagation();
+          _openContextMenu(e.clientX, e.clientY, [
+            { label: _t('pal2TitleRename'),                 onClick: startRenameConfig },
+            { label: _t('pal2TitleUpdate'),                 onClick: () => _updateConfig(sec.id, cfg.id) },
+            { label: _t('pal2TitleDuplicate'),              onClick: () => _duplicateConfig(sec.id, cfg.id) },
+            { sep: true },
+            { label: _t('pal2TitleDelete'), danger: true,   onClick: () => _deleteConfig(sec.id, cfg.id) },
+          ]);
         });
 
         _attachDrag(row, 'config', cfg.id, sec.id);
@@ -660,6 +695,20 @@ const Palette2 = (() => {
       secEl.appendChild(body);
       list.appendChild(secEl);
     }
+
+    const addBtn = document.createElement('div');
+    addBtn.className = 'pal2-add-section-btn pal2-section';
+    addBtn.innerHTML = `
+      <div class="pal2-section-hdr">
+        <div class="pal2-sec-left">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="5" y1="1" x2="5" y2="9"/><line x1="1" y1="5" x2="9" y2="5"/>
+          </svg>
+          <span class="pal2-sec-name">${_esc(_t('pal2NewSection'))}</span>
+        </div>
+      </div>`;
+    addBtn.addEventListener('click', _addSection);
+    list.appendChild(addBtn);
 
     _initActionTooltips();
   }
@@ -697,8 +746,7 @@ const Palette2 = (() => {
   function toggleCollapse() { if (isMobileLayout()) return; collapsed = !collapsed; _syncCollapsed(); }
   function isCollapsed()    { return collapsed; }
 
-  // syncLayout — geometry only; called by relayout() on actual layout changes
-  // (Palette2 has no per-render content sync — nothing else needs to run on every render())
+  // Geometry only; called by relayout(). No per-render content sync needed for this panel.
   function syncLayout() {
     if (!panel) return;
     panel.style.top = panel.style.left = panel.style.height = panel.style.width = '';
