@@ -541,7 +541,9 @@ const Palette2 = (() => {
         if (tt) { tt.classList.remove('visible'); const _tt = tt; tt = null; setTimeout(() => _tt.remove(), 120); }
       };
 
-      btn.addEventListener('mouseenter', () => { timer = setTimeout(_show, 0); });
+      // Tooltips are a hover/mouse affordance only — see tooltip.js's initButtonTooltips for why
+      // this guard is needed (mobile browsers synthesize mouseenter from a plain tap).
+      btn.addEventListener('mouseenter', () => { if (_isTouchDevice()) return; timer = setTimeout(_show, 0); });
       btn.addEventListener('mouseleave', _hide);
       btn.addEventListener('mousedown',  _hide);
     });

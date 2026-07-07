@@ -808,10 +808,15 @@ function _cancelTouchSelection() {
 }
 
 // ── LONG-PRESS STATE ──────────────────────────────────────────────────────────
-// GHOST_TAP_MS is the window after a long-press-opened menu during which trailing events from
-// that same physical gesture are still arriving and must be ignored rather than treated as a new,
-// separate one — used in onTouchStart/onTouchEnd below, and in each context menu's own
-// document-level 'contextmenu' listener (_openCtxMenu here, plus palette.js/palette2.js).
+// Two separate mechanisms, each guarding a different trailing event from the same long-press
+// gesture — don't merge them, they were merged before and it caused stuck-state bugs:
+//   - _longPressFired: a plain boolean, consumed exactly once by the very next onTouchEnd, to stop
+//     that one touchend (the finger lifting off the menu-opening press) from being read as a tap.
+//   - GHOST_TAP_MS / _longPressEndTime: a time window, needed only because the browser's own
+//     native 'contextmenu' (fired on release by a real long-press) arrives asynchronously and can't
+//     be caught by a consumable flag — used solely by each context menu's own document-level
+//     'contextmenu' listener (_openCtxMenu here, plus palette.js/palette2.js) to avoid mistaking it
+//     for a genuine "dismiss elsewhere" click.
 let _longPressTimer = null;
 let _longPressFired = false;
 let _longPressEndTime = 0;
@@ -864,13 +869,16 @@ function _touchXY(touch) {
 
 function onTouchStart(e) {
   if (e.touches.length !== 1) { _cancelLongPress(); return; }
-  if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); return; }
 
   const touch = e.touches[0];
   const { x, y } = _touchXY(touch);
 
   _closeAllToolbars(e.target);
   _cancelLongPress();
+  // A fresh single-touch start always means any previous gesture is fully over — clear a stale flag
+  // in case the previous long-press's own release wasn't the very next touchend to reach onTouchEnd
+  // (e.g. an intervening multi-touch release), so it can't wrongly eat this new, unrelated tap.
+  _longPressFired = false;
 
   onTouchStart._startX = touch.clientX;
   onTouchStart._startY = touch.clientY;
@@ -879,8 +887,9 @@ function onTouchStart(e) {
     _longPressTimer = null;
     drag = null; dpos = null; // a long-press always means "context menu," not "drag"
     _cancelTouchSelection();
-    // Only arm the ghost-tap suppression window (below, and in onTouchEnd) when a menu actually
-    // opened — a long-press on empty space does nothing, and shouldn't then eat the next touch.
+    // Only arm _longPressFired (consumed by the next onTouchEnd, above) and the native-contextmenu
+    // suppression window when a menu actually opened — a long-press on empty space does nothing,
+    // and shouldn't then eat the touch that ends it.
     if (_simulateRightClick(x, y, onTouchStart._startX, onTouchStart._startY)) {
       _longPressFired   = true;
       _longPressEndTime = Date.now();
@@ -920,7 +929,8 @@ function onTouchMove(e) {
 function onTouchEnd(e) {
   _cancelLongPress();
   if (e.changedTouches.length !== 1) { drag = null; dpos = null; return; }
-  if (Date.now() - _longPressEndTime < GHOST_TAP_MS) { e.preventDefault(); drag = null; dpos = null; return; }
+  // Consumes exactly the one touchend that ends the same gesture a long-press just fired on — a
+  // plain boolean, not a time window, so it never lingers to swallow a later, unrelated tap.
   if (_longPressFired) { _longPressFired = false; e.preventDefault(); drag = null; dpos = null; return; }
 
   const touch = e.changedTouches[0];

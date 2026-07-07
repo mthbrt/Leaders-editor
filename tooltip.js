@@ -252,7 +252,11 @@ function initButtonTooltips() {
       }
     }
 
-    btn.addEventListener('mouseenter', () => { timer = setTimeout(_showBtnTt, 0); });
+    // Tooltips are a hover/mouse affordance only — touch has no hover. Mobile browsers synthesize
+    // a mouseenter/mouseover right before a tap's mousedown/click (part of their standard touch-to-
+    // mouse compatibility sequence), which would otherwise pop this up from a plain tap — e.g. the
+    // very tap used to dismiss a context menu landing on a toolbar button underneath it.
+    btn.addEventListener('mouseenter', () => { if (_isTouchDevice()) return; timer = setTimeout(_showBtnTt, 0); });
     btn.addEventListener('mouseleave', _hideBtnTt);
     btn.addEventListener('mousedown',  _hideBtnTt);
   });
