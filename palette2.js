@@ -156,9 +156,9 @@ const Palette2 = (() => {
   // ── Undo-delete toast ─────────────────────────────────────────────────────
   // Deleting a section or save row takes it out of the in-memory list (and the UI) right away,
   // but doesn't persist that removal to localStorage until UNDO_DELETE_MS passes with no undo — via
-  // Ctrl+Z (routed in from editor.js's global keydown, which defers to us first) or the toast's own
-  // button. Only one deletion can be "pending" at a time; a new one commits whichever was showing.
-  const UNDO_DELETE_MS = 5000;
+  // Ctrl+Z (routed in from editor.js's global keydown, which defers to us first) or clicking the
+  // toast itself. Only one deletion can be "pending" at a time; a new one commits whichever was showing.
+  const UNDO_DELETE_MS = 7000;
   // hidxAtArm: editor.js's board-history pointer (hidx) at the moment of deletion — any board or
   // recruitment-zone change advances it via saveH(), so comparing against the current value tells
   // Ctrl+Z whether this deletion is still the very last action (see undoPendingDeleteIfLastAction).
@@ -206,20 +206,20 @@ const Palette2 = (() => {
     return true;
   }
 
-  // Section vs. save row both show the same "Annuler"/"Undo" label — same text as the button's own
-  // tooltip, so no separate wording needed for what was deleted (kind only matters for the restore).
+  // Section vs. save row both show the same "Annuler suppression" label — no separate wording
+  // needed for what was deleted (kind only matters for the restore). No button — the whole toast
+  // is the click target, with just the icon as a visual affordance rather than an actual control.
   function _armPendingDelete(kind, item, index, sectionId) {
     _commitPendingDelete(); // finalize whichever deletion was already pending, if any
 
     const el = document.createElement('div');
     el.className = 'pal2-toast';
+    el.title = _t('pal2ToastUndo');
     el.innerHTML = `
       <span class="pal2-toast-label"></span>
-      <button class="pal2-toast-undo" type="button" title="${_esc(_t('btnUndo'))}" aria-label="${_esc(_t('btnUndo'))}">
-        <svg viewBox="0 0 18 18" fill="currentColor"><path d="M8.92,6.33h-3.13l2.38-2.38-1.03-1.03L3,7.06l4.14,4.14,1.03-1.03-2.38-2.38h3.13c2.55,0,4.63,2.08,4.63,4.63v2.66h1.45v-2.66c0-3.36-2.73-6.09-6.08-6.09Z"/></svg>
-      </button>`;
-    el.querySelector('.pal2-toast-label').textContent = _t('btnUndo');
-    el.querySelector('.pal2-toast-undo').addEventListener('mousedown', e => { e.preventDefault(); undoPendingDelete(); });
+      <svg class="pal2-toast-undo-icon" viewBox="0 0 18 18" fill="currentColor"><path d="M8.92,6.33h-3.13l2.38-2.38-1.03-1.03L3,7.06l4.14,4.14,1.03-1.03-2.38-2.38h3.13c2.55,0,4.63,2.08,4.63,4.63v2.66h1.45v-2.66c0-3.36-2.73-6.09-6.08-6.09Z"/></svg>`;
+    el.querySelector('.pal2-toast-label').textContent = _t('pal2ToastUndo');
+    el.addEventListener('mousedown', e => { e.preventDefault(); undoPendingDelete(); });
     document.body.appendChild(el);
     requestAnimationFrame(() => el.classList.add('visible'));
 
@@ -828,7 +828,8 @@ const Palette2 = (() => {
 
   // ── Layout / collapse ─────────────────────────────────────────────────────
   // Desktop only — on mobile this panel is simply hidden via CSS (body.layout-mobile #pal2-panel),
-  // unlike the Palette panel, which gets reparented into the tab-driven mobile bottom sheet instead.
+  // unlike the Palette panel, which becomes a popup instead (see editor.js's
+  // _openMobilePalettePopup/style.css's body.layout-mobile #pal-panel).
   function layout(W, H) {
     _palW = LEFT_PANEL_WIDTH;
     return { palX: 0, palY: 0, palW: _palW, palH: H };

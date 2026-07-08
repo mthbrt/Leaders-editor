@@ -61,10 +61,6 @@ function _checkStandardCaptureCondition(color) {
     (!color || leader.c === color) && _isLeaderName(leader.name) && _isStandardCaptured(leader));
 }
 
-function _checkCaptureCondition(color) {
-  return _checkSniperCaptureCondition(color) || _checkStandardCaptureCondition(color);
-}
-
 function _checkEncirclementCondition(color) {
   const occupied = new Set(S.tokens.map(t => t.cell));
   return S.tokens.some(leader =>
@@ -195,11 +191,6 @@ function _findBarragePath(color) {
   return null;
 }
 
-function _checkBarrageCondition(color) {
-  if (color) return !!_findBarragePath(color);
-  return !!_findBarragePath('w') || !!_findBarragePath('b');
-}
-
 // Draws (or clears) the barrage path for `color` on #arrows-svg. Closed → polygon, open → polyline.
 function _drawBarrageLine(color, path) {
   const svg = document.getElementById('arrows-svg');
@@ -226,9 +217,6 @@ function _drawBarrageLine(color, path) {
 
 // Corner warning icons, gated by showAlertIcons — the barrage line itself is _clearBoardAids.
 function _clearAlertIcons() {
-  for (const id of ['capture-icon', 'encirclement-icon', 'barrage-icon']) {
-    document.getElementById(id)?.classList.remove('visible');
-  }
   for (const color of ['white', 'black']) {
     document.getElementById(`capture-icon-${color}`)?.classList.remove('visible');
     document.getElementById(`sniper-capture-icon-${color}`)?.classList.remove('visible');
@@ -243,13 +231,6 @@ function _clearBoardAids() {
 }
 
 function _updateBoardStatusIcons() {
-  const capEl = document.getElementById('capture-icon');
-  if (capEl) capEl.classList.toggle('visible', showAlertIcons && _checkCaptureCondition());
-  const encEl = document.getElementById('encirclement-icon');
-  if (encEl) encEl.classList.toggle('visible', showAlertIcons && _checkEncirclementCondition());
-  const barEl = document.getElementById('barrage-icon');
-  if (barEl) barEl.classList.toggle('visible', showAlertIcons && _checkBarrageCondition());
-
   for (const color of ['white', 'black']) {
     const c = color === 'white' ? 'w' : 'b';
     const capTeamEl = document.getElementById(`capture-icon-${color}`);

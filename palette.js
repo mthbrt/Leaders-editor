@@ -56,7 +56,8 @@ const Palette = (() => {
   // +4px is deliberate slack against fractional-pixel rounding under non-100% display scaling.
   const _widthForCols = (cols, itemSz) => INNER * 2 + cols * itemSz + PAL_G * (cols - 1) + 4;
 
-  // Desktop only — mobile sizes this panel entirely via CSS (see body.layout-mobile rules).
+  // Desktop only — on mobile the panel is a fixed-size popup instead (see body.layout-mobile
+  // #pal-panel in style.css; its items are sized separately, by syncLayout below).
   function layout(W, H, rEst) {
     const palW = _widthForCols(MIN_COLS, _itemSzFromR(rEst));
     return { palX: W - palW, palY: 0, palW, palH: H };
@@ -83,7 +84,7 @@ const Palette = (() => {
   function inPalette(x, y) {
     const r  = _mainRect();
     const el = document.elementFromPoint(x + r.left, y + r.top);
-    return !!(el?.closest('#pal-panel, #pal-ruban, #pal-bubble'));
+    return !!(el?.closest('#pal-panel'));
   }
 
   function palAt(x, y) {
@@ -394,7 +395,8 @@ const Palette = (() => {
     onCollapseChange?.();
   }
 
-  // Geometry only; called by relayout(). Mobile sizes/shows this panel entirely via CSS.
+  // Geometry only; called by relayout(). The panel's own box/visibility is CSS-driven on mobile
+  // (body.layout-mobile #pal-panel), but its items' size still needs computing here — see below.
   function syncLayout() {
     if (!panel) return;
     panel.style.left = panel.style.top = panel.style.width = panel.style.height = '';
@@ -417,7 +419,11 @@ const Palette = (() => {
         const cs   = getComputedStyle(grid);
         const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
         const GAP = 6, COLS = 5;
-        const itemSz = Math.max(0, (grid.clientWidth - padX - GAP * (COLS - 1)) / COLS);
+        // Floored, with a couple px of slack subtracted first — the exact fractional result still
+        // wrapped to 4 per row in practice, since each item's box gets rounded to a whole (device)
+        // pixel independently, and 5 of those rounding up even by a hair pushes the row past the
+        // grid's real content width. A little too small beats "occasionally wraps."
+        const itemSz = Math.max(0, Math.floor((grid.clientWidth - padX - GAP * (COLS - 1) - 2) / COLS));
         panel.style.setProperty('--tok-sz', itemSz + 'px');
       }
     } else {

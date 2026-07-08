@@ -44,6 +44,7 @@ const LANGS = {
     pal2TitleUpdate:    'Mettre à jour la sauvegarde',
     pal2TitleDuplicate: 'Dupliquer',
     pal2TitleMore:      'Plus d\'options',
+    pal2ToastUndo:      'Annuler suppression',
     btnHelp:            'Aide',
     helpTitle:          'Commandes',
     // Général
@@ -119,6 +120,7 @@ const LANGS = {
     pal2TitleUpdate:    'Update save',
     pal2TitleDuplicate: 'Duplicate',
     pal2TitleMore:      'More options',
+    pal2ToastUndo:      'Undo deletion',
     btnHelp:            'Help',
     helpTitle:          'Controls',
     // General
@@ -726,7 +728,7 @@ function _moveSelectedToCell(destCellId) {
 }
 
 // ── INTERACTION STATE ─────────────────────────────────────────────────────────
-let drag = null, dpos = null, justDropped = false;
+let drag = null, dpos = null;
 let mousePos = { x: 0, y: 0 };
 
 // ── SELECTION STATE ───────────────────────────────────────────────────────────
@@ -1273,7 +1275,7 @@ function onUp(e) {
     }
   }
 
-  drag = null; dpos = null; justDropped = true; render();
+  drag = null; dpos = null; render();
 }
 
 // ── ACTIONS ───────────────────────────────────────────────────────────────────
@@ -1538,12 +1540,14 @@ function _syncGhost() {
 let _lastEncodedState = null;
 
 function render() {
-  // Skip the URL/history write when it'd be a no-op — S doesn't change mid-drag, and render()
-  // runs on every mousemove during one.
-  const encoded = enc(S);
-  if (encoded !== _lastEncodedState) {
-    _lastEncodedState = encoded;
-    history.replaceState(null, '', '#' + encoded);
+  // S is frozen mid-drag (only the ghost moves) — skip re-encoding and writing history on every
+  // mousemove, since the encoded string can't have changed until the drag actually completes.
+  if (!drag) {
+    const encoded = enc(S);
+    if (encoded !== _lastEncodedState) {
+      _lastEncodedState = encoded;
+      history.replaceState(null, '', '#' + encoded);
+    }
   }
   _syncTokenLayer();
   _syncLabelLayer();
@@ -1563,7 +1567,6 @@ function init() {
   main.addEventListener('mousedown',   onDown);
   main.addEventListener('mousemove',   onMove);
   main.addEventListener('mouseup',     onUp);
-  main.addEventListener('click',       () => { if (justDropped) justDropped = false; });
   main.addEventListener('contextmenu', e => {
     e.preventDefault();
     const { x, y } = _mainXY(e);

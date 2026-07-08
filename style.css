@@ -21,7 +21,8 @@ button, input, select, textarea {
   --border:    #2a2a50;
   --border-hl: #363668;
 
-  --accent:    #5050c0;
+  --accent:       #5050c0;
+  --accent-light: #7878e8;
 
   --text-1: #dfdfff;
   --text-2: #9090c4;
@@ -508,7 +509,7 @@ body:not(.no-shadows) #drag-ghost {
 
 #pal-header, #pal2-header {
   padding: 0 20px;
-  height: 50px;
+  height: 48px; /* matches #toolbar's desktop height — these panels are a desktop-only concept */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1439,9 +1440,16 @@ body.layout-mobile .help-row  { padding: 8px 10px; min-height: 30px; }
   cursor: pointer;
   flex-shrink: 0;
 }
-.pal2-add-section-btn .pal2-sec-left { min-height: 28px; }
+.pal2-add-section-btn .pal2-section-hdr:hover { background: none; }
+/* Shrink-wrapped (not flex:1, unlike a real section's) so the hover feedback below triggers on the
+   icon+text itself, not the header's full clickable width — cancel the shared header-hover rule,
+   then reapply it scoped to .pal2-sec-left (same specificity, wins on being declared after). */
+.pal2-add-section-btn .pal2-sec-left { flex: 0 1 auto; min-height: 28px; }
 .pal2-add-section-btn svg { color: var(--text-2); }
-.pal2-add-section-btn .pal2-section-hdr:hover svg { color: var(--text-1); }
+.pal2-add-section-btn .pal2-section-hdr:hover svg,
+.pal2-add-section-btn .pal2-section-hdr:hover .pal2-sec-name { color: var(--text-2); }
+.pal2-add-section-btn .pal2-sec-left:hover svg,
+.pal2-add-section-btn .pal2-sec-left:hover .pal2-sec-name { color: var(--text-1); }
 
 /* ── Inline rename input ── */
 .pal2-inline-edit {
@@ -1469,7 +1477,7 @@ body.layout-mobile .help-row  { padding: 8px 10px; min-height: 30px; }
 
 /* ── Undo-delete toast (section/save row deletion) ──────────────────────────
    Fixed, centered at the bottom of the viewport — shown for UNDO_DELETE_MS (palette2.js) after
-   deleting a section or save row, with an Undo button that restores it before the delay commits. */
+   deleting a section or save row. No button inside — the whole toast is the click target. */
 .pal2-toast {
   position: fixed;
   left: 50%;
@@ -1478,16 +1486,19 @@ body.layout-mobile .help-row  { padding: 8px 10px; min-height: 30px; }
   z-index: 210;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 8px 8px 14px;
+  gap: 10px;
+  padding: 10px 16px;
   background: var(--bg-1);
   border: 1px solid var(--border-hl);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-float);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), background 0.12s;
 }
+.pal2-toast:hover { background: var(--bg-2); }
+.pal2-toast:active { scale: 0.98; }
 .pal2-toast.visible {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
@@ -1498,24 +1509,12 @@ body.layout-mobile .help-row  { padding: 8px 10px; min-height: 30px; }
   color: var(--text-1);
   white-space: nowrap;
 }
-.pal2-toast-undo {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-2);
-  cursor: pointer;
+.pal2-toast-undo-icon {
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
-  transition: background 0.12s, color 0.12s;
+  color: var(--text-1);
 }
-.pal2-toast-undo svg     { width: 18px; height: 18px; }
-.pal2-toast-undo:hover   { background: var(--bg-2); color: var(--text-1); }
-.pal2-toast-undo:active  { scale: 0.9; }
 
 /* ── Tooltips Discord-style ── */
 .dc-tooltip-el {
