@@ -7,6 +7,7 @@ const LANGS = {
     btnFlipPos:       'Inverser horizontalement le plateau',
     btnFlipPosV:      'Inverser verticalement le plateau',
     btnSettings:      'Paramètres',
+    btnTogglePal2:    'Afficher/masquer les sauvegardes',
     btnTogglePalette: 'Afficher/masquer les personnages',
     copied:           'Copié !',
     settingsTitle:    'Paramètres',
@@ -83,6 +84,7 @@ const LANGS = {
     btnFlipPos:       'Mirror board horizontally',
     btnFlipPosV:      'Mirror board vertically',
     btnSettings:      'Settings',
+    btnTogglePal2:    'Show/hide saves',
     btnTogglePalette: 'Show/hide characters',
     copied:           'Copied!',
     settingsTitle:    'Settings',
@@ -167,6 +169,7 @@ function _applyLang() {
     ['btn-flip-pos',       'btnFlipPos'],
     ['btn-flip-pos-v',     'btnFlipPosV'],
     ['btn-settings',       'btnSettings'],
+    ['btn-toggle-pal2',    'btnTogglePal2'],
     ['btn-toggle-palette', 'btnTogglePalette'],
     ['btn-help',           'btnHelp'],
   ];

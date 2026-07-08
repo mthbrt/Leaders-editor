@@ -578,6 +578,13 @@ const Palette2 = (() => {
   }
 
   // ── Action button tooltips ─────────────────────────────────────────────────
+  // _renderList() wipes and rebuilds #pal2-list's whole DOM on every mutation — if a tooltip is
+  // showing (or about to) when that happens, its owning button is destroyed before mouseleave ever
+  // fires, orphaning the tooltip (a plain document.body child, independent of the button) visible
+  // forever. _activeActionTooltipHide tracks whichever one is currently live so _renderList can
+  // force it closed first, right before tearing down the button that owns it.
+  let _activeActionTooltipHide = null;
+
   function _initActionTooltips() {
     if (!panel) return;
     panel.querySelectorAll('.pal2-action-btn[title]').forEach(btn => {
@@ -616,11 +623,17 @@ const Palette2 = (() => {
       const _hide = () => {
         clearTimeout(timer);
         if (tt) { tt.classList.remove('visible'); const _tt = tt; tt = null; setTimeout(() => _tt.remove(), 120); }
+        if (_activeActionTooltipHide === _hide) _activeActionTooltipHide = null;
       };
 
       // Tooltips are a hover/mouse affordance only — see tooltip.js's initButtonTooltips for why
       // this guard is needed (mobile browsers synthesize mouseenter from a plain tap).
-      btn.addEventListener('mouseenter', () => { if (_isTouchDevice()) return; timer = setTimeout(_show, 0); });
+      btn.addEventListener('mouseenter', () => {
+        if (_isTouchDevice()) return;
+        _activeActionTooltipHide?.();
+        _activeActionTooltipHide = _hide;
+        timer = setTimeout(_show, 0);
+      });
       btn.addEventListener('mouseleave', _hide);
       btn.addEventListener('mousedown',  _hide);
     });
@@ -630,6 +643,10 @@ const Palette2 = (() => {
   function _renderList() {
     const list = panel?.querySelector('#pal2-list');
     if (!list) return;
+    // Force-close any action-button tooltip still showing from before this rebuild — its owning
+    // button is about to be destroyed, and nothing else would ever tell it to hide (see
+    // _activeActionTooltipHide above).
+    _activeActionTooltipHide?.();
     list.innerHTML = '';
 
     for (const sec of sections) {
