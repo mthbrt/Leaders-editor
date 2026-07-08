@@ -613,17 +613,6 @@ body.layout-mobile .pal-sec-label { font-size: 14px; }
 body.layout-mobile .pal-grid { gap: 6px; padding: 6px 14px 14px; }
 body.layout-mobile .pal-grid-first { padding-top: 10px; }
 
-/* Exceptionally NOT matched to the board's token size here (unlike --tok-sz's every other use,
-   set once globally in editor.js's relayout() to match the board) — the popup has no board to
-   match against, so items are maximized instead: sized to fit exactly 5 per row, full stop.
-   Overriding --tok-sz itself (rather than just .pal-item's width) means every dependent rule —
-   the on-board ring, the recruit-count badge — automatically scales along with it too. The '%' in
-   this calc() still resolves against .pal-grid's own content width, exactly like a plain width
-   would, regardless of being threaded through a custom property first. */
-body.layout-mobile #pal-panel .pal-item {
-  --tok-sz: calc((100% - 4 * 6px) / 5);
-}
-
 .pal-item {
   position: relative;
   cursor: pointer;

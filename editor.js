@@ -331,11 +331,10 @@ function _palRemove(name) {
 }
 
 // Returns a token being removed from the board (deleted, or having its identity replaced) back to
-// the palette — including the Frog (id 22) if it was riding this token, which would otherwise be
-// lost from the game entirely (neither on the board nor available in the palette).
+// the palette. Its own Frog status (if any) needs no special handling — Frog is a free, unconstrained
+// cosmetic flag (see _placeTokToolbar), never tied to the palette's own Frog(22) piece.
 function _palReturnToken(tok) {
   _palAdd(tok.name);
-  if (tok.frog) _palAdd('22');
 }
 
 // ── BAN HELPERS ───────────────────────────────────────────────────────────────
@@ -553,8 +552,11 @@ function relayout() {
   document.body.style.setProperty('--tok-sz', Math.round(LO.r * 2) + 'px');
   // Rounded to a whole pixel for the same reason as --tok-sz above — a fractional-pixel box for
   // the frog badge's background-image forces the browser to anti-alias the whole image, not just
-  // its edges, which reads as blurry rather than just a soft edge (see _applyFrogBadge).
-  document.body.style.setProperty('--frog-badge-sz', Math.round(LO.r * 2 * 0.4) + 'px');
+  // its edges, which reads as blurry rather than just a soft edge (see _applyFrogBadge). Proportion
+  // is bigger on mobile (0.5 vs 0.4) — this is set as an inline style (higher specificity than any
+  // stylesheet rule could override), so the mobile-specific value has to be picked here in JS.
+  const frogBadgeRatio = isMobileLayout() ? 0.5 : 0.4;
+  document.body.style.setProperty('--frog-badge-sz', Math.round(LO.r * 2 * frogBadgeRatio) + 'px');
 }
 
 // Desktop: #main is a CSS grid (fixed-280px saves | board | tokens). The board's size is read
@@ -1073,13 +1075,11 @@ function _placeTokToolbar(x, y) {
 
   const fr = currentLang === 'fr';
   const id = tokTbId;
-  // Leaders (type 'd') and the Frog itself (id 22) can never become a Frog. There's only ever one
-  // Frog character (like any other), so also require it to actually be sitting in the palette —
-  // the same scarcity the drag-and-drop transform already enforces (dragging it from the palette
-  // is only possible while it's there). Checking the palette itself (rather than "is some other
-  // token's frog flag set") also correctly excludes it while it's a standalone board token.
-  const frogAvailable = S.palette.vermillon.includes('22');
-  const canFrog = tok.name !== '22' && _getTokenData(tok.name)?.type !== 'd' && frogAvailable;
+  // Leaders (type 'd') and the Frog itself (id 22) can never become a Frog — but otherwise, Frog
+  // status is a free, unconstrained cosmetic flag (mirroring the Shaman's ability, which can turn
+  // any number of different characters into a Frog), not tied to the palette's own Frog(22) piece —
+  // any number of tokens can be transformed at once, regardless of what's currently recruitable.
+  const canFrog = tok.name !== '22' && _getTokenData(tok.name)?.type !== 'd';
   const items = [
     {
       label: fr ? 'Changer de couleur' : 'Toggle color',
@@ -1093,9 +1093,7 @@ function _placeTokToolbar(x, y) {
         ? (fr ? 'Détransformer' : 'Remove Transformation')
         : (fr ? 'Transformer en grenouille' : 'Transform into Frog'),
       onClick: () => {
-        const turningOn = !tok.frog;
-        S.tokens = S.tokens.map(t => t.id === id ? { ...t, frog: turningOn } : t);
-        turningOn ? _palRemove('22') : _palAdd('22');
+        S.tokens = S.tokens.map(t => t.id === id ? { ...t, frog: !t.frog } : t);
         tokTbId = null; saveH(); render();
       },
     }] : []),
@@ -1257,17 +1255,20 @@ function onUp(e) {
       if (other && drag.name === '22' && !otherIsFrog && _getTokenData(other.name)?.type !== 'd') {
         // Dropping a Frog from the palette onto an existing token transforms it in place instead
         // of replacing its character (board-to-board Frog drags keep the normal swap behavior).
+        // No _palRemove here — like the context menu's toggle, this is a free, unconstrained
+        // cosmetic status, not spending the recruitable Frog(22) piece itself.
         S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, frog: true } : t);
       } else if (other) {
-        // Plain swap (also covers Frog-onto-Frog and Frog-onto-Leader) — the old character (and
-        // its Frog, if it had one) goes back to the palette; the target cell's own frog flag is
-        // cleared, exactly like a normal character exchange.
+        // Plain swap (also covers Frog-onto-Frog and Frog-onto-Leader) — the old character goes
+        // back to the palette; the target cell's own frog flag is cleared either way, exactly like
+        // a normal character exchange.
         _palReturnToken(other);
         S.tokens = S.tokens.map(t => t.id === other.id ? { ...t, name: drag.name, c: drag.c, frog: false } : t);
+        _palRemove(drag.name);
       } else {
         S.tokens = [...S.tokens, { id: S.nid++, cell: cell.id, name: drag.name, c: drag.c }];
+        _palRemove(drag.name);
       }
-      _palRemove(drag.name);
       saveH();
     }
   }
@@ -1298,10 +1299,6 @@ function doReset() {
 
 function _loadState({ tokens, banned }) {
   const used = new Set(tokens.map(t => t.name));
-  // A Frog riding another token is stored as that token's own `frog` flag, never as a token named
-  // '22' — without this, loading a state with a transformed token would leave the Frog looking
-  // available again in the palette even though it's actively in use.
-  if (tokens.some(t => t.frog)) used.add('22');
   const palette = { lancement: [], vermillon: [], leaders: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
   S = { tokens: tokens.map((t, i) => ({ ...t, id: i })), palette, nid: tokens.length, banned: banned || [] };

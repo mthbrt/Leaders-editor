@@ -403,6 +403,26 @@ const Palette = (() => {
       lastCollapsed = collapsed;
       panel.classList.toggle('collapsed', collapsed);
     }
+
+    // Mobile popup: items are maximized to fill exactly 5 columns instead of matching the board's
+    // token size. Computed here (a real px value set on #pal-panel, inherited down) rather than as
+    // a CSS-only percentage in --tok-sz's formula — a percentage baked into a custom property
+    // re-resolves against whichever element/property actually consumes it, not against the element
+    // where the variable was declared, so it silently went wrong for anything below .pal-item that
+    // also reads --tok-sz (the recruit-count badge's position, the on-board ring's width) instead
+    // of just .pal-item's own width/height. A plain px value has no such ambiguity.
+    if (isMobileLayout()) {
+      const grid = panel.querySelector('.pal-grid');
+      if (grid) {
+        const cs   = getComputedStyle(grid);
+        const padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+        const GAP = 6, COLS = 5;
+        const itemSz = Math.max(0, (grid.clientWidth - padX - GAP * (COLS - 1)) / COLS);
+        panel.style.setProperty('--tok-sz', itemSz + 'px');
+      }
+    } else {
+      panel.style.removeProperty('--tok-sz');
+    }
   }
 
   // No-ops during a drag — board state never changes mid-drag, only the ghost moves.
