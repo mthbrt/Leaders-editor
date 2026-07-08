@@ -192,7 +192,6 @@ function _applyLang() {
 
   Palette.applyLang();
   if (typeof Palette2 !== 'undefined') Palette2.applyLang();
-  _updateMobileTabLabels();
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -461,110 +460,48 @@ function _syncLayoutModeClass() {
   _layoutMode = mode;
   document.body.classList.toggle('layout-mobile', mode === 'mobile');
   document.body.classList.toggle('layout-desktop', mode === 'desktop');
-  mode === 'mobile' ? _enterMobileTabs() : _exitMobileTabs();
+  mode === 'mobile' ? _enterMobileBottomBar() : _exitMobileBottomBar();
 }
 
-// ── MOBILE TABS — merges the Saves and Tokens panels into one tabbed bottom section.
-// Reuses Palette/Palette2's existing panel DOM (reparented, never rebuilt) so none of their
-// rendering logic is duplicated — only which container holds them, and which one is visible.
-let _mobileTabsEl       = null;
-let _mobileTabContent   = null;
-let _mobileTabsCollapsed = false;
-
-function _buildMobileTabs() {
-  if (_mobileTabsEl) return;
-  const el = document.createElement('div');
-  el.id = 'mobile-tabs';
-  el.innerHTML = `
-    <div id="mobile-tab-bar">
-      <button class="mobile-tab-btn active" data-tab="tokens"></button>
-      <button id="mobile-tabs-collapse-btn">
-        <svg width="14" height="14" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="2 3 5 7 8 3"/>
-        </svg>
-      </button>
-    </div>
-    <div id="mobile-tab-content"></div>`;
-  document.getElementById('main').appendChild(el);
-  el.querySelector('#mobile-tabs-collapse-btn').addEventListener('click', _toggleMobileTabsCollapsed);
-  _mobileTabsEl     = el;
-  _mobileTabContent = el.querySelector('#mobile-tab-content');
-  _initMobileTabsSwipe(el.querySelector('#mobile-tab-bar'));
-  _updateMobileTabLabels();
+// ── MOBILE BOTTOM BAR — reparents Undo/Redo/Reset and the palette-popup trigger out of the top
+// toolbar into a fixed bar pinned to the bottom of the screen (order: open palette, undo, redo,
+// reset), shown only on mobile. Saves (Palette2) has no mobile equivalent at all — desktop-only.
+function _enterMobileBottomBar() {
+  const bar = document.getElementById('mobile-bottom-bar');
+  bar.appendChild(document.getElementById('btn-toggle-palette'));
+  bar.appendChild(document.getElementById('btn-undo'));
+  bar.appendChild(document.getElementById('btn-redo'));
+  bar.appendChild(document.getElementById('btn-reset-board'));
 }
 
-// Swipe-down-to-close / swipe-up-to-open on the tab bar — the content area has its own scrollable
-// lists, so a swipe there would fight normal scrolling. A tap that doesn't cross the threshold
-// below still reaches the tab/collapse buttons normally.
-function _initMobileTabsSwipe(bar) {
-  const SWIPE_PX = 24;
-  let startX = 0, startY = 0, tracking = false;
-
-  bar.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    tracking = true;
-  }, { passive: true });
-
-  bar.addEventListener('touchend', e => {
-    if (!tracking) return;
-    tracking = false;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-    if (Math.abs(dy) < SWIPE_PX || Math.abs(dy) < Math.abs(dx)) return; // not a deliberate vertical swipe
-
-    if (dy > 0 && !_mobileTabsCollapsed) { e.preventDefault(); _toggleMobileTabsCollapsed(); }
-    else if (dy < 0 && _mobileTabsCollapsed) { e.preventDefault(); _toggleMobileTabsCollapsed(); }
-  });
-
-  bar.addEventListener('touchcancel', () => { tracking = false; });
+// Restores each button to its original toolbar position — the palette-popup trigger as the last
+// child of .right-group, and undo/redo/reset right before the separator in .center-group (each
+// insertBefore(x, sep) lands immediately before it, so doing reset/undo/redo in that order
+// reconstructs the original reset-undo-redo-sep sequence).
+function _exitMobileBottomBar() {
+  document.querySelector('#toolbar .right-group').appendChild(document.getElementById('btn-toggle-palette'));
+  const centerGroup = document.querySelector('#toolbar .center-group');
+  const sep = centerGroup.querySelector('.toolbar-sep');
+  centerGroup.insertBefore(document.getElementById('btn-reset-board'), sep);
+  centerGroup.insertBefore(document.getElementById('btn-undo'),        sep);
+  centerGroup.insertBefore(document.getElementById('btn-redo'),        sep);
+  _closeMobilePalettePopup();
 }
 
-function _updateMobileTabLabels() {
-  if (!_mobileTabsEl) return;
-  _mobileTabsEl.querySelector('[data-tab="tokens"]').textContent = t('palTitle');
+// ── MOBILE PALETTE POPUP — the character panel becomes a centered modal on mobile instead of
+// the old embedded bottom panel (see style.css's body.layout-mobile #pal-panel/#pal-popup-backdrop).
+// Palette.getPanelEl() never moves in the DOM any more — position:fixed positions it against the
+// viewport regardless of its #main parent, so there's nothing to reparent, unlike the old tabs.
+function _openMobilePalettePopup() {
+  Palette.getPanelEl()?.classList.add('mobile-open');
+  document.getElementById('pal-popup-backdrop')?.classList.add('open');
 }
-
-// #mobile-tabs' height animates via plain CSS transition, so a single relayout() right after
-// toggling the class would only see its t=0 start value. Polling relayout()/render() every frame
-// instead samples the panel's real, already-progressed height each time, resizing the board
-// (#board-area, a flex child) smoothly in step with it — no separate JS easing needed.
-let _mobileTabsResizeRaf = null;
-
-function _toggleMobileTabsCollapsed() {
-  _mobileTabsCollapsed = !_mobileTabsCollapsed;
-  _mobileTabsEl?.classList.toggle('collapsed', _mobileTabsCollapsed);
-
-  if (_mobileTabsResizeRaf) cancelAnimationFrame(_mobileTabsResizeRaf);
-  const start = performance.now();
-  function step(now) {
-    relayout(); render();
-    if (now - start < PANEL_ANIM_MS) {
-      _mobileTabsResizeRaf = requestAnimationFrame(step);
-    } else {
-      _mobileTabsResizeRaf = null;
-      relayout(); render(); // settle on the final, fully-transitioned state
-    }
-  }
-  _mobileTabsResizeRaf = requestAnimationFrame(step);
+function _closeMobilePalettePopup() {
+  Palette.getPanelEl()?.classList.remove('mobile-open');
+  document.getElementById('pal-popup-backdrop')?.classList.remove('open');
 }
-
-// Saves (Palette2) is desktop-only now — its panel is never reparented here, so it just stays
-// wherever _build() created it, hidden by the same body.layout-mobile rule that hides any panel
-// without .tab-active.
-function _enterMobileTabs() {
-  _buildMobileTabs();
-  const palPanel = Palette.getPanelEl();
-  if (palPanel) { _mobileTabContent.appendChild(palPanel); palPanel.classList.add('tab-active'); }
-}
-
-function _exitMobileTabs() {
-  if (!_mobileTabsEl) return;
-  const palPanel = Palette.getPanelEl();
-  if (palPanel) document.getElementById('main').appendChild(palPanel);
-  palPanel?.classList.remove('tab-active');
+function _toggleMobilePalettePopup() {
+  Palette.getPanelEl()?.classList.contains('mobile-open') ? _closeMobilePalettePopup() : _openMobilePalettePopup();
 }
 
 // ── LAYOUT ────────────────────────────────────────────────────────────────────
@@ -694,8 +631,9 @@ function _relayoutDesktop() {
   if (typeof Palette2 !== 'undefined') Palette2.syncLayout();
 }
 
-// Mobile: #board-area is a flex child that takes whatever height #mobile-tabs doesn't (style.css),
-// so its clientWidth/clientHeight already is the available space, and centering is just W/2,H/2.
+// Mobile: #board-area is a flex child that takes whatever height #mobile-bottom-bar doesn't
+// (style.css), so its clientWidth/clientHeight already is the available space, and centering is
+// just W/2,H/2. The palette popup is position:fixed and plays no part in this at all.
 function _relayoutMobile() {
   const boardArea = document.getElementById('board-area');
   const W = boardArea.clientWidth  || 800;
@@ -1648,7 +1586,14 @@ function init() {
 
   window.addEventListener('keydown', e => {
     if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
-    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      // A pending Saves-panel deletion (its undo toast still showing) takes priority over the
+      // board's own undo history, but only while it's still the very last action — once a board or
+      // recruitment-zone change happens, Ctrl+Z reverts to meaning "undo that" instead (the toast's
+      // own button still restores the deletion regardless — see undoPendingDeleteIfLastAction).
+      if (!Palette2?.undoPendingDeleteIfLastAction?.()) undo();
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
     if (e.key === 'ArrowLeft')  undo();
     if (e.key === 'ArrowRight') redo();
@@ -1670,6 +1615,7 @@ function init() {
       document.getElementById('help-overlay').classList.add('hidden');
       document.getElementById('lang-submenu').classList.remove('open');
       Palette.hidePalToolbar?.();
+      _closeMobilePalettePopup();
     }
   });
 
@@ -1679,8 +1625,14 @@ function init() {
   document.getElementById('btn-flip-colors'   ).addEventListener('click', doFlipColors);
   document.getElementById('btn-flip-pos'      ).addEventListener('click', doFlipPositions);
   document.getElementById('btn-flip-pos-v'    ).addEventListener('click', doFlipPositionsV);
-  document.getElementById('btn-toggle-palette').addEventListener('click', () => Palette.toggleCollapse());
+  // Same button, two meanings — a collapsible desktop sidebar vs. a mobile popup trigger (the
+  // button itself is reparented between the toolbar and the mobile bottom bar, see
+  // _enterMobileBottomBar/_exitMobileBottomBar).
+  document.getElementById('btn-toggle-palette').addEventListener('click', () => {
+    isMobileLayout() ? _toggleMobilePalettePopup() : Palette.toggleCollapse();
+  });
   document.getElementById('btn-toggle-pal2'   ).addEventListener('click', () => Palette2?.toggleCollapse());
+  document.getElementById('pal-popup-backdrop').addEventListener('click', _closeMobilePalettePopup);
 
   // ── Settings ──
   const _syncToggle = (id, val) => {

@@ -104,8 +104,11 @@ const Palette2 = (() => {
   }
 
   function _deleteSection(id) {
-    sections = sections.filter(s => s.id !== id);
-    _save(); _renderList();
+    const index = sections.findIndex(s => s.id === id);
+    if (index === -1) return;
+    const [item] = sections.splice(index, 1);
+    _renderList();
+    _armPendingDelete('section', item, index, null);
   }
 
   function _renameSection(id, raw) {
@@ -146,8 +149,85 @@ const Palette2 = (() => {
 
   function _deleteConfig(sectionId, configId) {
     const sec = sections.find(s => s.id === sectionId); if (!sec) return;
-    sec.configs = sec.configs.filter(c => c.id !== configId);
+    const index = sec.configs.findIndex(c => c.id === configId);
+    if (index === -1) return;
+    const [item] = sec.configs.splice(index, 1);
+    _renderList();
+    _armPendingDelete('config', item, index, sectionId);
+  }
+
+  // ── Undo-delete toast ─────────────────────────────────────────────────────
+  // Deleting a section or save row takes it out of the in-memory list (and the UI) right away,
+  // but doesn't persist that removal to localStorage until UNDO_DELETE_MS passes with no undo — via
+  // Ctrl+Z (routed in from editor.js's global keydown, which defers to us first) or the toast's own
+  // button. Only one deletion can be "pending" at a time; a new one commits whichever was showing.
+  const UNDO_DELETE_MS = 5000;
+  // hidxAtArm: editor.js's board-history pointer (hidx) at the moment of deletion — any board or
+  // recruitment-zone change advances it via saveH(), so comparing against the current value tells
+  // Ctrl+Z whether this deletion is still the very last action (see undoPendingDeleteIfLastAction).
+  let _pendingDelete = null; // { kind: 'section'|'config', item, index, sectionId, timer, toastEl, hidxAtArm }
+
+  function _commitPendingDelete() {
+    if (!_pendingDelete) return;
+    clearTimeout(_pendingDelete.timer);
+    const el = _pendingDelete.toastEl;
+    _pendingDelete = null;
+    _save();
+    el.classList.remove('visible');
+    setTimeout(() => el.remove(), 200);
+  }
+
+  function _restorePendingDelete() {
+    const pd = _pendingDelete;
+    clearTimeout(pd.timer);
+    _pendingDelete = null;
+    pd.toastEl.classList.remove('visible');
+    setTimeout(() => pd.toastEl.remove(), 200);
+
+    if (pd.kind === 'section') {
+      sections.splice(Math.min(pd.index, sections.length), 0, pd.item);
+    } else {
+      const sec = sections.find(s => s.id === pd.sectionId);
+      if (sec) sec.configs.splice(Math.min(pd.index, sec.configs.length), 0, pd.item);
+    }
     _save(); _renderList();
+  }
+
+  // Unconditional — used by the toast's own Undo button, which should always work while it's showing.
+  function undoPendingDelete() {
+    if (!_pendingDelete) return false;
+    _restorePendingDelete();
+    return true;
+  }
+
+  // Gated — used by the Ctrl+Z keyboard shortcut, which should only reach for this deletion as long
+  // as nothing else (a board move, a recruit/ban, etc.) has happened since. Once it has, Ctrl+Z goes
+  // back to meaning "undo that", and the toast just quietly finishes its countdown on its own.
+  function undoPendingDeleteIfLastAction() {
+    if (!_pendingDelete || _pendingDelete.hidxAtArm !== hidx) return false;
+    _restorePendingDelete();
+    return true;
+  }
+
+  // Section vs. save row both show the same "Annuler"/"Undo" label — same text as the button's own
+  // tooltip, so no separate wording needed for what was deleted (kind only matters for the restore).
+  function _armPendingDelete(kind, item, index, sectionId) {
+    _commitPendingDelete(); // finalize whichever deletion was already pending, if any
+
+    const el = document.createElement('div');
+    el.className = 'pal2-toast';
+    el.innerHTML = `
+      <span class="pal2-toast-label"></span>
+      <button class="pal2-toast-undo" type="button" title="${_esc(_t('btnUndo'))}" aria-label="${_esc(_t('btnUndo'))}">
+        <svg viewBox="0 0 18 18" fill="currentColor"><path d="M8.92,6.33h-3.13l2.38-2.38-1.03-1.03L3,7.06l4.14,4.14,1.03-1.03-2.38-2.38h3.13c2.55,0,4.63,2.08,4.63,4.63v2.66h1.45v-2.66c0-3.36-2.73-6.09-6.08-6.09Z"/></svg>
+      </button>`;
+    el.querySelector('.pal2-toast-label').textContent = _t('btnUndo');
+    el.querySelector('.pal2-toast-undo').addEventListener('mousedown', e => { e.preventDefault(); undoPendingDelete(); });
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('visible'));
+
+    const timer = setTimeout(_commitPendingDelete, UNDO_DELETE_MS);
+    _pendingDelete = { kind, item, index, sectionId, timer, toastEl: el, hidxAtArm: hidx };
   }
 
   function _renameConfig(sectionId, configId, raw) {
@@ -750,7 +830,8 @@ const Palette2 = (() => {
   }
 
   // ── Layout / collapse ─────────────────────────────────────────────────────
-  // Desktop only — mobile sizes/shows this panel entirely via CSS (body.layout-mobile + .tab-active).
+  // Desktop only — on mobile this panel is simply hidden via CSS (body.layout-mobile #pal2-panel),
+  // unlike the Palette panel, which gets reparented into the tab-driven mobile bottom sheet instead.
   function layout(W, H) {
     _palW = LEFT_PANEL_WIDTH;
     return { palX: 0, palY: 0, palW: _palW, palH: H };
@@ -762,7 +843,8 @@ const Palette2 = (() => {
     onCollapseChange?.();
   }
 
-  // Collapse/expand is a desktop-only concept — on mobile, visibility is tab-driven instead.
+  // Collapse/expand is a desktop-only concept — on mobile the panel is hidden outright, not shown
+  // via tabs, so there's nothing to toggle (and its toolbar button is hidden there too).
   function toggleCollapse() { if (isMobileLayout()) return; collapsed = !collapsed; _syncCollapsed(); }
   function isCollapsed()    { return collapsed; }
 
@@ -788,5 +870,5 @@ const Palette2 = (() => {
   function init() { _build(); }
   function getPanelEl() { return panel; }
 
-  return { layout, syncLayout, isCollapsed, toggleCollapse, applyLang, init, setOnCollapseChange, getPanelEl };
+  return { layout, syncLayout, isCollapsed, toggleCollapse, applyLang, init, setOnCollapseChange, getPanelEl, undoPendingDelete, undoPendingDeleteIfLastAction };
 })();

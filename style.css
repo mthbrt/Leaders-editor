@@ -36,9 +36,6 @@ button, input, select, textarea {
   --radius-lg: 14px;
   /* Shared floating-panel shadow: popups, dropdown menus, tooltips. */
   --shadow-float: 0 6px 24px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
-
-  /* Must match #mobile-tabs.collapsed's target height exactly, or collapsing leaves a gap/clips it. */
-  --mobile-tabbar-h: clamp(36px, 11vh, 44px);
 }
 
 body {
@@ -84,6 +81,10 @@ body {
   flex-shrink: 0;
 }
 #toolbar .logo:hover { color: var(--text-1); }
+/* #btn-toggle-pal2 is hidden on mobile, so the logo becomes .left-group's flush-left first child —
+   sitting right at the toolbar's own padding, unlike a button's icon, which is inset 10px inside
+   its 40px box. This margin matches that inset so the logo's visual start lines up with the icons. */
+body.layout-mobile #toolbar .logo { margin-left: 10px; }
 
 #toolbar .center-group {
   display: flex;
@@ -109,6 +110,9 @@ body {
   flex-shrink: 0;
   margin: 0 1px;
 }
+/* Undo/Redo/Reset move out to #mobile-bottom-bar on mobile (editor.js's _enterMobileBottomBar),
+   leaving this separator with nothing before it to separate from board-color-change anymore. */
+body.layout-mobile #toolbar .toolbar-sep { display: none; }
 
 /* ── Buttons ── */
 .btn {
@@ -131,27 +135,22 @@ body {
 .btn svg { width: 20px; height: 20px; }
 .btn:hover { background: var(--bg-0); color: var(--text-1); }
 
-/* ── Responsive toolbar ── */
+/* #btn-toggle-palette shows a different icon depending on what it does — collapse the desktop
+   sidebar vs. open the mobile popup (same button, reparented between the two — see editor.js's
+   _enterMobileBottomBar/_exitMobileBottomBar). */
+#btn-toggle-palette .icon-mobile  { display: none; }
+body.layout-mobile #btn-toggle-palette .icon-desktop { display: none; }
+body.layout-mobile #btn-toggle-palette .icon-mobile  { display: block; }
 
-body.layout-mobile #toolbar { height: 56px; }
+/* Harmonized with #mobile-bottom-bar's own gap/button size below — together they keep both bars'
+   content within 400px wide (padding + 2 grid gaps + widest group vs. 4 buttons + 3 gaps). Height
+   matches #mobile-bottom-bar's own 56px too — desktop keeps the base rule's 48px above. */
+body.layout-mobile #toolbar { height: 56px; gap: 8px; }
 body.layout-mobile #toolbar .left-group,
 body.layout-mobile #toolbar .center-group,
 body.layout-mobile #toolbar .right-group { gap: 8px; }
-body.layout-mobile .btn { width: 48px; height: 48px; }
-body.layout-mobile .btn svg { width: 24px; height: 24px; }
-
-/* Narrow: tighten separators */
-@media (max-width: 520px) {
-  .toolbar-sep { margin: 0; }
-}
-
-/* Very narrow: hide logo text + help button, hide toolbar separator */
-@media (max-width: 380px) {
-  #toolbar .logo { display: none; }
-  #toolbar { grid-template-columns: auto 1fr auto; }
-  #btn-help { display: none; }
-  #toolbar .center-group > .toolbar-sep { display: none; }
-}
+body.layout-mobile #toolbar .btn { width: 40px; height: 40px; }
+body.layout-mobile #toolbar .btn svg { width: 20px; height: 20px; }
 
 /* ── Main area ── */
 #main {
@@ -193,9 +192,8 @@ body.layout-desktop #pal-panel {
 body.layout-desktop #pal2-panel { left: 0;  width: var(--pal2-panel-w, 280px); }
 body.layout-desktop #pal-panel  { right: 0; width: var(--pal-panel-w, 0px); }
 
-/* ── Mobile layout: board on top + one tabbed panel below. #board-area is a normal flex child
-   (not an overlay), so expanding/collapsing the panel actually resizes it — see _relayoutMobile
-   and _toggleMobileTabsCollapsed in editor.js. */
+/* ── Mobile layout: board fills #main entirely — no embedded bottom panel any more, the character
+   palette is a centered popup instead (further down) and Saves has no mobile presence at all. ── */
 body.layout-mobile #main {
   display: flex;
   flex-direction: column;
@@ -205,107 +203,87 @@ body.layout-mobile #board-area {
   min-height: 0;
 }
 
-body.layout-mobile #btn-toggle-pal2,
-body.layout-mobile #btn-toggle-palette {
+body.layout-mobile #btn-toggle-pal2 { display: none; }
+
+/* ── Mobile bottom bar — Undo/Redo/Reset + the palette-popup trigger, reparented in from the top
+   toolbar (editor.js's _enterMobileBottomBar/_exitMobileBottomBar). A plain flex row, sibling of
+   #toolbar and #main under body's own flex column — its fixed height shrinks #main automatically,
+   exactly like the toolbar does at the top, no extra layout math needed (see _relayoutMobile). */
+#mobile-bottom-bar {
   display: none;
-}
-
-#mobile-tabs {
-  display: none;
-  flex-direction: column;
-  flex-shrink: 0;
-  /* Scales with viewport height but never shrinks below a usable floor (e.g. short landscape
-     phones) or grows past what the board needs to keep priority over. */
-  height: clamp(160px, 30vh, 360px);
-  background: var(--bg-1);
-  border-top: 1px solid var(--border);
-  transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
-}
-body.layout-mobile #mobile-tabs { display: flex; }
-#mobile-tabs.collapsed { height: var(--mobile-tabbar-h); }
-
-#mobile-tab-bar {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  height: var(--mobile-tabbar-h);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-1);
-}
-.mobile-tab-btn {
-  /* Sized to its label, not stretched across the bar — flex:1 (the old behavior) made each tab
-     as wide as the bar regardless of how short its text was. */
-  flex: 0 0 auto;
-  height: 100%;
-  padding: 0 16px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-2);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  cursor: pointer;
-  transition: color 0.12s, border-color 0.12s;
-}
-.mobile-tab-btn.active {
-  color: var(--text-1);
-  border-bottom-color: var(--accent);
-}
-
-#mobile-tabs-collapse-btn {
-  /* Pushed to the far right of the bar, after the (now label-sized) tab buttons. */
-  margin-left: auto;
-  flex-shrink: 0;
-  width: var(--mobile-tabbar-h);
-  height: 100%;
-  display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  gap: 20px; /* still comfortably within 400px: 4 buttons * 40px + 3 gaps * 20px = 220px */
+  height: 56px;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+body.layout-mobile #mobile-bottom-bar { display: flex; }
+#mobile-bottom-bar .btn { width: 40px; height: 40px; }
+#mobile-bottom-bar .btn svg { width: 20px; height: 20px; }
+
+/* ── Mobile palette popup — #pal-panel becomes a centered modal card (same visual language as
+   #settings-popup/#help-popup) instead of an embedded panel. position:fixed positions it against
+   the viewport regardless of its #main parent, so it never needs to be reparented in the DOM. */
+body.layout-mobile #pal-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* Same fixed size as #help-popup/#settings-popup. Fixed height, not max-height/auto — recruiting
+     a character removes it from the list below, and an auto-height popup would visibly shrink to
+     match on every single recruit. */
+  width: 420px;
+  max-width: 92vw;
+  height: min(500px, 80vh);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
+  z-index: 81;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.96);
+  transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.22,1,0.36,1);
+}
+body.layout-mobile #pal-panel.mobile-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Backdrop behind the popup — a plain sibling, not a wrapper, so #pal-panel needs no reparenting.
+   Click anywhere on it to dismiss, same as #settings-overlay/#help-overlay's own backdrop. */
+#pal-popup-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.40);
+}
+body.layout-mobile #pal-popup-backdrop.open { display: block; }
+
+.pal-header-actions { display: flex; align-items: center; gap: 4px; }
+
+/* Desktop closes the panel via the toolbar's own toggle button instead — see palette.js's
+   #pal-popup-close click handler and editor.js's _closeMobilePalettePopup. */
+#pal-popup-close {
+  display: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   border: none;
+  background: transparent;
   color: var(--text-2);
   cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s;
 }
-#mobile-tabs-collapse-btn:hover { color: var(--text-1); }
-#mobile-tabs-collapse-btn svg {
-  transition: transform 0.2s cubic-bezier(0.4,0,0.2,1);
-}
-#mobile-tabs.collapsed #mobile-tabs-collapse-btn svg {
-  transform: rotate(180deg);
-}
+#pal-popup-close:hover { color: var(--text-1); }
+body.layout-mobile #pal-popup-close { display: flex; }
 
-#mobile-tab-content {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* Reparented panels fill the tab slot; visibility is tab-driven here, not collapse-driven */
-body.layout-mobile #pal-panel,
-body.layout-mobile #pal2-panel {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  transform: none;
-  opacity: 1;
-  pointer-events: all;
-  display: none;
-  border: none;
-  box-shadow: none;
-}
-body.layout-mobile #pal-panel.tab-active,
-body.layout-mobile #pal2-panel.tab-active {
-  display: flex;
-}
-
-/* The tab bar already labels each section — don't repeat the title inside it too */
-body.layout-mobile #pal-header,
-body.layout-mobile #pal2-header {
-  display: none;
-}
+/* Saves (Palette2) is desktop-only — no mobile presence of any kind. */
+body.layout-mobile #pal2-panel { display: none; }
 
 /* ── Board layer ── */
 #board-layer {
@@ -585,6 +563,14 @@ body:not(.no-shadows) #drag-ghost {
 }
 #pal-body::-webkit-scrollbar { display: none; }
 
+/* Mobile popup shows the same scrollbar as #help-body/#settings-body instead of the desktop
+   sidebar's hidden one — a modal benefits from a visible affordance that there's more to scroll. */
+body.layout-mobile #pal-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+body.layout-mobile #pal-body::-webkit-scrollbar { display: block; }
+
 .pal-item.pal-item-filtered-out { display: none; }
 .pal-section.pal-section-empty { display: none; }
 
@@ -626,6 +612,17 @@ body.layout-mobile .pal-sec-hdr { padding: 0 14px; height: 34px; }
 body.layout-mobile .pal-sec-label { font-size: 14px; }
 body.layout-mobile .pal-grid { gap: 6px; padding: 6px 14px 14px; }
 body.layout-mobile .pal-grid-first { padding-top: 10px; }
+
+/* Exceptionally NOT matched to the board's token size here (unlike --tok-sz's every other use,
+   set once globally in editor.js's relayout() to match the board) — the popup has no board to
+   match against, so items are maximized instead: sized to fit exactly 5 per row, full stop.
+   Overriding --tok-sz itself (rather than just .pal-item's width) means every dependent rule —
+   the on-board ring, the recruit-count badge — automatically scales along with it too. The '%' in
+   this calc() still resolves against .pal-grid's own content width, exactly like a plain width
+   would, regardless of being threaded through a custom property first. */
+body.layout-mobile #pal-panel .pal-item {
+  --tok-sz: calc((100% - 4 * 6px) / 5);
+}
 
 .pal-item {
   position: relative;
@@ -1481,27 +1478,55 @@ body.layout-mobile .help-row  { padding: 8px 10px; min-height: 30px; }
   border-bottom-color: var(--accent-light);
 }
 
-/* Mobile: bigger touch targets (>=44px guideline) and more breathing room than desktop's
-   mouse-optimized density. */
-body.layout-mobile #pal2-list { padding: 18px; }
-body.layout-mobile .pal2-section-hdr { padding-top: 8px; padding-bottom: 8px; }
-body.layout-mobile .pal2-sec-name    { font-size: 16px; }
-body.layout-mobile .pal2-sec-arrow   { width: 12px; height: 12px; }
-
-/* 40x40 clears the touch-target guideline once row/header padding is added, vs. 28px on desktop. */
-body.layout-mobile .pal2-action-btn     { width: 40px; height: 40px; border-radius: 8px; }
-body.layout-mobile .pal2-action-btn svg { width: 20px; height: 20px; }
-body.layout-mobile .pal2-sec-actions,
-body.layout-mobile .pal2-row-actions    { gap: 8px; }
-
-body.layout-mobile .pal2-config-list { padding: 0 0 10px; gap: 6px; }
-body.layout-mobile .pal2-row-main {
-  /* 40px buttons + 8px top/bottom padding = 56px row height. */
+/* ── Undo-delete toast (section/save row deletion) ──────────────────────────
+   Fixed, centered at the bottom of the viewport — shown for UNDO_DELETE_MS (palette2.js) after
+   deleting a section or save row, with an Undo button that restores it before the delay commits. */
+.pal2-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(12px);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 8px 8px 14px;
-  gap: 12px;
-  border-radius: 10px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-hl);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
-body.layout-mobile .pal2-row-name   { font-size: 15px; }
+.pal2-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+.pal2-toast-label {
+  font-size: 14px;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.pal2-toast-undo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.pal2-toast-undo svg     { width: 18px; height: 18px; }
+.pal2-toast-undo:hover   { background: var(--bg-2); color: var(--text-1); }
+.pal2-toast-undo:active  { scale: 0.9; }
 
 /* ── Tooltips Discord-style ── */
 .dc-tooltip-el {

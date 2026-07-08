@@ -77,7 +77,13 @@
         </svg>
       </button>
       <button id="btn-toggle-palette" class="btn" title="Afficher/masquer les personnages">
-        <svg viewBox="0 -960 960 960" fill="currentColor" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" transform="matrix(-1,0,0,1,0,0)"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm120-80v-560H200v560h120Zm80 0h360v-560H400v560Zm-80 0H200h120Z"></path></svg>
+        <svg class="icon-desktop" viewBox="0 -960 960 960" fill="currentColor" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" transform="matrix(-1,0,0,1,0,0)"><path d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm120-80v-560H200v560h120Zm80 0h360v-560H400v560Zm-80 0H200h120Z"></path></svg>
+        <svg class="icon-mobile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="9" cy="8" r="3.2"/>
+          <path d="M3.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6"/>
+          <line x1="18" y1="8" x2="18" y2="14"/>
+          <line x1="15" y1="11" x2="21" y2="11"/>
+        </svg>
       </button>
     </div>
   </div>
@@ -166,6 +172,13 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Mobile bottom bar — Undo/Redo/Reset + the palette-popup trigger, reparented in from the
+       top toolbar on mobile (editor.js's _enterMobileBottomBar/_exitMobileBottomBar) ── -->
+  <div id="mobile-bottom-bar"></div>
+
+  <!-- ── Mobile palette popup backdrop — see style.css's body.layout-mobile #pal-panel ── -->
+  <div id="pal-popup-backdrop"></div>
 
   <!-- Help popup -->
   <div id="help-overlay" class="hidden">

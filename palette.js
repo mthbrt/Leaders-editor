@@ -119,10 +119,18 @@ const Palette = (() => {
     panel.innerHTML = `
       <div id="pal-header">
         <span id="pal-title"></span>
-        <button id="pal-filter-btn" class="pal-filter-btn" data-tooltip="${t('palFilterTitle')}" aria-label="${t('palFilterTitle')}">
-          <svg class="pal-filter-icon-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-          <svg class="pal-filter-icon-on" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-        </button>
+        <div class="pal-header-actions">
+          <button id="pal-filter-btn" class="pal-filter-btn" data-tooltip="${t('palFilterTitle')}" aria-label="${t('palFilterTitle')}">
+            <svg class="pal-filter-icon-off" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            <svg class="pal-filter-icon-on" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          </button>
+          <!-- Mobile popup only (see style.css) — closing the panel on desktop is the toolbar's own toggle button. -->
+          <button id="pal-popup-close">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div id="pal-body"><div id="pal-sections"></div></div>`;
     main.appendChild(panel);
@@ -137,6 +145,7 @@ const Palette = (() => {
     panel.querySelector('#pal-filter-btn').addEventListener('click', e => {
       _filterMenuEl ? _closeFilterMenu() : _openFilterMenu(e.currentTarget);
     });
+    panel.querySelector('#pal-popup-close').addEventListener('click', () => _closeMobilePalettePopup());
 
     // Clic molette → ban/unban
     panel.addEventListener('mousedown', e => {
