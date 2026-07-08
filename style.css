@@ -686,14 +686,14 @@ body.layout-mobile .pal-grid-first { padding-top: 10px; }
 
 .pal-badge {
   position: absolute;
-  --badge-sz: clamp(14px, calc(var(--tok-sz, 0px) * 0.32), 20px);
+  --badge-sz: clamp(12px, calc(var(--tok-sz, 0px) * 0.29), 18px);
   --target-r: calc(var(--tok-sz, 0px) / 2);
   --circle-corner-inset: calc(var(--tok-sz, 0px) / 2 - var(--target-r) * 0.7);
   top: calc(var(--circle-corner-inset) - var(--badge-sz) / 2);
   right: calc(var(--circle-corner-inset) - var(--badge-sz) / 2);
   background: var(--gold);
   color: var(--bg-1);
-  font-size: clamp(9px, calc(var(--tok-sz, 0px) * 0.22), 14px);
+  font-size: clamp(8px, calc(var(--tok-sz, 0px) * 0.2), 12px);
   font-weight: bold;
   border-radius: 50%;
   width: var(--badge-sz);
