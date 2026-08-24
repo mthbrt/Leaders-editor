@@ -37,7 +37,7 @@ function _isStandardCaptured(leader) {
   const neighborIds = new Set(_neighborCellIds(leader.cell));
   if (S.tokens.some(t => t.c !== leader.c && t.name === '5' && neighborIds.has(t.cell))) return true;
   let threats = S.tokens.filter(t =>
-    t.c !== leader.c && !CAPTURE_EXCLUDED.has(t.name) && t.name !== '4' && neighborIds.has(t.cell)
+    t.c !== leader.c && !CAPTURE_EXCLUDED.has(t.name) && !t.name.endsWith('f') && t.name !== '4' && neighborIds.has(t.cell)
   ).length;
   const archerRange = _cellsAtLineDistance(leader.cell, 2, 2);
   threats += S.tokens.filter(t => t.c !== leader.c && t.name === '4' && archerRange.has(t.cell)).length;
