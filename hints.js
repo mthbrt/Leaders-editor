@@ -27,7 +27,7 @@ const _isLeaderName = name => TOKEN_DATA_EN[name]?.type === 'd';
 // one is in danger.
 function _isSniperCaptured(leader) {
   const sniperRange = _cellsAtLineDistance(leader.cell, 3, 6);
-  return S.tokens.some(t => t.c !== leader.c && t.name === '23' && sniperRange.has(t.cell));
+  return S.tokens.some(t => t.c !== leader.c && t.name === '23' && !t.frog && sniperRange.has(t.cell));
 }
 
 // Standard capture: Assassin (5) adjacent alone, OR ≥ 2 opposing pieces threaten the leader.
@@ -35,7 +35,7 @@ function _isSniperCaptured(leader) {
 //   • Archer (4): exactly distance 2 in a straight line, never when adjacent
 function _isStandardCaptured(leader) {
   const neighborIds = new Set(_neighborCellIds(leader.cell));
-  if (S.tokens.some(t => t.c !== leader.c && t.name === '5' && neighborIds.has(t.cell))) return true;
+  if (S.tokens.some(t => t.c !== leader.c && t.name === '5' && !t.frog && neighborIds.has(t.cell))) return true;
   let threats = S.tokens.filter(t =>
     t.c !== leader.c && !CAPTURE_EXCLUDED.has(t.name) && !t.frog && t.name !== '4' && neighborIds.has(t.cell)
   ).length;
