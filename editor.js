@@ -1358,6 +1358,12 @@ function doReset() {
 }
 
 function _loadState({ tokens, banned, traps }) {
+  // Si l'option "non-officiels" n'est pas activée, ignorer les personnages 26 à 29 et les pièges
+  if (!showUnofficial) {
+    tokens = tokens.filter(t => +t.name < 26 || +t.name > 29);
+    traps = [];
+  }
+
   const used = new Set(tokens.map(t => t.name));
   const palette = { lancement: [], vermillon: [], unofficial: [], leaders: [], other: [] };
   for (const n of ALL_NAMES) { if (!used.has(n)) palette[_palGroupOf(n)].push(n); }
