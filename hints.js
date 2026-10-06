@@ -20,6 +20,9 @@ function _cellsAtLineDistance(cellId, minDist, maxDist) {
 // Pieces that never count toward capturing the leader (18=Cub, 20=Wisp, 22=Frog).
 const CAPTURE_EXCLUDED = new Set(['18', '20', '22']);
 
+// Renvoie true si le jeton est une grenouille de base ('22') ou un jeton transformé en grenouille (frog: true)
+const _isFrog = t => t.name === '22' || t.frog;
+
 // Driven off tooltip.js's type 'd' (King/Queen/Emperor) instead of a hardcoded id list.
 const _isLeaderName = name => TOKEN_DATA_EN[name]?.type === 'd';
 
@@ -35,12 +38,12 @@ function _isSniperCaptured(leader) {
 //   • Archer (4): exactly distance 2 in a straight line, never when adjacent
 function _isStandardCaptured(leader) {
   const neighborIds = new Set(_neighborCellIds(leader.cell));
-  if (S.tokens.some(t => t.c !== leader.c && t.name === '5' && neighborIds.has(t.cell))) return true;
+  if (S.tokens.some(t => t.c !== leader.c && t.name === '5' && !_isFrog(t) && neighborIds.has(t.cell))) return true;
   let threats = S.tokens.filter(t =>
-    t.c !== leader.c && !CAPTURE_EXCLUDED.has(t.name) && t.name !== '4' && neighborIds.has(t.cell)
+    t.c !== leader.c && !CAPTURE_EXCLUDED.has(t.name) && !_isFrog(t) && t.name !== '4' && neighborIds.has(t.cell)
   ).length;
   const archerRange = _cellsAtLineDistance(leader.cell, 2, 2);
-  threats += S.tokens.filter(t => t.c !== leader.c && t.name === '4' && archerRange.has(t.cell)).length;
+  threats += S.tokens.filter(t => t.c !== leader.c && t.name === '4' && !_isFrog(t) && archerRange.has(t.cell)).length;
   return threats >= 2;
 }
 
